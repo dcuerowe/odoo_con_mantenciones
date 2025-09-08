@@ -1805,10 +1805,10 @@ sp = Sharepoint()
 #Datos de conexión
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
-url = os.getenv('URL_Odoo')
-db = os.getenv('DB_Odoo')
-username = os.getenv('USER_Odoo')
-password = os.getenv('ODOO_API_KEY')
+url = str(os.getenv('URL_Odoo'))
+db = str(os.getenv('DB_Odoo'))
+username = str(os.getenv('USER_Odoo'))
+password = str(os.getenv('ODOO_API_KEY'))
 
 # #Inicio de sesión
 try: 
@@ -1828,15 +1828,10 @@ except Exception as e:
 #-----------------------------------------------------------------------------------------
 #CONEXIÓN CON API CONNECTEAM
 
-API_key_c = os.getenv('CONNECTEAM_API_KEY')
+API_key_c = str(os.getenv('CONNECTEAM_API_KEY'))
 
 #-----------------------------------------------------------------------------------------
-#CONEXIÓN CON API SHAREPOINT
-USERNAME = os.getenv('sharepoint_user')
-PASSWORD = os.getenv('sharepoint_password')
-SHAREPOINT_SITE = os.getenv('sharepoint_url_site')
-SHAREPOINT_NAME_SITE = os.getenv('sharepoint_site_name')
-SHAREPOINT_DOC = os.getenv('sharepoint_doc_library')
+
 
 job(API_key_c)
 
