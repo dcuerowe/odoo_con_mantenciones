@@ -26,7 +26,7 @@ jobs:
       - name: Instalar las dependencias
         run: | 
           python -m pip install --upgrade pip
-          pip install --no-cahe-dir -r requirements.txt
+          pip install -r requirements.txt
 
       - name: Ejecutar script de sincronizacion
         env:
