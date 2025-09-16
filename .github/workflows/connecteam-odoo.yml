@@ -11,6 +11,14 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
+      - name: Descargar el artefacto de la última corrida
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          workflow: 'Sincronizar'
+          branch: main
+          path: .
+          name: sqlite-database-*
+
       - name: Configuracion de python 3.11.9
         uses: actions/setup-python@v5
         with:
