@@ -6,22 +6,28 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps: 
+      #Descarga la version mas reciente del repositorio
       - name: Checkout del código
         uses: actions/checkout@v4
 
+      # Configura python 3.11.9
       - name: Configuracion de python 3.11.9
         uses: actions/setup-python@v5
         with:
           python-version: '3.11.9'
           cache: 'pip'
-          
+      
+      # Instala las dependencias
       - name: Instalar las dependencias
         run: | 
           python -m pip install --upgrade pip
           pip install --upgrade --force-reinstall -r requirements.txt
 
+      # Ejecuta el script de sincronizacion
       - name: Ejecutar script de sincronizacion
         env:
           CONNECTEAM_API_KEY: ${{ secrets.CONNECTEAM_API_KEY }}
@@ -35,6 +41,22 @@ jobs:
           
         run:  python app_registro_git.py
 
+      # Subir la base de datos actualizada al reositorio
+      - name: Configurar Git para la Action
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+      
+      - name: Commit de la base de datos actualizada
+        run: |
+          git add form_entries.db
+          git commit -m "chore: Actualizar DB de registros de sincronización" || echo "No hay cambios para commitear"
+      
+      - name: Push de los cambios
+        run: git push
+    
+      
+      # Sube la base de datos como artefacto
       - name: Subir DB como artefacto (backup histórico)
         if: always()
         uses: actions/upload-artifact@v4
