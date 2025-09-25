@@ -224,8 +224,8 @@ def filter_submissions(API_key_connecteam):
     # Obtiene la fecha actual
     today = date.today()   
 
-    # Calcula la fecha de hace 5 días
-    yesterday = today - timedelta(days=3)
+    # Calcula la fecha de hace 1 día
+    yesterday = today - timedelta(days=1)
 
     # Calcula el inicio del día (medianoche) de hace 5 días en la zona horaria de Chile
     start_of_day_chile = datetime.combine(yesterday, datetime.min.time(), tzinfo=chile_tz)
