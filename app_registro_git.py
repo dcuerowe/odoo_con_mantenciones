@@ -225,16 +225,16 @@ def filter_submissions(API_key_connecteam):
     today = date.today()   
 
     # Calcula la fecha de hace 1 día
-    yesterday = today - timedelta(days=1)
+    yesterday = today - timedelta(days=2)
 
-    # Calcula el inicio del día (medianoche) de hace 5 días en la zona horaria de Chile
+    # Calcula el inicio del día (medianoche) de hace 2 días en la zona horaria de Chile
     start_of_day_chile = datetime.combine(yesterday, datetime.min.time(), tzinfo=chile_tz)
     # Convierte el inicio del día a UTC
     start_of_day_utc =  start_of_day_chile.astimezone(timezone.utc)
     # Obtiene el timestamp en segundos para el inicio del rango
     start_timestamp_ms = int(start_of_day_utc.timestamp())
 
-    # Calcula el fin del día de mañana en la zona horaria de Chile
+    # Calcula el fin del día de hoy en la zona horaria de Chile
     end_of_day_chile = datetime.combine(today + timedelta(days=1), datetime.min.time(), tzinfo=chile_tz)
     # Convierte el fin del día a UTC
     end_of_day_utc = end_of_day_chile.astimezone(timezone.utc)
