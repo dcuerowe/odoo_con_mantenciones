@@ -1,0 +1,15 @@
+# Entornos virtuales
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Entornos/artefactos comunes
+.env
+.env.*
+*.log
+
+# macOS
+.DS_Store
