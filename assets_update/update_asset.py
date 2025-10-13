@@ -50,19 +50,19 @@ while True:
         break
 
 
-# #Actualizando Freshdesk
-# add_choices_to_field(
-#     domain=domain_fresh,
-#     api_key=api_key_fresh,
-#     field_id=151001231887,
-#     new_points=assets_name)
+#Actualizando Freshdesk
+add_choices_to_field(
+    domain=domain_fresh,
+    api_key=api_key_fresh,
+    field_id=151001231887,
+    new_points=assets_name)
 
-# #Actualizando Odoo
-# new_asset(asset_list,
-#         url,
-#         db,
-#         username,
-#         password)
+#Actualizando Odoo
+new_asset(asset_list,
+        url,
+        db,
+        username,
+        password)
 
 #Actualizando Connecteam
 add_new_options(API_KEY,
