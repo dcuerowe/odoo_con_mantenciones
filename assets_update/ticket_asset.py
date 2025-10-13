@@ -1,7 +1,9 @@
 import requests
-from dotenv import load_dotenv
 import os
 import json
+import traceback
+
+
 
 def add_choices_to_field(domain: str, api_key: str, field_id: int, new_points: list):
     """
@@ -15,6 +17,8 @@ def add_choices_to_field(domain: str, api_key: str, field_id: int, new_points: l
 
     password = "X"  # Freshdesk requiere este placeholder
     url = f"https://{domain}.freshdesk.com/api/v2/admin/ticket_fields/{field_id}"
+
+    print(domain)
 
     # 1. Obtener las opciones actuales
     response = requests.get(url, auth=(api_key, password))
@@ -39,30 +43,12 @@ def add_choices_to_field(domain: str, api_key: str, field_id: int, new_points: l
     update_response = requests.put(url, auth=(api_key, password), json=payload)
 
     if update_response.status_code == 200:
-        print("✅ Opciones agregadas exitosamente.")
+        print(f"Opciones agregadas exitosamente en fresh desk: ")
+        for choice in new_points:
+            print(f"   - {choice}")
         return update_response.json()
     else:
         raise Exception(f"Error al actualizar el field: {update_response.status_code} {update_response.text}")
-
-
-
-load_dotenv()
-api_key = os.getenv('Fresh_API_KEY')
-domain = os.getenv('Fresh_domain')
-
-
-print('Ejemplo: [proyecto] punto de acceso 1')
-print('Si son varios, sepáralos con coma (ej: [proyecto] punto1, [proyecto] punto2): ')
-print('--------------------------------------------------------------------------------')
-print('Nombre del nuevo asset: ')
-punto = input(' ').split(', ')
-lista_punto = [str(i) for i in punto]
-
-add_choices_to_field(
-    domain=domain,
-    api_key=api_key,
-    field_id=151001231887,
-    new_points=lista_punto)
 
 
 
