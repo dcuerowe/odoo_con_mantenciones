@@ -18,7 +18,6 @@ def add_choices_to_field(domain: str, api_key: str, field_id: int, new_points: l
     password = "X"  # Freshdesk requiere este placeholder
     url = f"https://{domain}.freshdesk.com/api/v2/admin/ticket_fields/{field_id}"
 
-    print(domain)
 
     # 1. Obtener las opciones actuales
     response = requests.get(url, auth=(api_key, password))
