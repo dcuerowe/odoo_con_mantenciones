@@ -33,7 +33,6 @@ def new_asset(assets,  url, db, username, password):
 
             asset_id = models.execute_kw(db, uid, password, 'x_maintenance_location', 'create', [asset_data])
             print(f'Creado en Odoo: {asset[0]}')
-            print(f'Creado en Odoo: {asset[0]}')
 
 
         except Exception as e:
