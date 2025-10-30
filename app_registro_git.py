@@ -195,7 +195,7 @@ def ordenar_respuestas(estructura, respuestas):
                 elif question_type == 'datetime':
                     date_sub = answer.get('timestamp', '')  # Obtiene el timestamp
                     dt_utc = datetime.fromtimestamp(date_sub, tz=timezone.utc)  # Convierte a fecha UTC
-                    value = dt_utc.strftime("%d/%m/%Y")  # Formatea la fecha
+                    value = dt_utc.strftime("%Y-%m-%d")  # Formatea la fecha
                 elif question_type == 'description':
                     value = None  # Las descripciones no se almacenan
                 elif question_type == 'image':
@@ -1031,9 +1031,66 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito):
                                     location_MC = equipment_MC[0]['x_studio_location'][1]
                                 else:
                                     location_MC = False
-                                
 
-                                if location_MC != df_con_datos[f'{i}.1 Punto de monitoreo'][0]:
+                                if location_MC == False:
+                                    puntos_odoo = models.execute_kw(db, uid, password,
+                                        'x_maintenance_location', 'search_read',
+                                        [[]],
+                                        {'fields': ['id', 'x_name']}, 
+                                        )
+                                    #Lista de diccionarios
+
+                                    id_punto = None
+                                    for p in puntos_odoo:
+                                        if p['x_name'] == df_con_datos[f'{i}.1 Punto de monitoreo'][0]:
+                                            id_punto = p['id']
+                                            break
+
+                                    new_location_MC = {
+                                        'x_studio_location': id_punto,
+                                    # 'effective_date': f"{dic_trabajo_I['Fecha visita ']}",
+                                    }
+
+                                    try:
+                                        update_location_MC = models.execute_kw(
+                                            db, uid, password,
+                                            'maintenance.equipment',
+                                            'write',
+                                            [
+                                                [id_number_MC], 
+                                                new_location_MC
+                                            ],)
+
+                                        star_location = models.execute_kw(db, uid, password,
+                                            'maintenance.equipment', 'message_post', [
+                                                id_number_MC,
+                                            ], {
+                                                'body': f"<p>Ubicación asignada: {punto}</p>",
+                                                'message_type': 'comment',
+                                                'subtype_xmlid': 'mail.mt_note',  # nota interna
+                            
+                                                })
+                                        detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id,
+                                                f'Se asocia correctamente el dispositico con el punto de monitoreo {punto}')
+
+                                    except Exception as e:
+                                        try:
+                                            star_location = models.execute_kw(db, uid, password,
+                                                'maintenance.equipment', 'message_post', [
+                                                    id_number_MC,
+                                                ], {
+                                                    'body': f"<p>Nueva ubicación: {punto}</p>",
+                                                    'message_type': 'comment',
+                                                    'subtype_xmlid': 'mail.mt_note',  # nota interna
+                                                    })
+                                        except Exception as e:
+                                            print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')
+
+                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
+                                                    f'{punto} no se encuentra listado en Odoo y Connecteam({type(e)})')
+
+                                
+                                elif location_MC != df_con_datos[f'{i}.1 Punto de monitoreo'][0]:
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
                                                 f'La ubicación indicada en la OT ({df_con_datos[f"{i}.1 Punto de monitoreo"][0]}) es distinta a la registrada en Odoo ({location_MC}). Revisar OT.')
                                     
