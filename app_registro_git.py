@@ -1413,6 +1413,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito):
                                     domain_filter = [['equipment_id', '=', number_equipment_MP],
                                                     ['maintenance_type', '=', 'preventive']]
 
+                                    #IDs de todas las solicitudes preventivas del equipo
                                     request_ids_MP = models.execute_kw(db, uid, password,
                                                     'maintenance.request', 'search',
                                                     [domain_filter])
@@ -1442,11 +1443,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito):
                                                 print(e)
                                         if interruptor_MP == False:
                                             try:
-                                                #Atualizando su estado a Finalizado
+                                                #Actualizando su estado a Finalizado
                                                 update_MP = {
                                                     'stage_id': 5,
                                                     'x_studio_informe': informe_codificado_MP,
-                                                    'x_studio_nmero_de_ot_1': f"{dic_trabajo_MP['#']}"
+                                                    # 'x_studio_nmero_de_ot_1': f"{dic_trabajo_MP['#']}"
                                                 }
 
                                                 update_stage_MP = models.execute_kw(
@@ -1599,6 +1600,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito):
                                             "mimetype": "application/pdf",
 
                                          }])
+                                    
+                                    #Si el equipo no tiene ubicación, se actualiza
                                     if location_I == False:
 
                                         puntos_odoo = models.execute_kw(db, uid, password,
@@ -1616,7 +1619,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito):
 
                                         new_location_I = {
                                             'x_studio_location': id_punto,
-                                        # 'effective_date': f"{dic_trabajo_I['Fecha visita ']}",
+                                            'effective_date': f"{dic_trabajo_I['Fecha visita ']}",
                                         }
 
                                         try:
@@ -1661,7 +1664,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito):
                                                         f'{punto} no se encuentra listado en Odoo y Connecteam({type(e)})')
 
                                     
-                                        #Incluir esta validación dentro de MC y MP
+                                    #Si el equipo cambia de ubicación
                                     elif location_I != df_con_datos[f'{i}.1 Punto de monitoreo'][0]:
                                         detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
                                                     f'El dispositivo ahora se encuentra en {punto}')
@@ -1680,6 +1683,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito):
                                         except Exception as e:
                                             print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')
 
+                                    #Si el equipo no cambia de ubicación, ganeramos una nota de que se mantiene en la misma ubicación                    
                                     else:
                                         try:
                                             last_location = models.execute_kw(db, uid, password,
