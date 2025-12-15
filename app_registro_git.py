@@ -195,7 +195,7 @@ def ordenar_respuestas(estructura, respuestas):
                 elif question_type == 'datetime':
                     date_sub = answer.get('timestamp', '')  # Obtiene el timestamp
                     dt_utc = datetime.fromtimestamp(date_sub, tz=timezone.utc)  # Convierte a fecha UTC
-                    value = dt_utc.strftime("%Y-%m-%d")  # Formatea la fecha
+                    value = dt_utc.strftime("%d-%m-%Y")  # Formatea la fecha
                 elif question_type == 'description':
                     value = None  # Las descripciones no se almacenan
                 elif question_type == 'image':
@@ -1159,7 +1159,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito):
                                     if interruptor_MC:
                                         try:
                                             fields_values_OT_MC = {
-                                                'name': f"MANTENIMIENTO CORRECTIVO | {tipo_MC} {modelo_MC}",
+                                                'name': f"Mantenimiento Correctivo | {modelo_MC}",
                                                 'equipment_id': id_number_MC, #Aquí debemos usar el ID númerico de la sonda
                                                 'stage_id': '5', # 5 es finalizado 
                                                 'maintenance_type': id_mantencion[id],
