@@ -1,5 +1,5 @@
 import time
-from conn_sharepoint_1 import get_auth_token, get_file_from_sharepoint, upload_file_to_sharepoint
+from conn_sharepoint import get_auth_token, get_file_from_sharepoint, upload_file_to_sharepoint
 
 class Sharepoint:
 
