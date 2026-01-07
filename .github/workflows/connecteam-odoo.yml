@@ -41,7 +41,7 @@ jobs:
           MS_CLIENT_ID: ${{ secrets.MS_CLIENT_ID }}
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           
-        run:  python app_registro_git.py
+        run:  python pipeline_registro/main_practice.py
 
       # Subir la base de datos actualizada al reositorio
       - name: Configurar Git para la Action
