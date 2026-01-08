@@ -3,6 +3,7 @@ import sqlite3
 import traceback
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+import os
 
 def ordenar_respuestas(estructura, respuestas):
     # Mapeo de IDs de preguntas a títulos
