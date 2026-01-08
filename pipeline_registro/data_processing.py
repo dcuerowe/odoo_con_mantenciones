@@ -123,5 +123,5 @@ def check_new_sub(ordered_responses):
     
     except sqlite3.Error as e:
         print(f'Error en la base de datos: {e}')
-        traceback.print_exc
+        print(traceback.format_exc())
         return []

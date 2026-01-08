@@ -172,17 +172,17 @@ def main():
         elif codigo == '2':
             try:
                 #Provisorio
-                data = pd.read_excel('OT_borrador_2.xlsx')
-                data_list = [data]
-                # ordered_responses_3 = ordenar_respuestas(form_structure(CONNECTEAM_API_KEY), filter_submissions(CONNECTEAM_API_KEY))
+                #data = pd.read_excel('OT_borrador_2.xlsx')
+                #data_list = [data]
+                ordered_responses_3 = ordenar_respuestas(form_structure(CONNECTEAM_API_KEY), all_submission(CONNECTEAM_API_KEY))
             except Exception as e:
                 print(f"Ocurrio un problema con la conexión a la API-Connecteam: {e}")
                 continue
         
             try:
             # Busca nuevas OTs que no hayan sido procesadas previamente
-                # nuevas_entradas = check_new_sub(data_list)
-                # if nuevas_entradas:
+                nuevas_entradas = check_new_sub(ordered_responses_3)
+                if nuevas_entradas:
                     # Inicializa los diccionarios para resumen y éxito de operaciones
                     resumen = {
                         'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
@@ -195,9 +195,9 @@ def main():
                         'N° serie': [], 'Tipo': [], 'Mensaje': []
                     }
 
-                    print(f"Se encontraron {len(data_list)} nuevas entradas. Procesando...")
+                    print(f"Se encontraron {len(nuevas_entradas)} nuevas entradas. Procesando...")
                     # Procesa las nuevas entradas encontradas
-                    process_entrys(data_list, CONNECTEAM_API_KEY, resumen, exito, odoo, sp)
+                    process_entrys(nuevas_entradas, CONNECTEAM_API_KEY, resumen, exito, odoo, sp)
 
                     # Convierte los diccionarios a DataFrames para facilitar el manejo de datos
                     df_resumen = pd.DataFrame(resumen)

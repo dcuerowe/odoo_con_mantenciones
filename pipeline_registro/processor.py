@@ -194,7 +194,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         modelo_MC = dic_trabajo_MC[f"{i}.2.{equipo} MC | Modelo"]
                         tipo_MC = dic_trabajo_MC[f"{i}.2.{equipo} MC | ¿A qué se le realiza mantenimiento correctivo?"]
                         serial_MC = dic_trabajo_MC[f'{i}.2.{equipo} MC | N° de serie']
-                        operativo_MC = dic_trabajo_MC[f"{i}.2.{equipo} MC | ¿Equipo operativo?"]
+                        #operativo_MC = dic_trabajo_MC[f"{i}.2.{equipo} MC | ¿Equipo operativo?"]
 
                         
                         #Asegurando que el serial pase de float a int
@@ -772,7 +772,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         tipo_MP = dic_trabajo_MP[f"{i}.2.{equipo} MP | ¿A qué se le realiza mantenimiento preventivo?"]
                         ot_mp = dic_trabajo_MP['#']
                         fecha_mp = dic_trabajo_MP['Fecha visita ']
-                        operativo_mp = dic_trabajo_MP[f"{i}.2.{equipo} MP | ¿Equipo operativo?"]
+                        #operativo_mp = dic_trabajo_MP[f"{i}.2.{equipo} MP | ¿Equipo operativo?"]
 
 
                         #print(df_trabajo_equipo_MP)
