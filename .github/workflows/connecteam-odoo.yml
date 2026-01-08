@@ -41,7 +41,7 @@ jobs:
           MS_CLIENT_ID: ${{ secrets.MS_CLIENT_ID }}
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           
-        run:  python app_registro_git.py
+        run:  python pipeline_registro/main.py
 
       # Subir la base de datos actualizada al reositorio
       - name: Configurar Git para la Action
@@ -51,7 +51,7 @@ jobs:
       
       - name: Commit de la base de datos actualizada
         run: |
-          git add form_entries.db
+          git add pipeline_registro/form_entries.db
           git commit -m "chore: Actualizar DB de registros de sincronización" || echo "No hay cambios para commitear"
       
       - name: Push de los cambios
@@ -64,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sqlite-database-${{ github.run_number }}
-          path: ./form_entries.db
+          path: pipeline_registro/form_entries.db
         
 
 
