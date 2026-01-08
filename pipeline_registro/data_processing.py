@@ -90,10 +90,29 @@ def check_new_sub(ordered_responses):
     
     ots = (df['#'][0] for df in ordered_responses)
     ots_id = {int(i) for i in ots}
+
+    # 1. Obtener la ruta absoluta del directorio donde está ESTE script (main.py)
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+    # 2. Construir la ruta completa a la base de datos
+    db_path = os.path.join(BASE_DIR, 'form_entries.db')
+
+    print(f"Conectando a la base de datos en: {db_path}") # Debug útil
     
     try:
-        with sqlite3.connect('form_entries.db') as connection:
+        with sqlite3.connect(db_path) as connection:
             cursor = connection.cursor()
+
+            # --- BLOQUE DE DEBUG: LISTAR TABLAS ---
+            print("--- Verificando tablas en la base de datos ---")
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tablas = cursor.fetchall()
+            
+            if not tablas:
+                print("LA BASE DE DATOS ESTÁ VACÍA (No se encontraron tablas).")
+            else:
+                print(f"Tablas encontradas: {tablas}")
+            # ---------------------------------------
 
             # Creamos placeholders (?,?,?) para una consulta segura
             if ots_id:
