@@ -97,22 +97,15 @@ def check_new_sub(ordered_responses):
 
     # 2. Construir la ruta completa a la base de datos
     db_path = os.path.join(BASE_DIR, 'form_entries.db')
-
-    print(f"Conectando a la base de datos en: {db_path}") # Debug útil
     
     try:
         with sqlite3.connect(db_path) as connection:
             cursor = connection.cursor()
 
             # --- BLOQUE DE DEBUG: LISTAR TABLAS ---
-            print("--- Verificando tablas en la base de datos ---")
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
             tablas = cursor.fetchall()
             
-            if not tablas:
-                print("LA BASE DE DATOS ESTÁ VACÍA (No se encontraron tablas).")
-            else:
-                print(f"Tablas encontradas: {tablas}")
             # ---------------------------------------
 
             # Creamos placeholders (?,?,?) para una consulta segura
