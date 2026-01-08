@@ -30,7 +30,7 @@ def job():
 
     try:
         # Obtiene la estructura del formulario y las submissions filtradas, luego las ordena
-        ordered_responses_2 = ordenar_respuestas(form_structure(CONNECTEAM_API_KEY), all_submission_submissions(CONNECTEAM_API_KEY))
+        ordered_responses_2 = ordenar_respuestas(form_structure(CONNECTEAM_API_KEY), all_submission(CONNECTEAM_API_KEY))
     except Exception as e:
         # Si ocurre un error en la conexión a la API, lo muestra
         print(f"Ocurrio un problema con la conexión a la API-Connecteam: {e}")
