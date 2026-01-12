@@ -358,11 +358,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 'name': f"Mantenimiento Correctivo | {tipo_MC} {modelo_MC}",
                                                 'equipment_id': id_number_MC, #Aquí debemos usar el ID númerico de la sonda
                                                 'stage_id': '5', # 5 Finalizado
-                                                'x_studio_etiqueta_1': id_mantencion[id],
+                                                'x_studio_tipo_de_trabajo': id_mantencion[id],
+                                                #'x_studio_etiqueta_1': id_mantencion[id],
                                                 'description': f"{dic_trabajo_MC[f'{i}.2.{equipo} MC | Observaciones']}",
                                                 'schedule_date': f"{dic_trabajo_MC[f'Fecha visita ']}",
                                                 'x_studio_informe': informe_codificado_MC,
-                                                #4'x_studio_tcnico_1': operators[tecnico]
+                                                
 
                                             }
                                             created_request_MC = odoo_client.create(
@@ -381,13 +382,24 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 update_stage_MC
                                             )
 
+                                            update_close_date_MC = {
+                                                'close_date': fecha,
+                                                'x_studio_tcnico': operators[tecnico]
+                                            }
+
+                                            update_close_date_MC = odoo_client.write(
+                                                'maintenance.request',
+                                                [created_request_MC], 
+                                                update_close_date_MC
+                                            )
+
+
                                             #Resgistro en resumen
                                             detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id,
                                                         f'Se crea con éxito el registro de mantenimiento {created_request_MC}')
 
 #Registro de automatización exitosa                                            
                                             
-
                                             
                                             try:
                                                 #Buscamos el ID de la actividad existente para la OT_number
@@ -1066,11 +1078,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'name': f"Mantenimiento Preventivo | {tipo_MP} {modelo_MP}",
                                                     'equipment_id': number_equipment_MP, #Aquí debemos usar el ID númerico de la sonda
                                                     'stage_id': '5', # 5 Finalizado
-                                                    'x_studio_etiqueta_1': id_mantencion[id],
+                                                    'x_studio_tipo_de_trabajo': id_mantencion[id],
+                                                    #'x_studio_etiqueta_1': id_mantencion[id],
                                                     'description': f"{dic_trabajo_MP[f'{i}.2.{equipo} MP | Observaciones']}",
                                                     'schedule_date': f"{dic_trabajo_MP[f'Fecha visita ']}",
                                                     'x_studio_informe': informe_codificado_MP,
-                                                    #4'x_studio_tcnico_1': operators[tecnico]
+                                                    
 
                                                 }
                                                 created_request_MP = odoo_client.create(
@@ -1087,6 +1100,17 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     [created_request_MP], 
                                                     update_stage_MP
+                                                )
+
+                                                update_close_date_MP = {
+                                                    'close_date': fecha,
+                                                    'x_studio_tcnico': operators[tecnico]
+                                                }
+
+                                                update_close_date_MP = odoo_client.write(
+                                                    'maintenance.request',
+                                                    [created_request_MP], 
+                                                    update_close_date_MP
                                                 )
 
                                                 #Resgistro en resumen
@@ -1235,7 +1259,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                         new_location_I = {
                                             'x_studio_location': id_punto,
-                                            'effective_date': f"{dic_trabajo_I['Fecha visita ']}",
+                                            'assign_date': f"{dic_trabajo_I['Fecha visita ']}",
                                         }
 
                                         try:
@@ -1286,10 +1310,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         'equipment_id': number_equipment_I, #Aquí debemos usar el ID númerico de la sonda
                                         'stage_id': '5', # 5 Finalizado
                                         'x_studio_tipo_de_trabajo': id_mantencion[id],
-                                        'description': f"{dic_trabajo_I[f'{i}.2.{equipo} I | Observación']}",
+                                        #'x_studio_etiqueta_1': id_mantencion[id],
+                                        'description': punto,
                                         'schedule_date': f"{fecha}",
                                         'x_studio_informe': informe_codificado_I,
-                                        'x_studio_tcnico': operators[tecnico]
                                     }
 
                                     try:                                             
@@ -1307,6 +1331,17 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'maintenance.request',
                                             [created_request_I], 
                                             update_stage_I
+                                        )
+
+                                        update_close_date_I = {
+                                            'close_date': fecha,
+                                            'x_studio_tcnico': operators[tecnico]
+                                        }
+
+                                        update_close_date_I = odoo_client.write(
+                                            'maintenance.request',
+                                            [created_request_I], 
+                                            update_close_date_I
                                         )
 
                                         #Resgistro en resumen
