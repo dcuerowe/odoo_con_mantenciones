@@ -42,9 +42,8 @@ def ordenar_respuestas(estructura, respuestas):
                 elif question_type == 'datetime':
                     date_sub = answer.get('timestamp', '')  # Obtiene el timestamp
                     dt_utc = datetime.fromtimestamp(date_sub, tz=timezone.utc)  # Convierte a fecha UTC
-                    # dt_chile = dt_utc.astimezone(ZoneInfo("America/Santiago"))
-
-                    value = dt_utc.strftime("%Y-%m-%d")  # Formatea la fecha
+                    #dt_chile = dt_utc.astimezone(ZoneInfo("America/Santiago"))
+                    value = dt_utc.strftime("%Y-%m-%d %H:%M:%S")  # Formatea la fecha
                 elif question_type == 'description':
                     value = None  # Las descripciones no se almacenan   
                 elif question_type == 'image':
@@ -71,7 +70,13 @@ def detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo, modelo, seria
     """
     resumen['OT'].append(ot)
     resumen['Técnico'].append(tecnico)
-    resumen.setdefault('Fecha de revisión', []).append(fecha)
+
+    #Transformación de fechas a zona horaria chilena
+    dt_utc = datetime.strptime(fecha, "%Y-%m-%d %H:%M:%S").replace(tzinfo=ZoneInfo("UTC"))
+    dt_chile = dt_utc.astimezone(ZoneInfo("America/Santiago"))
+    fecha_chile = dt_chile.strftime("%Y-%m-%d")
+    
+    resumen.setdefault('Fecha de revisión', []).append(fecha_chile)
     resumen['Proyecto'].append(proyecto)
     resumen['Punto de monitoreo'].append(punto)
     resumen['Modelo'].append(modelo)
