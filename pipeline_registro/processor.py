@@ -1288,21 +1288,38 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     # Si la ubicación del equipo cambia
                                     elif location_I != df_con_datos[f'{i}.1 Punto de monitoreo'][0]:
 #Notificación de cambio de ubicación
+
+                                        new_location_I = {
+                                            'x_studio_location': id_punto,
+                                            'assign_date': f"{dic_trabajo_I['Fecha visita ']}",
+                                        }
+
                                         
-                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
-                                                    f'El dispositivo ahora se encuentra en {punto}')
-        
                                         try:
+
+                                            #Actualización de la ubicación del equipo
+                                            update_location_I = odoo_client.write(
+                                                'maintenance.equipment',
+                                                [number_equipment_I], 
+                                                new_location_I
+                                            )
+
+                                            #Notificación de cambio de ubicación
                                             new_location = odoo_client.message_post(
                                                 'maintenance.equipment',
                                                 number_equipment_I,
                                                 f"<p>La ubicación a cambiado.</p><p>Nueva ubicación: {punto}</p>",
                                                 attachment_ids=[attachment_id]
                                             )
+        
+                                        
+                                            detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
+                                                        f'El dispositivo ahora se encuentra en {punto}')
                                             
                                         except Exception as e:
                                             print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')
                                     
+        
                                     
                                     # Creamos la instancia dentro de Odoo
                                     fields_values_OT_I = {
