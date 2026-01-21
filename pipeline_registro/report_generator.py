@@ -207,27 +207,49 @@ def add_header_first_page(canvas, doc):
 def agregar_imagenes_desde_url(story, lista_urls):
     """
     Agrega imágenes a una historia de ReportLab a partir de una lista de URLs.
+    Incluye manejo de punteros de memoria y validación de imágenes.
     """
-    max_width = A4[0] - 4*cm 
+    max_width = A4[0] - 4 * cm 
+    max_height = A4[1] - 4 * cm 
 
-    max_height = A4[1] - 4 * cm # alto máximo dentro de la página
     for url in lista_urls:
         try:
-            response = requests.get(url)
+            response = requests.get(url, timeout=10) # Agrega timeout por seguridad
             response.raise_for_status()
+            
+            # Crear el objeto BytesIO
             img_bytes = BytesIO(response.content)
-            img_reader = ImageReader(img_bytes)
-            img_width, img_height = img_reader.getSize()
-            # Escalado proporcional
-            scale = min(max_width / img_width, max_height / img_height, 1.0)  # nunca agrandar, solo reducir
+            
+            # --- VALIDACIÓN Y OBTENCIÓN DE TAMAÑO ---
+            # Usamos PIL directamente para verificar que la imagen es válida
+            # y obtener sus dimensiones sin depender solo de ReportLab
+            try:
+                with PILImage.open(img_bytes) as pil_img:
+                    pil_img.verify() # Verifica integridad del archivo
+                    
+                # Reabrimos porque verify() puede consumir el archivo
+                img_bytes.seek(0) # <--- IMPORTANTE: Reiniciar puntero
+                with PILImage.open(img_bytes) as pil_img:
+                    img_width, img_height = pil_img.size
+            except Exception as e:
+                print(f"Imagen corrupta o inválida en {url}: {e}")
+                continue # Saltar esta imagen si está rota
 
+            # --- ESCALADO ---
+            scale = min(max_width / img_width, max_height / img_height, 1.0)
             new_width = img_width * scale
             new_height = img_height * scale
 
+            # --- PREPARACIÓN PARA REPORTLAB ---
+            # Reiniciar el puntero a 0 OBLIGATORIAMENTE antes de dárselo a ReportLab
+            img_bytes.seek(0) 
+
             story.append(PageBreak())
+            # Pasamos el objeto BytesIO con el puntero en 0
             story.append(Image(img_bytes, width=new_width, height=new_height))
+            
         except Exception as e:
-            print(f"Error al agregar imagen desde {url}: {e}")
+            print(f"Error general al procesar imagen {url}: {e}")
 
 def informe_pdf_profesional(numero_visita, tipo_trabajo, dataframe_visita, dataframe_trabajo, equipo):
     """

@@ -1304,7 +1304,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 new_location_I
                                             )
 
-                                            #Notificación de cambio de ubicación
+                                            
                                             new_location = odoo_client.message_post(
                                                 'maintenance.equipment',
                                                 number_equipment_I,

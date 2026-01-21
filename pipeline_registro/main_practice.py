@@ -126,7 +126,7 @@ def main():
             except ValueError:
                 print("Entrada inválida. Por favor ingrese números.")
                 continue
-            t 
+    
             try:
                 ordered_responses_1 = ordenar_respuestas(form_structure(CONNECTEAM_API_KEY), all_submission(CONNECTEAM_API_KEY))
             except Exception as e:
