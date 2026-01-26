@@ -13,6 +13,7 @@ from reportlab.lib.utils import ImageReader
 from datetime import datetime
 from io import BytesIO
 from config import LOGO_URL
+from PIL import Image as PILImage
 
 def crear_estilos_personalizados():
     """

@@ -313,7 +313,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 try:
                                     domain_filter_MC = [['equipment_id', '=', id_number_MC],
                                                     ['maintenance_type', '=', 'corrective'],
-                                                    ['x_studio_etiqueta_1', '=', 'Mantención Correctiva']]
+                                                    ['x_studio_tipo_de_trabajo', '=', 'Mantención Correctiva']]
 
                                     request_ids_MC = odoo_client.search(
                                         'maintenance.request',
@@ -831,14 +831,14 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                     f'La ubicación indicada en la OT ({df_con_datos[f"{i}.1 Punto de monitoreo"][0]}) es distinta a la registrada en Odoo ({location_MP}). Revisar OT.')
                                         
-                                    try:
-                                        new_location_MP = odoo_client.message_post(
-                                            'maintenance.equipment',
-                                            number_equipment_MP,
-                                            f"<p>La ubicación a cambiado.</p><p>Nueva ubicación: {punto}</p>"
-                                        )
-                                    except Exception as e:
-                                        print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')                                    
+                                    # try:
+                                    #     new_location_MP = odoo_client.message_post(
+                                    #         'maintenance.equipment',
+                                    #         number_equipment_MP,
+                                    #         f"<p>La ubicación a cambiado.</p><p>Nueva ubicación: {punto}</p>"
+                                    #     )
+                                    # except Exception as e:
+                                    #     print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')                                    
                                     
                                 else:
                                     try:
@@ -853,7 +853,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 try:
                                     domain_filter = [['equipment_id', '=', number_equipment_MP],
                                                     ['maintenance_type', '=', 'preventive'],
-                                                    ['x_studio_etiqueta_1', '=', 'Mantención Preventiva']]
+                                                    ['x_studio_tipo_de_trabajo', '=', 'Mantención Preventiva']]
 
                                     request_ids_MP = odoo_client.search(
                                         'maintenance.request',
@@ -897,6 +897,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 print(e)
 
                                         # Buscamos la solicitud mas cercana a la fecha de realización del trabajo o aquella que se encuentra "en proceso"
+
+                                        mp_gestionada = False
                                         if interest_requests_MP:
                                             # Interruptor abierto por defecto para la no exitencia de un caso en proceso
                                             interruptor_MP = True
@@ -945,6 +947,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 if update_stage_MP:
                                                     detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                                 f'Se registra con exito el mantenimiento preventivo programado: {name_MP}')
+                                                    
+                                                    mp_gestionada = True
                                                     
                                                     #Actualización de bitácora
                                                     try:
@@ -1071,7 +1075,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     continue                                             
                                             """  
                                         #Creación de MP        
-                                        else:
+                                        if not mp_gestionada:
 
                                             try:
                                                 fields_values_OT_MP = {
@@ -1120,8 +1124,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
     #Registro de automatización exitosa                                 4           
                                                 
-
-                                                
                                                 try:
                                                     #Buscamos el ID de la actividad existente para la OT_number
                                                     actividad_id_MP = odoo_client.search_read(
@@ -1161,6 +1163,84 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         f'El equipo/instrumento no cuenta con una solicitud de mantenimiento preventivo programada. Revisar OT | {nombre_archivo_MP}')
 
                                     else:
+
+                                        try:
+                                            fields_values_OT_MP = {
+                                                'name': f"Mantenimiento Preventivo | {tipo_MP} {modelo_MP}",
+                                                'equipment_id': number_equipment_MP, #Aquí debemos usar el ID númerico de la sonda
+                                                'stage_id': '5', # 5 Finalizado
+                                                'x_studio_tipo_de_trabajo': id_mantencion[id],
+                                                #'x_studio_etiqueta_1': id_mantencion[id],
+                                                'description': f"{dic_trabajo_MP[f'{i}.2.{equipo} MP | Observaciones']}",
+                                                'schedule_date': f"{dic_trabajo_MP[f'Fecha visita ']}",
+                                                'x_studio_informe': informe_codificado_MP,
+                                                
+
+                                            }
+                                            created_request_MP = odoo_client.create(
+                                                'maintenance.request',
+                                                fields_values_OT_MP
+                                            )
+
+                                            #Hacemos la escritura para que se actualice la fecha de cierre
+                                            update_stage_MP = {
+                                                'stage_id': 5,
+                                            }
+
+                                            update_stage_MP = odoo_client.write(
+                                                'maintenance.request',
+                                                [created_request_MP], 
+                                                update_stage_MP
+                                            )
+
+                                            update_close_date_MP = {
+                                                'close_date': fecha,
+                                                'x_studio_tcnico': operators[tecnico]
+                                            }
+
+                                            update_close_date_MP = odoo_client.write(
+                                                'maintenance.request',
+                                                [created_request_MP], 
+                                                update_close_date_MP
+                                            )
+
+                                            #Resgistro en resumen
+                                            print(id_mantencion[id])
+                                            detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id,
+                                                        f'Se crea con éxito el registro de mantenimiento {created_request_MP}')
+
+#Registro de automatización exitosa                                 4           
+                                            
+                                            try:
+                                                #Buscamos el ID de la actividad existente para la OT_number
+                                                actividad_id_MP = odoo_client.search_read(
+                                                    'mail.activity',
+                                                    [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_MP]],
+                                                    limit=1
+                                                )
+
+                                                #Actualizando actividad
+                                                try:
+                                                    actividad_number_MP = actividad_id_MP[0]['id']
+                                                    odoo_client.action_feedback(
+                                                        'mail.activity',
+                                                        [actividad_number_MP],
+                                                        f"Se ha completado desde API | Última ubicación: {punto}"
+                                                    )
+
+                                                except Exception as e:
+                                                    print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
+                                                    continue        
+                                                
+                                            except Exception as e:
+                                                print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
+                                                continue   
+                                    
+                                        except Exception as e:
+                                            print(f"Error al crear request MP para la OT-{dic_trabajo_MP['#']} en Odoo: {type(e)}")
+                                            print(traceback.format_exc())
+                                            continue
+
 
                                         try:
                                             sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MP}:/content', pdf_stream_MP, "application/pdf" )

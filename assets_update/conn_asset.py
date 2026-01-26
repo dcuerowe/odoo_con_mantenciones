@@ -3,12 +3,10 @@ import os
 import json
 import traceback
 
-<<<<<<< HEAD
-#Incluir el un ciclo for dentro de las funciones para que se actulice tambien el fomrulario de contratación
+#Incluir el un ciclo for dentro de las funciones para que se actulice tambien el fomrulario de contrastación
 
-=======
 # 12052552 Entrega de proyectos
->>>>>>> f69510cf7bab2a44fbb08883961b6818da075da4
+
 
 def add_new_options(API_KEY, assets_name):
 
@@ -37,8 +35,3 @@ def add_new_options(API_KEY, assets_name):
             print(f"Opciones agregadas exitosamente en Connecteam: ")
             for choice in assets_name:
                 print(f"   - {choice}")
-<<<<<<< HEAD
-            
-=======
-        
->>>>>>> f69510cf7bab2a44fbb08883961b6818da075da4
