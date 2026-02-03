@@ -215,10 +215,11 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
 
     # 172: Rodrigo
     # 147: Emir
+    # 158: Juan
     follow = odoo_client.message_subscribe(
         'x_inbox_integracion',
         [created_inbox],
-        [147, 172 ]
+        [147, 172, 158]
     )
 
     if id_origen == "M" or id_origen == "N":
