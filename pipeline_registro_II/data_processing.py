@@ -226,7 +226,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         info = odoo_client.message_post(
         'x_inbox_integracion',
         147,
-        f"<b>Caso a ser revisado:</b> {id_etiqueta}"),
+        f"<b>Caso a ser revisado:</b> {punto} | {id_tipo} | {id_etiqueta}"),
         message_type='notification'
         
 
