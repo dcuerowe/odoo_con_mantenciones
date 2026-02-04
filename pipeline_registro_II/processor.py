@@ -264,7 +264,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             punto = df_visita[f'{i}.1 Punto de monitoreo'].to_list()[0]
             ot = df_visita['#'].to_list()[0]
             fecha = df_visita['Fecha visita '].to_list()[0]
-            tecnico = df_visita['user'].to_list()[0]
+            tecnico = df_visita['user'].to_list()[0].strip()
             cliente = df_visita['Nombre del Cliente'].to_list()[0]
             
             
@@ -2726,7 +2726,33 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     
                                     id_punto = punto_odoo[0]['id']
 
-                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
+
+                                    #Validamos si el producto se encuntra instalado
+
+                                    domain = [
+                                        ('location_usage', '=', 'transit'),
+                                        ('location_dest_usage', '=', 'customer'),
+                                        ('lot_id.name', '=', serial_I),
+                                        # ('reference', '=', 'WH/OUT/00189'),
+                                        ('state', 'not in', ['done', 'cancel'])  # Filtra para que NO sea 'done' ni 'cancel'
+                                    ]
+
+                                    search_read = odoo_client.search_read(
+                                        'stock.move.line',
+                                        domain,
+                                        limit=1
+                                    )
+
+                                    print(search_read)
+
+                                    if search_read:
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
+                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}',
+                                                'M',
+                                                'Creación en espera',
+                                                'Nuevo')
+                                    else:
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}',
                                                 'M',
                                                 'S/N no encontrado',

@@ -156,6 +156,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         'Caudalímetro': [(4,7)], #Productivo: 7 | Test: 5
         'Caudalímetro Ultrasónico': [(4,4)], #Productivo: 4 | Test: 6
         'Sensor de Nivel': [(4,6)], #Productivo: 6 | Test: 8
+        'Sensor de nivel': [(4,6)], #Productivo: 6 | Test: 8
         'Caudalímetro Mecánico': [(4,5)] #Productivo: 5 | Test: 7
 
     }
@@ -225,9 +226,18 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
     if id_origen == "M" or id_origen == "N":
         info = odoo_client.message_post(
         'x_inbox_integracion',
-        147,
-        f"<b>Caso a ser revisado:</b> {punto} | {id_tipo} | {id_etiqueta}"),
-        message_type='notification'
+        created_inbox,
+        f"<b>Caso a ser revisado:</b> {id_tipo} | {id_etiqueta}",
+        message_type='notification',
+        partner_ids=[147])
+    
+    if id_etiqueta == "Creación en espera":
+        info = odoo_client.message_post(
+        'x_inbox_integracion',
+        created_inbox,
+        f"<b>Reconocer salida de inventario | Equipo instalado :</b> {id_tipo} | S/N: {serial}",
+        message_type='notification',
+        partner_ids=[158])
         
 
 

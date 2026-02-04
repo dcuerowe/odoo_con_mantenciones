@@ -51,12 +51,14 @@ class OdooClient:
     def write(self, model, ids, values):
         return self.execute_kw(model, 'write', [ids, values])
 
-    def message_post(self, model, id, body, message_type, subtype_xmlid='mail.mt_note', attachment_ids=None):
+    def message_post(self, model, id, body, message_type, subtype_xmlid='mail.mt_note', partner_ids=None, attachment_ids=None):
         kwargs = {
             'body': body,
             'message_type': message_type,
             'subtype_xmlid': subtype_xmlid
         }
+        if partner_ids:
+            kwargs['partner_ids'] = partner_ids
         if attachment_ids:
             kwargs['attachment_ids'] = attachment_ids
         return self.execute_kw(model, 'message_post', [id], kwargs)
