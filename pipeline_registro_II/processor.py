@@ -825,7 +825,29 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 
                                 id_punto = punto_odoo[0]['id']
 
-                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
+                                domain = [
+                                    ('location_usage', '=', 'transit'),
+                                    ('location_dest_usage', '=', 'customer'),
+                                    ('lot_id.name', '=', serial_MC),
+                                    # ('reference', '=', 'WH/OUT/00189'),
+                                    ('state', 'not in', ['done', 'cancel'])  # Filtra para que NO sea 'done' ni 'cancel'
+                                ]
+
+                                search_read = odoo_client.search_read(
+                                    'stock.move.line',
+                                    domain,
+                                    limit=1
+                                )
+
+
+                                if search_read:
+                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
+                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}',
+                                            'M',
+                                            'Creación en espera',
+                                            'Nuevo')
+                                else:
+                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
                                             f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}',
                                             'M',
                                             'S/N no encontrado',
@@ -1485,7 +1507,29 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 id_punto = punto_odoo[0]['id']
 
-                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
+                                domain = [
+                                    ('location_usage', '=', 'transit'),
+                                    ('location_dest_usage', '=', 'customer'),
+                                    ('lot_id.name', '=', serial_CF),
+                                    # ('reference', '=', 'WH/OUT/00189'),
+                                    ('state', 'not in', ['done', 'cancel'])  # Filtra para que NO sea 'done' ni 'cancel'
+                                ]
+
+                                search_read = odoo_client.search_read(
+                                    'stock.move.line',
+                                    domain,
+                                    limit=1
+                                )
+
+
+                                if search_read:
+                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
+                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}',
+                                            'M',
+                                            'Creación en espera',
+                                            'Nuevo')
+                                else:
+                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
                                             f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}',
                                             'M',
                                             'S/N no encontrado',
@@ -2079,8 +2123,30 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                # Id del punto dentro de Odoo
                                 id_punto = punto_odoo[0]['id']
 
-                                inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                            f'N° de serie no encontrado en Odoo. Revisar OT | {ot}',
+                                domain = [
+                                    ('location_usage', '=', 'transit'),
+                                    ('location_dest_usage', '=', 'customer'),
+                                    ('lot_id.name', '=', serial_CI),
+                                    # ('reference', '=', 'WH/OUT/00189'),
+                                    ('state', 'not in', ['done', 'cancel'])  # Filtra para que NO sea 'done' ni 'cancel'
+                                ]
+
+                                search_read = odoo_client.search_read(
+                                    'stock.move.line',
+                                    domain,
+                                    limit=1
+                                )
+
+
+                                if search_read:
+                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_CI, modelo_CI, serial_CI, id, odoo_client,
+                                            f'N° de serie no encontrado en Odoo. Revisar OT',
+                                            'M',
+                                            'Creación en espera',
+                                            'Nuevo')
+                                else:
+                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_CI, modelo_CI, serial_CI, id, odoo_client,
+                                            f'N° de serie no encontrado en Odoo. Revisar OT',
                                             'M',
                                             'S/N no encontrado',
                                             'Nuevo')
@@ -2088,7 +2154,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         except Exception as e:
                             print(f"Error al buscar equipo en base de Odoo MP: {e}")                
                     
-
                 
                 elif id == "I":
                     #Iteramos sobre los tipos de mantenimientos
@@ -2743,7 +2808,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         limit=1
                                     )
 
-                                    print(search_read)
 
                                     if search_read:
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
@@ -3445,13 +3509,34 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     )
 
                                     id_punto = punto_odoo[0]['id']
+                                    
+                                    domain = [
+                                        ('location_usage', '=', 'transit'),
+                                        ('location_dest_usage', '=', 'customer'),
+                                        ('lot_id.name', '=', serial_MP),
+                                        # ('reference', '=', 'WH/OUT/00189'),
+                                        ('state', 'not in', ['done', 'cancel'])  # Filtra para que NO sea 'done' ni 'cancel'
+                                    ]
 
-                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
+                                    search_read = odoo_client.search_read(
+                                        'stock.move.line',
+                                        domain,
+                                        limit=1
+                                    )
+
+
+                                    if search_read:
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
+                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}',
+                                                'M',
+                                                'Creación en espera',
+                                                'Nuevo')
+                                    else:
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}',
                                                 'M',
                                                 'S/N no encontrado',
                                                 'Nuevo')
-
                                     continue
                         
                             except Exception as e:
