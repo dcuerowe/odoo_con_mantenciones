@@ -235,7 +235,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         info = odoo_client.message_post(
         'x_inbox_integracion',
         created_inbox,
-        f"<b>Reconocer salida de inventario | Equipo instalado :</b> {id_tipo} | S/N: {serial}",
+        f"<b>Crear equipo en modulo de mantención | Dispositivo instalado:</b> {id_tipo} | S/N: {serial}",
         message_type='notification',
         partner_ids=[158])
         
