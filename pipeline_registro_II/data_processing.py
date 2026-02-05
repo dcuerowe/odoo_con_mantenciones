@@ -172,7 +172,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
     estados = {
         'Nuevo': 1,
         'En proceso': 2,
-        'Resuelto': 4
+        'Resuelto': 3
     }
 
     etiquetas = {
@@ -229,7 +229,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         created_inbox,
         f"<b>Caso a ser revisado:</b> {id_tipo} | {id_etiqueta}",
         message_type='notification',
-        partner_ids=[147])
+        partner_ids=[147, 172])
     
     if id_etiqueta == "Creación en espera":
         info = odoo_client.message_post(

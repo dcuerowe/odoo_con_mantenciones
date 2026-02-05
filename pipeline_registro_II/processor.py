@@ -609,7 +609,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     
 #                                                     # 'maintenance_team_id': 1, #Equipo de mantenimiento por defecto
 #                                                     # 'user_id':  #Asignando el técnico que creó la solicitud
-#                                                     #'x_studio_nmero_de_ot_1': f"{dic_trabajo_MC['#']}"
 #                                                 }
 #                                                 created_request_MC = odoo_client.create(
 #                                                     'maintenance.request',
@@ -1071,7 +1070,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     update_CF = {
                                                         'stage_id': 5,
                                                         'x_studio_informe': informe_codificado_CF,
-                                                        # 'x_studio_nmero_de_ot_1': f"{dic_trabajo_CF['#']}"
                                                     }
 
                                                     update_stage_CF = odoo_client.write(
@@ -2388,7 +2386,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         update_I = {
                                                             'stage_id': 5,
                                                             'x_studio_informe': informe_codificado_I,
-                                                            'x_studio_nmero_de_ot_1': f"{dic_trabajo_MP['#']}",
                                                             'description': punto
                                                         }
 
@@ -2951,7 +2948,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             )
 
                                             inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                    f'Equipo pasa de {location_MP} a [{proyecto}] {punto}). Validar cambio',
+                                                    f'Equipo pasa de {location_MP} a [{proyecto}] {punto}. Validar cambio',
                                                     'N',
                                                     'Cambio de ubicación',
                                                     'En proceso')
@@ -3046,7 +3043,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         update_MP = {
                                                             'stage_id': 5,
                                                             'x_studio_informe': informe_codificado_MP,
-                                                            'x_studio_nmero_de_ot_1': f"{dic_trabajo_MP['#']}"
                                                         }
 
                                                         update_stage_MP = odoo_client.write(
@@ -3383,7 +3379,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             elif operativo_MP == 'Sí':
                                                 try:
                                                     fields_values_OT_MP = {
-                                                        'name': f"Mantenimiento Correctivo | {tipo_MP} {modelo_MP}",
+                                                        'name': f"Mantenimiento Preventivo | {tipo_MP} {modelo_MP}",
                                                         'equipment_id': number_equipment_MP, #Aquí debemos usar el ID númerico de la sonda
                                                         'stage_id': '5', # 5 Finalizado
                                                         'description': f"{obs_MP}",
