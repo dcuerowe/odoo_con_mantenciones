@@ -51,7 +51,7 @@ class OdooClient:
     def write(self, model, ids, values):
         return self.execute_kw(model, 'write', [ids, values])
 
-    def message_post(self, model, id, body, message_type, subtype_xmlid='mail.mt_note', partner_ids=None, attachment_ids=None):
+    def message_post(self, model, id, body, message_type='comment', subtype_xmlid='mail.mt_note', partner_ids=None, attachment_ids=None):
         kwargs = {
             'body': body,
             'message_type': message_type,
