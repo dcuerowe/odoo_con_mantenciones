@@ -373,7 +373,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                         #trabajos sobre equipos que no estan con punto asignado
                                         inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, odoo_client,
-                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar',
+                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MC}',
                                             'N',
                                             'Cambio de ubicación',
                                             'En proceso')
@@ -397,7 +397,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         )
 
                                         inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, odoo_client,
-                                                f'Equipo pasa de {location_MC} a {punto}). Validar cambio',
+                                                f'Equipo pasa de {location_MC} a {punto}). Validar {nombre_archivo_MC}',
                                                 'N',
                                                 'Cambio de ubicación',
                                                 'En proceso')
@@ -951,7 +951,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                         #trabajos sobre equipos que no estan con punto asignado
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
-                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar',
+                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_CF}',
                                             'N',
                                             'Cambio de ubicación',
                                             'En proceso')
@@ -962,7 +962,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 elif location_CF != f'[{proyecto}] {punto}':
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id, 
-                                                f'Equipo pasa de {location_CF} a [{proyecto}] {punto}). Validar cambio')
+                                                f'Equipo pasa de {location_CF} a [{proyecto}] {punto}). Validar {nombre_archivo_CF}')
                                     
                                     #Notificación por cambio de ubicación
 
@@ -975,7 +975,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         )
 
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
-                                                f'Equipo pasa de {location_CF} a [{proyecto}] {punto}). Validar cambio',
+                                                f'Equipo pasa de {location_CF} a [{proyecto}] {punto}). Validar {nombre_archivo_CF}',
                                                 'N',
                                                 'Cambio de ubicación',
                                                 'En proceso')
@@ -1618,7 +1618,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                         #trabajos sobre equipos que no estan con punto asignado
                                         inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar',
+                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_CI}',
                                             'N',
                                             'Cambio de ubicación',
                                             'En proceso')
@@ -1629,7 +1629,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 elif location_CI != f'[{proyecto}] {punto}':
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, 
-                                                f'Equipo pasa de {location_CI} a {punto}). Validar cambio')
+                                                f'Equipo pasa de {location_CI} a {punto}). Validar {nombre_archivo_CI}')
                                     
                                     #Notificación por cambio de ubicación
 
@@ -1642,7 +1642,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         )
 
                                         inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                f'Equipo pasa de {location_CI} a {punto}). Validar cambio',
+                                                f'Equipo pasa de {location_CI} a {punto}). Validar {nombre_archivo_CI}',
                                                 'N',
                                                 'Cambio de ubicación',
                                                 'En proceso')
@@ -2316,7 +2316,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         f'El dispositivo ahora se encuentra en [{proyecto}] {punto}')
 
                                             inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
-                                                    f'Equipo pasa de {location_I} a [{proyecto}] {punto}). Validar cambio',
+                                                    f'Equipo pasa de {location_I} a [{proyecto}] {punto}). Validar cambio {nombre_archivo_I}',
                                                     'N',
                                                     'Cambio de ubicación',
                                                     'En proceso')
@@ -2924,7 +2924,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                             # trabajos sobre equipos que no estan con punto asignado
                                             inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                f'Equipo sin evento de instalación We en el punto {punto}. Validar',
+                                                f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MP}',
                                                 'N',
                                                 'Cambio de ubicación',
                                                 'En proceso')
@@ -2935,7 +2935,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                     elif location_MP != f'[{proyecto}] {punto}':
                                         detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
-                                                    f'Equipo pasa de {location_MP} a [{proyecto}] {punto}). Validar cambio')
+                                                    f'Equipo pasa de {location_MP} a [{proyecto}] {punto}). Validar {nombre_archivo_MP}')
                                         
                                         # Notificación por cambio de ubicación
 
@@ -2948,7 +2948,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             )
 
                                             inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                    f'Equipo pasa de {location_MP} a [{proyecto}] {punto}. Validar cambio',
+                                                    f'Equipo pasa de {location_MP} a [{proyecto}] {punto}. Validar {nombre_archivo_MP}',
                                                     'N',
                                                     'Cambio de ubicación',
                                                     'En proceso')
