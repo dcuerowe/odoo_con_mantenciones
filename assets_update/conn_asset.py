@@ -10,13 +10,12 @@ import traceback
 
 def add_new_options(API_KEY, assets_name):
 
-    id_question = ["9d7a30fa-d3ee-c639-7b6f-60be1103c7cc", "7d421fe8-92c8-ddd0-75f2-23ecad62aff1", "5c4c3d6a-933d-c89d-89c1-21b4e0034c23", 
-                   "f1de4866-466f-58b9-2b65-d8694d6c71f7", "2b81c480-30a1-25a3-a65d-507f9ba0f441", "a00e9070-96de-15cc-12fd-b90b305f77ff"]
+    id_question = ['71c3abbd-4fa6-1168-07ce-c6f789faccab', "9d7a30fa-d3ee-c639-7b6f-60be1103c7cc", "29720501-2fe2-1163-375a-87ee17edf252", "da9ff9dd-2773-824a-fbe3-70d5fa33a8fd", "29720501-2fe2-1163-375a-87ee17edf252"]
                    
 
     for id in id_question:
 
-        url = f"https://api.connecteam.com/forms/v1/forms/12914411/questions/{id}"
+        url = f"https://api.connecteam.com/forms/v1/forms/15540738/questions/{id}"
 
         data = []
         for name in assets_name:
