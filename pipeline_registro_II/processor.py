@@ -409,7 +409,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 try:
                                     domain_filter_MC = [['equipment_id', '=', id_number_MC],
                                                     ['maintenance_type', '=', 'corrective'],
-                                                    ['x_studio_tipo_trabajo', '=', 'Mantención Correctiva']] #Productivo: x_studio_tipo_trabajo
+                                                    ['x_studio_tipo_de_trabajo', '=', 'Mantención Correctiva']] #Productivo: x_studio_tipo_trabajo
 
                                     request_ids_MC = odoo_client.search(
                                         'maintenance.request',
@@ -988,7 +988,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 try:
                                     domain_filter = [['equipment_id', '=', number_equipment_CF],
                                                     ['maintenance_type', '=', 'preventive'],
-                                                    ['x_studio_tipo_trabajo', '=', 'Configuración']] #Productivo: x_studio_tipo_trabajo
+                                                    ['x_studio_tipo_de_trabajo', '=', 'Configuración']] #Productivo: x_studio_tipo_trabajo
 
                                     request_ids_CF = odoo_client.search(
                                         'maintenance.request',
@@ -1656,7 +1656,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 try:
                                     domain_filter = [['equipment_id', '=', number_equipment_CI],
                                                     ['maintenance_type', '=', 'preventive'],
-                                                    ['x_studio_tipo_trabajo', '=', 'Calibración']] #Productivo: x_studio_tipo_trabajo
+                                                    ['x_studio_tipo_de_trabajo', '=', 'Calibración']] #Productivo: x_studio_tipo_trabajo
 
                                     request_ids_CI = odoo_client.search(
                                         'maintenance.request',
@@ -2333,7 +2333,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     try:
                                         domain_filter = [['equipment_id', '=', number_equipment_I],
                                                         ['maintenance_type', '=', False],
-                                                        ['x_studio_tipo_trabajo', '=', 'Instalación']] #Productivo: x_studio_tipo_trabajo
+                                                        ['x_studio_tipo_de_trabajo', '=', 'Instalación']] #Productivo: x_studio_tipo_trabajo
 
                                         request_ids_I = odoo_client.search(
                                             'maintenance.request',
@@ -2963,7 +2963,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     try:
                                         domain_filter = [['equipment_id', '=', number_equipment_MP],
                                                         ['maintenance_type', '=', 'preventive'],
-                                                        ['x_studio_tipo_trabajo', '=', 'Mantención Preventiva']] #Productivo: x_studio_tipo_trabajo
+                                                        ['x_studio_tipo_de_trabajo', '=', 'Mantención Preventiva']] #Productivo: x_studio_tipo_trabajo
 
                                         request_ids_MP = odoo_client.search(
                                             'maintenance.request',
