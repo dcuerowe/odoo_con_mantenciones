@@ -824,6 +824,18 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 
                                 id_punto = punto_odoo[0]['id']
 
+
+                                if not id_punto:
+                                    id_punto = False
+                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam')
+
+                                    inbox(ot, operators[tecnico], fecha, False, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                            'M',
+                                            'Punto no existe en sistema',
+                                            'Nuevo')
+
                                 domain = [
                                     ('location_usage', '=', 'transit'),
                                     ('location_dest_usage', '=', 'customer'),
@@ -1505,6 +1517,20 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 id_punto = punto_odoo[0]['id']
 
+                                if not id_punto:
+                                    id_punto = False
+                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id, 
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam')
+
+                                    inbox(ot, operators[tecnico], fecha, False, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                            'M',
+                                            'Punto no existe en sistema',
+                                            'Nuevo')
+
+
+
+
                                 domain = [
                                     ('location_usage', '=', 'transit'),
                                     ('location_dest_usage', '=', 'customer'),
@@ -2120,6 +2146,18 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 
                                # Id del punto dentro de Odoo
                                 id_punto = punto_odoo[0]['id']
+
+                                if not id_punto:
+                                    id_punto = False
+                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CI, modelo_CI, serial_CI, id, 
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam')
+
+                                    inbox(ot, operators[tecnico], fecha, False, tipo_CI, modelo_CI, serial_CI, id, odoo_client,
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                            'M',
+                                            'Punto no existe en sistema',
+                                            'Nuevo')
+
 
                                 domain = [
                                     ('location_usage', '=', 'transit'),
@@ -2788,6 +2826,16 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     
                                     id_punto = punto_odoo[0]['id']
 
+                                    if not id_punto:
+                                        id_punto = False
+                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam')
+
+                                        inbox(ot, operators[tecnico], fecha, False, tipo_I, modelo_I, serial_I, id, odoo_client,
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                                'M',
+                                                'Punto no existe en sistema',
+                                                'Nuevo')
 
                                     #Validamos si el producto se encuntra instalado
 
@@ -3505,6 +3553,18 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     )
 
                                     id_punto = punto_odoo[0]['id']
+
+                                    if not id_punto:
+                                        id_punto = False
+                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam')
+
+                                        inbox(ot, operators[tecnico], fecha, False, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                                'M',
+                                                'Punto no existe en sistema',
+                                                'Nuevo')
+                                        
                                     
                                     domain = [
                                         ('location_usage', '=', 'transit'),
