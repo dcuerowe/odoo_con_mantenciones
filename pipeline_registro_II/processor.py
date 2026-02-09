@@ -821,11 +821,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     limit=1
                                 )
                                 
-                                
-                                id_punto = punto_odoo[0]['id']
-
-
-                                if not id_punto:
+                                if not punto_odoo:
                                     id_punto = False
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
                                             f'{punto} no se encuentra listado en Odoo y Connecteam')
@@ -835,6 +831,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo')
+                                
+                                else:
+                                    id_punto = punto_odoo[0]['id']
+
+
 
                                 domain = [
                                     ('location_usage', '=', 'transit'),
@@ -1515,9 +1516,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     limit=1
                                 )
 
-                                id_punto = punto_odoo[0]['id']
-
-                                if not id_punto:
+                                if not punto_odoo:
                                     id_punto = False
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id, 
                                             f'{punto} no se encuentra listado en Odoo y Connecteam')
@@ -1527,6 +1526,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo')
+                                else:
+                                    id_punto = punto_odoo[0]['id']
+
 
 
 
@@ -2144,10 +2146,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     limit=1
                                 )
                                 
-                               # Id del punto dentro de Odoo
-                                id_punto = punto_odoo[0]['id']
-
-                                if not id_punto:
+                                if not punto_odoo:
                                     id_punto = False
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CI, modelo_CI, serial_CI, id, 
                                             f'{punto} no se encuentra listado en Odoo y Connecteam')
@@ -2157,6 +2156,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo')
+                               # Id del punto dentro de Odoo
+
+                                else:
+                                    id_punto = punto_odoo[0]['id']
 
 
                                 domain = [
@@ -2823,10 +2826,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         limit=1
                                     )
                                     
-                                    
-                                    id_punto = punto_odoo[0]['id']
-
-                                    if not id_punto:
+                                    if not punto_odoo:
                                         id_punto = False
                                         detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam')
@@ -2836,6 +2836,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo')
+                                    
+                                    else:
+                                        id_punto = punto_odoo[0]['id']
+
 
                                     #Validamos si el producto se encuntra instalado
 
@@ -3545,16 +3549,13 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}')
                                     
-
                                     punto_odoo = odoo_client.search_read(
                                         'x_maintenance_location',
                                         [['x_name', '=', f'[{proyecto}] {punto}']],
                                         limit=1
                                     )
-
-                                    id_punto = punto_odoo[0]['id']
-
-                                    if not id_punto:
+                                    
+                                    if not punto_odoo:
                                         id_punto = False
                                         detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam')
@@ -3564,7 +3565,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo')
-                                        
+
+                                    else: 
+                                        id_punto = punto_odoo[0]['id']
+
                                     
                                     domain = [
                                         ('location_usage', '=', 'transit'),
@@ -3588,13 +3592,15 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 'Creación en espera',
                                                 'Nuevo')
                                     else:
+                                    
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}',
                                                 'M',
                                                 'S/N no encontrado',
                                                 'Nuevo')
-                                    continue
-                        
+                                        continue
+                            
+                                    
                             except Exception as e:
                                     print(f"Error al buscar equipo en base de Odoo MP: {e}")
                                     traceback.print_exc()
