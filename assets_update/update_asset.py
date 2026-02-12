@@ -1,6 +1,6 @@
 import xmlrpc.client
 import pandas as pd
-import load_dotenv
+from dotenv import load_dotenv
 import os
 import re
 import ssl
