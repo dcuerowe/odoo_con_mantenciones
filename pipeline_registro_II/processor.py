@@ -579,7 +579,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         odoo_client.action_feedback(
                                                             'mail.activity',
                                                             [actividad_number_MC],
-                                                            f"<p><b>Se ha completado desde API</b></p><p>Última ubicación: {punto}</p>"
+                                                            f"Se ha completado desde API"
                                                         )
 
                                                     except Exception as e:
@@ -738,7 +738,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                 odoo_client.action_feedback(
                                                                     'mail.activity',
                                                                     [actividad_number_MC],
-                                                                    f"<p><b>Se ha completado desde API</b></p><p>Última ubicación: {punto}</p>"
+                                                                    f"Se ha completado desde API"
                                                                 )
                                                                 
                                                             except Exception as e:
@@ -2115,7 +2115,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         odoo_client.action_feedback(
                                                             'mail.activity',
                                                             [actividad_number_CI],
-                                                            f"Se ha completado desde API | Última ubicación: {punto}"
+                                                            f"Se ha completado desde API"
                                                         )
 
                                                     except Exception as e:
@@ -3139,7 +3139,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                         odoo_client.action_feedback(
                                                                             'mail.activity',
                                                                             [actividad_number_MP],
-                                                                            f"<p><b>Se ha completado desde API</b></p><p>Última ubicación: {punto}</p>"
+                                                                            f"Se ha completado desde API"
                                                                         )
                                                                         
                                                                     except Exception as e:
@@ -3336,7 +3336,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                 odoo_client.action_feedback(
                                                                     'mail.activity',
                                                                     [actividad_number_MP],
-                                                                    f"<p><b>Se ha completado desde API</b></p><p>Última ubicación: {punto}</p>"
+                                                                    f"Se ha completado desde API"
                                                                 )
 
                                                             except Exception as e:
@@ -3502,7 +3502,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             odoo_client.action_feedback(
                                                                 'mail.activity',
                                                                 [actividad_number_MP],
-                                                                f"<p><b>Se ha completado desde API</b></p><p>Última ubicación: {punto}</p>"
+                                                                f"Se ha completado desde API"
                                                             )
 
                                                         except Exception as e:
