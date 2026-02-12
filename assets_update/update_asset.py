@@ -10,7 +10,7 @@ from conn_asset import add_new_options
 from odoo_asset import new_asset
 from ticket_asset import add_choices_to_field
 
-load_dotenv.load_dotenv()
+load_dotenv()
 
 #Credenciales Freshdesk
 api_key_fresh = os.getenv('Fresh_API_KEY')
