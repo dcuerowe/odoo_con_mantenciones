@@ -10,7 +10,7 @@ import traceback
 
 def add_new_options(API_KEY, assets_name):
 
-    id_question = ['71c3abbd-4fa6-1168-07ce-c6f789faccab', "9d7a30fa-d3ee-c639-7b6f-60be1103c7cc", "29720501-2fe2-1163-375a-87ee17edf252", "da9ff9dd-2773-824a-fbe3-70d5fa33a8fd", "29720501-2fe2-1163-375a-87ee17edf252"]
+    id_question = ["9d7a30fa-d3ee-c639-7b6f-60be1103c7cc","9d7a30fa-d3ee-c639-7b6f-60be1103c7cc", "da9ff9dd-2773-824a-fbe3-70d5fa33a8fd","e9693a06-d584-29e9-cf4a-07ffbe32f506"]
                    
 
     for id in id_question:
