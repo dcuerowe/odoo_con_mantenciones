@@ -22,7 +22,7 @@ def job():
     print('\n-> Detección automática de OTs en Connecteam')
     
     # Initialize Clients
-    sp = Sharepoint()
+    #sp = Sharepoint()
     odoo = OdooClient(ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD)
     try:
         odoo.authenticate()
@@ -60,7 +60,7 @@ def job():
             print(f"Se encontraron {len(nuevas_entradas)} nuevas entradas. Procesando...")
 
             # Procesa las nuevas entradas encontradas
-            process_entrys(nuevas_entradas, CONNECTEAM_API_KEY, resumen, exito, odoo, sp)
+            process_entrys(nuevas_entradas, CONNECTEAM_API_KEY, resumen, exito, odoo) #sp al final del argumento
 
             # Convierte los diccionarios a DataFrames para facilitar el manejo de datos
             df_resumen = pd.DataFrame(resumen)
@@ -72,8 +72,8 @@ def job():
 
             try:
                 # Envía los datos filtrados a SharePoint, actualizando los archivos correspondientes
-                send_data(df_manual_i, 'Instalaciones', 'resumen_instalación', sp)
-                send_data(df_manual_m, 'Mantenciones', 'resumen_mantenciones', sp)
+                # send_data(df_manual_i, 'Instalaciones', 'resumen_instalación', sp)
+                # send_data(df_manual_m, 'Mantenciones', 'resumen_mantenciones', sp)
 
                 # Muestra por consola los resúmenes de operaciones manuales y exitosas
                 print("\nResumen de operaciones para tratamiento manual:")

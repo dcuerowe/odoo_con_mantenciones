@@ -10,7 +10,7 @@ from config import SHAREPOINT_UPLOAD_BASE_URL, SHAREPOINT_UPLOAD_INSTALL_BASE_UR
 
 
 
-def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sharepoint_client):
+def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sharepoint_client=None):
 
     for i, r in ordered_responses.iterrows():
 
@@ -296,7 +296,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         operativo_MC = dic_trabajo_MC[f"{i}.2.{equipo} MC | ¿Equipo operativo tras trabajos?"]
                         obs_MC = dic_trabajo_MC[f'{i}.2.{equipo} MC | Observación']
 
-                        print(dic_trabajo_MC)
                         
                         #Asegurando que el serial pase de float a int
                         for llave, valor in dic_trabajo_MC.items():
@@ -376,7 +375,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MC}',
                                             'N',
                                             'Cambio de ubicación',
-                                            'En proceso')
+                                            'En proceso',
+                                            nombre_archivo_MC,
+                                            informe_codificado_MC)
                                     
                                     except Exception as e:
                                         print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')
@@ -400,7 +401,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'Equipo pasa de {location_MC} a {punto}). Validar {nombre_archivo_MC}',
                                                 'N',
                                                 'Cambio de ubicación',
-                                                'En proceso')
+                                                'En proceso',
+                                                nombre_archivo_MC,
+                                                informe_codificado_MC
+                                                )
                                                 
 
                                     except Exception as e:
@@ -806,10 +810,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     continue
                                 
                             else:
-                                try:
-                                    sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MC}:/content', pdf_stream_MC, "application/pdf" )
-                                except Exception as e:
-                                    print(f"Error al subir el informe al Sharepoint: {e}")
+                                # try:
+                                #     sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MC}:/content', pdf_stream_MC, "application/pdf" )
+                                # except Exception as e:
+                                #     print(f"Error al subir el informe al Sharepoint: {e}")
 
                                 detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
                                             f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}')
@@ -857,13 +861,17 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}',
                                             'M',
                                             'Creación en espera',
-                                            'Nuevo')
+                                            'Nuevo',
+                                            nombre_archivo_MC,
+                                            informe_codificado_MC)
                                 else:
                                     inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
                                             f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}',
                                             'M',
                                             'S/N no encontrado',
-                                            'Nuevo')
+                                            'Nuevo',
+                                            nombre_archivo_MC,
+                                            informe_codificado_MC)
 
                                 
                         except Exception as e:
@@ -967,7 +975,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_CF}',
                                             'N',
                                             'Cambio de ubicación',
-                                            'En proceso')
+                                            'En proceso',
+                                            nombre_archivo_CF,
+                                            informe_codificado_CF)
                                     
                                     except Exception as e:
                                         print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')
@@ -991,7 +1001,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'Equipo pasa de {location_CF} a [{proyecto}] {punto}). Validar {nombre_archivo_CF}',
                                                 'N',
                                                 'Cambio de ubicación',
-                                                'En proceso')
+                                                'En proceso',
+                                                nombre_archivo_CF,
+                                                informe_codificado_CF)
                                                 
 
                                     except Exception as e:
@@ -1501,10 +1513,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                             else:   
 
-                                try:
-                                    sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_CF}:/content', pdf_stream_CF, "application/pdf" )
-                                except Exception as e:
-                                    print(f"Error al subir el informe al Sharepoint: {e}")
+                                # try:
+                                #     sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_CF}:/content', pdf_stream_CF, "application/pdf" )
+                                # except Exception as e:
+                                #     print(f"Error al subir el informe al Sharepoint: {e}")
 
                                 detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id, 
                                             f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}')
@@ -1553,13 +1565,17 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}',
                                             'M',
                                             'Creación en espera',
-                                            'Nuevo')
+                                            'Nuevo',
+                                            nombre_archivo_CF,
+                                            informe_codificado_CF)
                                 else:
                                     inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
                                             f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}',
                                             'M',
                                             'S/N no encontrado',
-                                            'Nuevo')
+                                            'Nuevo',
+                                            nombre_archivo_CF,
+                                            informe_codificado_CF)
 
                                 continue
                     
@@ -1670,7 +1686,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         )
 
                                         inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                f'Equipo pasa de {location_CI} a {punto}). Validar {nombre_archivo_CI}',
+                                                f'Equipo pasa de {location_CI} a {punto}). Validar',
                                                 'N',
                                                 'Cambio de ubicación',
                                                 'En proceso')
@@ -2360,7 +2376,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     f'Equipo pasa de {location_I} a [{proyecto}] {punto}). Validar cambio {nombre_archivo_I}',
                                                     'N',
                                                     'Cambio de ubicación',
-                                                    'En proceso')
+                                                    'En proceso',
+                                                    nombre_archivo_I,
+                                                    informe_codificado_I)
 
 
                                             
@@ -2811,10 +2829,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 else:
                                     
-                                    try:
-                                            sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_INSTALL_BASE_URL}/{nombre_archivo_I}:/content', pdf_stream_I, "application/pdf" )
-                                    except Exception as e:
-                                            print(f"Error al subir el informe al Sharepoint: {e}")
+                                    # try:
+                                    #         sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_INSTALL_BASE_URL}/{nombre_archivo_I}:/content', pdf_stream_I, "application/pdf" )
+                                    # except Exception as e:
+                                    #         print(f"Error al subir el informe al Sharepoint: {e}")
 
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}')
@@ -2863,13 +2881,17 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}',
                                                 'M',
                                                 'Creación en espera',
-                                                'Nuevo')
+                                                'Nuevo',
+                                                nombre_archivo_I,
+                                                informe_codificado_I)
                                     else:
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}',
                                                 'M',
                                                 'S/N no encontrado',
-                                                'Nuevo')
+                                                'Nuevo',
+                                                nombre_archivo_I,
+                                                informe_codificado_I)
 
                             except Exception as e:
                                 print(f"Error al buscar equipo en base de Odoo I: {e}")
@@ -2979,7 +3001,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MP}',
                                                 'N',
                                                 'Cambio de ubicación',
-                                                'En proceso')
+                                                'En proceso',
+                                                nombre_archivo_MP,
+                                                informe_codificado_MP)
                                         
                                         except Exception as e:
                                             print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')
@@ -3003,7 +3027,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     f'Equipo pasa de {location_MP} a [{proyecto}] {punto}. Validar {nombre_archivo_MP}',
                                                     'N',
                                                     'Cambio de ubicación',
-                                                    'En proceso')
+                                                    'En proceso',
+                                                    nombre_archivo_MP,
+                                                    informe_codificado_MP)
                                                     
  
                                         except Exception as e:
@@ -3354,10 +3380,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         continue
                                                 
                                                 # Sin plan de mantenimiento
-                                                try:
-                                                    sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MP}:/content', pdf_stream_MP, "application/pdf" )
-                                                except Exception as e:
-                                                    print(f"Error al subir el informe al Sharepoint: {e}")
+                                                # try:
+                                                #     sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MP}:/content', pdf_stream_MP, "application/pdf" )
+                                                # except Exception as e:
+                                                #     print(f"Error al subir el informe al Sharepoint: {e}")
                                                     
                                                 detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                             f'Equipo sin plan de mantenimiennto en sistema')
@@ -3520,10 +3546,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     continue
 
 
-                                            try:
-                                                sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MP}:/content', pdf_stream_MP, "application/pdf" )
-                                            except Exception as e:
-                                                print(f"Error al subir el informe al Sharepoint: {e}")
+                                            # try:
+                                            #     sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MP}:/content', pdf_stream_MP, "application/pdf" )
+                                            # except Exception as e:
+                                            #     print(f"Error al subir el informe al Sharepoint: {e}")
                                                 
                                             detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                         f'Equipo sin plan de mantenimiennto en sistema')
@@ -3541,10 +3567,10 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 else:   
 
-                                    try:
-                                        sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MP}:/content', pdf_stream_MP, "application/pdf" )
-                                    except Exception as e:
-                                        print(f"Error al subir el informe al Sharepoint: {e}")
+                                    # try:
+                                    #     sharepoint_client.upload_file(f'{SHAREPOINT_UPLOAD_BASE_URL}/{nombre_archivo_MP}:/content', pdf_stream_MP, "application/pdf" )
+                                    # except Exception as e:
+                                    #     print(f"Error al subir el informe al Sharepoint: {e}")
 
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}')
@@ -3590,14 +3616,18 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}',
                                                 'M',
                                                 'Creación en espera',
-                                                'Nuevo')
+                                                'Nuevo',
+                                                nombre_archivo_MP,
+                                                informe_codificado_MP)
                                     else:
                                     
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
                                                 f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}',
                                                 'M',
                                                 'S/N no encontrado',
-                                                'Nuevo')
+                                                'Nuevo',
+                                                nombre_archivo_MP,
+                                                informe_codificado_MP)
                                         continue
                             
                                     

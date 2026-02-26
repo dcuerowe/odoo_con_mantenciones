@@ -137,7 +137,7 @@ def detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo, modelo, seria
     resumen['Equipo/instrumento'].append(tipo)
     resumen['Mensaje'].append(mensaje)
 
-def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, odoo_client, mensaje, id_origen, id_etiqueta, etapa):
+def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, odoo_client, mensaje, id_origen, id_etiqueta, etapa, informe_name = False, informe_data = False):
 
     origen = {
         'A' : [(4,2)],
@@ -223,13 +223,31 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         [147, 172, 158]
     )
 
+    if informe_name != False and informe_data != False:
+        informe = odoo_client.create(
+        "ir.attachment",
+            {
+                "name": informe_name,
+                "datas": informe_data,
+                "res_model": 'x_inbox_integracion',
+                "res_id": created_inbox,
+                "mimetype": "application/pdf",
+            }
+        )
+    
+    else:
+        informe = False
+
+
+
     if id_origen == "M" or id_origen == "N":
         info = odoo_client.message_post(
         'x_inbox_integracion',
         created_inbox,
         f"<b>Caso a ser revisado:</b> {id_tipo} | {id_etiqueta}",
         message_type='notification',
-        partner_ids=[147, 172])
+        partner_ids=[147, 172],
+        attachment_ids=[informe] if informe else [])
     
     if id_etiqueta == "Creación en espera":
         info = odoo_client.message_post(
@@ -237,7 +255,9 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         created_inbox,
         f"<b>Crear equipo en modulo de mantención | Dispositivo instalado:</b> {id_tipo} | S/N: {serial}",
         message_type='notification',
-        partner_ids=[158])
+        partner_ids=[158],
+        attachment_ids=[informe] if informe else [])
+        
         
 
 
@@ -292,7 +312,6 @@ def check_new_sub(ordered_responses):
             
             # SE CAMBIA LA FORMA DE FILTRADO
             new_entries = ordered_responses[ordered_responses["#"].isin(new_ids)]
-
 
             # Registrar en la base de datos el ID de las nuevas OT encontradas
             for entry in new_ids:
