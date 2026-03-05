@@ -45,46 +45,46 @@ def job():
 
         if isinstance(nuevas_entradas, pd.DataFrame) and not nuevas_entradas.empty:
             
-            # Inicializa los diccionarios para resumen y éxito de operaciones
-            resumen = {
-                'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
-                'Punto de monitoreo': [], 'Equipo/instrumento': [], 'Modelo': [],
-                'N° serie': [], 'Tipo': [], 'Mensaje': []
-            }
-            exito = {
-                'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
-                'Punto de monitoreo': [], 'Equipo/instrumento': [], 'Modelo': [],
-                'N° serie': [], 'Tipo': [], 'Mensaje': []
-            }
+            # # Inicializa los diccionarios para resumen y éxito de operaciones
+            # resumen = {
+            #     'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
+            #     'Punto de monitoreo': [], 'Equipo/instrumento': [], 'Modelo': [],
+            #     'N° serie': [], 'Tipo': [], 'Mensaje': []
+            # }
+            # exito = {
+            #     'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
+            #     'Punto de monitoreo': [], 'Equipo/instrumento': [], 'Modelo': [],
+            #     'N° serie': [], 'Tipo': [], 'Mensaje': []
+            # }
 
             print(f"Se encontraron {len(nuevas_entradas)} nuevas entradas. Procesando...")
 
             # Procesa las nuevas entradas encontradas
             process_entrys(nuevas_entradas, CONNECTEAM_API_KEY, resumen, exito, odoo) #sp al final del argumento
 
-            # Convierte los diccionarios a DataFrames para facilitar el manejo de datos
-            df_resumen = pd.DataFrame(resumen)
-            df_exito = pd.DataFrame(exito)
+            # # Convierte los diccionarios a DataFrames para facilitar el manejo de datos
+            # df_resumen = pd.DataFrame(resumen)
+            # df_exito = pd.DataFrame(exito)
 
-            # Filtra las operaciones que requieren tratamiento manual por tipo de trabajo
-            df_manual_m = df_resumen[(df_resumen['Tipo'] == 'MC') | (df_resumen['Tipo'] == 'MP')]
-            df_manual_i = df_resumen[df_resumen['Tipo'] == 'I']
+            # # Filtra las operaciones que requieren tratamiento manual por tipo de trabajo
+            # df_manual_m = df_resumen[(df_resumen['Tipo'] == 'MC') | (df_resumen['Tipo'] == 'MP')]
+            # df_manual_i = df_resumen[df_resumen['Tipo'] == 'I']
 
-            try:
-                # Envía los datos filtrados a SharePoint, actualizando los archivos correspondientes
-                # send_data(df_manual_i, 'Instalaciones', 'resumen_instalación', sp)
-                # send_data(df_manual_m, 'Mantenciones', 'resumen_mantenciones', sp)
+            # try:
+            #     # Envía los datos filtrados a SharePoint, actualizando los archivos correspondientes
+            #     # send_data(df_manual_i, 'Instalaciones', 'resumen_instalación', sp)
+            #     # send_data(df_manual_m, 'Mantenciones', 'resumen_mantenciones', sp)
 
-                # Muestra por consola los resúmenes de operaciones manuales y exitosas
-                print("\nResumen de operaciones para tratamiento manual:")
-                print(tabulate.tabulate(df_resumen, headers='keys', tablefmt='grid'))
+            #     # Muestra por consola los resúmenes de operaciones manuales y exitosas
+            #     # print("\nResumen de operaciones para tratamiento manual:")
+            #     # print(tabulate.tabulate(df_resumen, headers='keys', tablefmt='grid'))
 
-                print("\nResumen de operaciones exitosas:")
-                print(tabulate.tabulate(df_exito, headers='keys', tablefmt='grid'))
+            #     # print("\nResumen de operaciones exitosas:")
+            #     # print(tabulate.tabulate(df_exito, headers='keys', tablefmt='grid'))
 
-            except Exception as e:
-                # Si ocurre un error al actualizar SharePoint, lo muestra
-                print(f"Error al actualizar sharepoint: {e}")
+            # except Exception as e:
+            #     # Si ocurre un error al actualizar SharePoint, lo muestra
+            #     print(f"Error al actualizar sharepoint: {e}")
 
     except Exception as e:
         # Si ocurre un error durante la ejecución de la tarea, lo muestra
