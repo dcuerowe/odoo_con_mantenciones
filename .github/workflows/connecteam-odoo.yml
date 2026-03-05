@@ -1,71 +1,71 @@
-name: Sincronizar 
+  name: Sincronizar 
 
-on: 
-  schedule:
-    - cron: '0 11 * * 1-6'  # Ejecutar de lunes a viernes a las 9:00 AM UTC
-  workflow_dispatch:
+  on: 
+    schedule:
+      - cron: '0 11 * * 1-6'  # Ejecutar de lunes a viernes a las 9:00 AM UTC
+    workflow_dispatch:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      permissions:
+        contents: write
 
-    steps: 
-      #Descarga la version mas reciente del repositorio
-      - name: Checkout del código
-        uses: actions/checkout@v4
+      steps: 
+        #Descarga la version mas reciente del repositorio
+        - name: Checkout del código
+          uses: actions/checkout@v4
 
-      # Configura python 3.11.9
-      - name: Configuracion de python 3.11.9
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11.9'
-          cache: 'pip'
+        # Configura python 3.11.9
+        - name: Configuracion de python 3.11.9
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.11.9'
+            cache: 'pip'
+        
+        # Instala las dependencias
+        - name: Instalar las dependencias
+          run: | 
+            python -m pip install --upgrade pip
+            pip install --upgrade --force-reinstall -r requirements.txt
+
+        # Ejecuta el script de sincronizacion
+        - name: Ejecutar script de sincronizacion
+          env:
+            CONNECTEAM_API_KEY: ${{ secrets.CONNECTEAM_API_KEY }}
+            ODOO_API_KEY: ${{ secrets.ODOO_API_KEY }}
+            URL_Odoo: ${{ secrets.URL_Odoo }}
+            DB_Odoo: ${{ secrets.DB_Odoo }}
+            USER_Odoo: ${{ secrets.USER_Odoo }}
+            MS_TENANT: ${{ secrets.MS_TENANT }}
+            MS_CLIENT_ID: ${{ secrets.MS_CLIENT_ID }}
+            MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
+            
+          run:  python pipeline_registro_II/main.py
+
+        # Subir la base de datos actualizada al reositorio
+        - name: Configurar Git para la Action
+          run: |
+            git config user.name "GitHub Actions"
+            git config user.email "actions@github.com"
+        
+        - name: Commit de la base de datos actualizada
+          run: |
+            git add pipeline_registro_II/form_entries.db
+            git commit -m "chore: Actualizar DB de registros de sincronización" || echo "No hay cambios para commitear"
+        
+        - name: Push de los cambios
+          run: git push
       
-      # Instala las dependencias
-      - name: Instalar las dependencias
-        run: | 
-          python -m pip install --upgrade pip
-          pip install --upgrade --force-reinstall -r requirements.txt
-
-      # Ejecuta el script de sincronizacion
-      - name: Ejecutar script de sincronizacion
-        env:
-          CONNECTEAM_API_KEY: ${{ secrets.CONNECTEAM_API_KEY }}
-          ODOO_API_KEY: ${{ secrets.ODOO_API_KEY }}
-          URL_Odoo: ${{ secrets.URL_Odoo }}
-          DB_Odoo: ${{ secrets.DB_Odoo }}
-          USER_Odoo: ${{ secrets.USER_Odoo }}
-          MS_TENANT: ${{ secrets.MS_TENANT }}
-          MS_CLIENT_ID: ${{ secrets.MS_CLIENT_ID }}
-          MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
+        
+        # Sube la base de datos como artefacto
+        - name: Subir DB como artefacto (backup histórico)
+          if: always()
+          uses: actions/upload-artifact@v4
+          with:
+            name: sqlite-database-${{ github.run_number }}
+            path: pipeline_registro_II/form_entries.db
           
-        run:  python pipeline_registro_II/main.py
-
-      # Subir la base de datos actualizada al reositorio
-      - name: Configurar Git para la Action
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-      
-      - name: Commit de la base de datos actualizada
-        run: |
-          git add pipeline_registro_II/form_entries.db
-          git commit -m "chore: Actualizar DB de registros de sincronización" || echo "No hay cambios para commitear"
-      
-      - name: Push de los cambios
-        run: git push
-    
-      
-      # Sube la base de datos como artefacto
-      - name: Subir DB como artefacto (backup histórico)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sqlite-database-${{ github.run_number }}
-          path: pipeline_registro/form_entries.db
-        
 
 
-        
+          
