@@ -45,17 +45,17 @@ def job():
 
         if isinstance(nuevas_entradas, pd.DataFrame) and not nuevas_entradas.empty:
             
-            # # Inicializa los diccionarios para resumen y éxito de operaciones
-            # resumen = {
-            #     'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
-            #     'Punto de monitoreo': [], 'Equipo/instrumento': [], 'Modelo': [],
-            #     'N° serie': [], 'Tipo': [], 'Mensaje': []
-            # }
-            # exito = {
-            #     'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
-            #     'Punto de monitoreo': [], 'Equipo/instrumento': [], 'Modelo': [],
-            #     'N° serie': [], 'Tipo': [], 'Mensaje': []
-            # }
+            # Inicializa los diccionarios para resumen y éxito de operaciones
+            resumen = {
+                'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
+                'Punto de monitoreo': [], 'Equipo/instrumento': [], 'Modelo': [],
+                'N° serie': [], 'Tipo': [], 'Mensaje': []
+            }
+            exito = {
+                'OT': [], 'Técnico': [], 'Fecha de revisión': [], 'Proyecto': [],
+                'Punto de monitoreo': [], 'Equipo/instrumento': [], 'Modelo': [],
+                'N° serie': [], 'Tipo': [], 'Mensaje': []
+            }
 
             print(f"Se encontraron {len(nuevas_entradas)} nuevas entradas. Procesando...")
 
