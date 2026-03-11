@@ -180,7 +180,8 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         'Creación en espera': [(4,2)], #Productivo: 2 | Test: 3
         'Cambio de ubicación': [(4,3)], #Productivo: 3 | Test: 4
         'Punto no existe en sistema': [(4,4)], #Productivo: 4 | Test: 5
-        'S/N no encontrado': [(4,5)] #Productivo: 5 | Test: 6
+        'S/N no encontrado': [(4,5)],  #Productivo: 5 | Test: 6
+        'Sin evento de instalación': [(4,6)] #Productivo: 5 | Test: 6
     }
 
     fields_inbox = {

@@ -358,6 +358,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'Punto no existe en sistema',
                                             'Nuevo')
 
+                                    continue
                                 
                                 #Equipo a reparar sin una instancia de instalación
 
@@ -374,7 +375,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, odoo_client,
                                             f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MC}',
                                             'N',
-                                            'Cambio de ubicación',
+                                            'Sin evento de instalación',
                                             'En proceso',
                                             nombre_archivo_MC,
                                             informe_codificado_MC)
@@ -835,6 +836,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo')
+                                    continue
                                 
                                 else:
                                     id_punto = punto_odoo[0]['id']
@@ -959,6 +961,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo')
+                                    continue
                                 
 
                                 if location_CF == False:
@@ -974,7 +977,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
                                             f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_CF}',
                                             'N',
-                                            'Cambio de ubicación',
+                                            'Sin evento de instalación',
                                             'En proceso',
                                             nombre_archivo_CF,
                                             informe_codificado_CF)
@@ -1538,6 +1541,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo')
+                                    continue
                                 else:
                                     id_punto = punto_odoo[0]['id']
 
@@ -1649,6 +1653,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo')
+                                    continue
                                 
 
                                 if location_CI == False:
@@ -1664,7 +1669,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
                                             f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_CI}',
                                             'N',
-                                            'Cambio de ubicación',
+                                            'Sin evento de instalación',
                                             'En proceso')
                                     
                                     except Exception as e:
@@ -2172,6 +2177,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo')
+                                    continue        
                                # Id del punto dentro de Odoo
 
                                 else:
@@ -2298,6 +2304,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo')
+                                        
+                                        continue
 
                                     # Si el equipo no tiene ubicación definida
                                     if location_I == False:
@@ -2854,6 +2862,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo')
+                                        continue
                                     
                                     else:
                                         id_punto = punto_odoo[0]['id']
@@ -2985,6 +2994,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo')
+                                        continue
                                     
 
                                     if location_MP == False:
@@ -3000,7 +3010,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
                                                 f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MP}',
                                                 'N',
-                                                'Cambio de ubicación',
+                                                'Sin evento de instalación',
                                                 'En proceso',
                                                 nombre_archivo_MP,
                                                 informe_codificado_MP)
@@ -3591,6 +3601,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo')
+                                        
+                                        continue
 
                                     else: 
                                         id_punto = punto_odoo[0]['id']
