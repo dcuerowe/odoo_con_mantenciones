@@ -3398,11 +3398,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                             f'Equipo sin plan de mantenimiennto en sistema')
 
-                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                    f'Equipo sin plan de mantenimiennto en sistema',
-                                                    'N',
-                                                    'MP sin programar',
-                                                    'En proceso')
+                                                # inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
+                                                #     f'Equipo sin plan de mantenimiennto en sistema',
+                                                #     'N',
+                                                #     'MP sin programar',
+                                                #     'En proceso')
 
 
                                         # Caso en que el equipo no tiene solicitudes de ninguna naturaleza 
@@ -3564,11 +3564,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                         f'Equipo sin plan de mantenimiennto en sistema')
 
-                                            inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                f'Equipo sin plan de mantenimiennto en sistema',
-                                                'N',
-                                                'MP sin programar',
-                                                'En proceso')
+                                            # inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
+                                            #     f'Equipo sin plan de mantenimiennto en sistema',
+                                            #     'N',
+                                            #     'MP sin programar',
+                                            #     'En proceso')
                                             
             
                                     except Exception as e: 

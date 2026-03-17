@@ -20,6 +20,7 @@ CONNECTEAM_API_KEY = os.getenv('CONNECTEAM_API_KEY')
 FORM_ID = "15540738" # Hardcoded in original code
 
 #Odoo Configuration
+
 ODOO_URL = os.getenv('URL_Odoo')
 ODOO_DB = os.getenv('DB_Odoo')
 ODOO_USER = os.getenv('USER_Odoo')
