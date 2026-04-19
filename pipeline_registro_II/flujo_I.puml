@@ -1,0 +1,73 @@
+@startuml
+skinparam style strictuml
+skinparam DefaultFontName Inter
+skinparam ActivityBackgroundColor #FDF5E6
+skinparam ActivityBorderColor #A85A14
+skinparam ArrowColor #A85A14
+
+start
+:Iterar instancias de Instalación "conteo_I";
+:Extraer variables: "modelo", "tipo", "serial", "operativo", "obs", "alcance";
+:Generar "informe_pdf_profesional()" -> Base64;
+
+if (Buscar "maintenance.equipment" por "serial") then (Sí)
+  :Buscar "id_punto" en "x_maintenance_location";
+  if (¿El punto no existe en Odoo?) then (Sí)
+    :Inbox: "Punto no existe en sistema" (Nuevo);
+    stop
+  else (No, punto válido)
+  endif
+  
+  if ("location_I" == False / Nulo) then (Viene de Bodega/Sin ubicación)
+    :Actualizar "maintenance.equipment":\nx_studio_location = id_punto\nassign_date = fecha;
+    :message_post: "Nuevo equipo instalado";
+  else (Ya tiene ubicación asignada)
+    :message_post: Validar ubicación existente (Inbox);
+  endif
+  
+  :Buscar "maintenance.request"\ndomain = [('equipment_id', '=', id_I),\n('maintenance_type', '=', False),\n('x_studio_tipo_de_trabajo', '=', 'Instalación')];
+  
+  :Filtrar peticiones ("interest_requests_I");
+  note right: Ignora archivadas, sin fecha, o finalizadas/desechadas.;
+
+  if (¿Hay solicitudes filtradas?) then (Sí)
+    :Seleccionar la primera de la lista ("id_I");
+    note right: En Instalación no busca la más cercana\nni la que esté en stage 3, selecciona\ndirectamente el índice [0].;
+    
+    if ("operativo_I" == "Sí") then (Sí)
+      :Actualizar "maintenance.request" seleccionada\nstage_id = 5, close_date = fecha\nx_studio_tcnico = tecnico;
+      :Completar "mail.activity" ("action_feedback");
+    else (No)
+      :Actualizar "maintenance.request" seleccionada\nstage_id = 3;
+      :Completar "mail.activity" ("action_feedback");
+      :Crear "ir.attachment" con PDF;
+    endif
+    :Inbox: "Se registra con éxito" (Resuelto);
+
+  else (No hay previas)
+    if ("operativo_I" == "Sí") then (Sí)
+      :Crear "maintenance.request"\nstage_id = 5, close_date = fecha\nx_studio_tcnico = tecnico;
+      :Completar "mail.activity" ("action_feedback");
+    else (No)
+      :Crear "maintenance.request"\nstage_id = 3;
+      :Crear "ir.attachment" con PDF;
+      :message_post con adjunto y ubicación;
+    endif
+    :Inbox: "Se crea con éxito el registro" (Resuelto);
+  endif
+
+else (No Encontrado)
+  :Buscar "id_punto" en "x_maintenance_location";
+  if (¿Punto existe?) then (No)
+    :Inbox: "Punto no existe en sistema" (Nuevo);
+  else (Sí)
+    :Buscar "stock.move.line"\ndomain = [('usage', '=', 'transit'), ('dest', '=', 'customer'),\n('lot_id.name', '=', serial), ('state', 'not in', ['done', 'cancel'])];
+    if (¿En Tránsito?) then (Sí)
+      :Inbox: "Creación en espera" (Nuevo);
+    else (No)
+      :Inbox: "S/N no encontrado" (Nuevo);
+    endif
+  endif
+endif
+stop
+@enduml

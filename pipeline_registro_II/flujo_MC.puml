@@ -1,0 +1,65 @@
+@startuml
+skinparam style strictuml
+skinparam DefaultFontName Inter
+skinparam ActivityBackgroundColor #F2F4F8
+skinparam ActivityBorderColor #2B3A67
+skinparam ArrowColor #2B3A67
+
+start
+:Iterar "conteo_instancias_MC";
+:Extraer variables: "modelo", "tipo", "serial", "operativo", "obs";
+:Generar "informe_pdf_profesional()" -> "informe_codificado_MC" (Base64);
+
+if (Buscar "maintenance.equipment" por "serial") then (Sí)
+  :Validar "location_MC" vs "punto";
+  if (¿Ubicación nula?) then (Sí)
+    :message_post: "Equipo sin evento de instalación We.";
+    :Inbox: "Sin evento de instalación" (En Proceso);
+  elseif (¿Ubicación distinta?) then (Sí)
+    :message_post: "La ubicación ha cambiado";
+    :Inbox: "Cambio de ubicación" (En Proceso);
+  else (Ubicación coincide)
+  endif
+
+  :Buscar "maintenance.request"\ndomain = [('equipment_id', '=', id_MC),\n('maintenance_type', '=', 'corrective'),\n('x_studio_tipo_de_trabajo', '=', 'Mantención Correctiva')];
+  
+  :Validar "interruptor_MC" iterando peticiones;
+  note right: Ignora peticiones con\nschedule_date = False,\nstage_id = 5 (Finalizado),\nstage_id = 4 (Desecho).\nSe detiene (break) en la primera abierta.;
+  
+  if (¿"interruptor_MC" es True? / No hay peticiones) then (Sí, Crear Nueva)
+    if ("operativo_MC" == "Sí") then (Sí)
+      :Crear "maintenance.request"\nstage_id = 5, close_date = fecha\nx_studio_tcnico = tecnico;
+      :Completar "mail.activity" ("action_feedback");
+    else (No)
+      :Crear "maintenance.request"\nstage_id = 3;
+      :Crear "ir.attachment" con PDF;
+      :message_post con adjunto y ubicación;
+    endif
+    :Inbox: "Se crea con éxito el registro" (Resuelto);
+  else (No, Actualizar Existente "ids_MC")
+    if ("operativo_MC" == "Sí") then (Sí)
+      :Actualizar "maintenance.request"\nstage_id = 5, close_date = fecha;
+      :Completar "mail.activity" ("action_feedback");
+    else (No)
+      :Actualizar "maintenance.request"\nstage_id = 3;
+      :Crear "ir.attachment" con PDF;
+      :message_post con adjunto y ubicación;
+    endif
+    :Inbox: "Se registra con éxito" (Resuelto);
+  endif
+
+else (No Encontrado)
+  :Buscar "id_punto" en "x_maintenance_location";
+  if (¿Punto existe?) then (No)
+    :Inbox: "Punto no existe en sistema" (Nuevo);
+  else (Sí)
+    :Buscar "stock.move.line"\ndomain = [('usage', '=', 'transit'), ('dest', '=', 'customer'),\n('lot_id.name', '=', serial), ('state', 'not in', ['done', 'cancel'])];
+    if (¿En Tránsito?) then (Sí)
+      :Inbox: "Creación en espera" (Nuevo);
+    else (No)
+      :Inbox: "S/N no encontrado" (Nuevo);
+    endif
+  endif
+endif
+stop
+@enduml
