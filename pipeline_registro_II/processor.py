@@ -76,7 +76,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             "Matías Pomar": 164,
             "Rodrigo López": 172,
             "Tomás Bustamante": 178,
-            "Elías Sanchez": 5432
+            "Elías Sanchez": 5432,
+            "Cristian Cardenas": 5544
         }
 
         #Puntos que efectivamente se visitaron
@@ -367,12 +368,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     try:
                                         star_location = odoo_client.message_post(
                                             'maintenance.equipment',
-                                            number_equipment_MC,
+                                            id_number_MC,
                                             f"<p><b>Equipo sin evento de instalación We.</b></p><<p>Ubicación actual según OT-{ot}: {punto}</p>"
                                         )
 
                                         #trabajos sobre equipos que no estan con punto asignado
-                                        inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, odoo_client,
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
                                             f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MC}',
                                             'N',
                                             'Sin evento de instalación',
@@ -385,7 +386,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                     
 
                                 elif location_MC != f'[{proyecto}] {punto}':
-                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, 
+                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
                                                 f'Equipo pasa de {location_MC} a {punto}). Validar cambio')
                                     
                                     #Notificación por cambio de ubicación
@@ -394,11 +395,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         
                                         new_location_MC = odoo_client.message_post(
                                             'maintenance.equipment',
-                                            number_equipment_MC,
+                                            id_number_MC,
                                             f"<p><b>La ubicación a cambiado.</b></p><p><b>Nueva ubicación según OT-{ot}:</b> {location_MC} => [{proyecto}] {punto}</p>"
                                         )
 
-                                        inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, odoo_client,
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
                                                 f'Equipo pasa de {location_MC} a {punto}). Validar {nombre_archivo_MC}',
                                                 'N',
                                                 'Cambio de ubicación',
@@ -1605,6 +1606,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         modelo_CI = dic_trabajo_CI[f"{i}.2.{equipo} CI | Modelo"]
                         serial_CI = dic_trabajo_CI[f'{i}.2.{equipo} CI | N° de serie']
                         obs_CI = dic_trabajo_CI[f'{i}.2.{equipo} CI | Observación']
+                        tipo_CI = 'Sonda multiparamétrica'
+
                         
                         
                         #Asegurando que el serial pase de float a int
@@ -1667,7 +1670,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                         #trabajos sobre equipos que no estan con punto asignado
                                         inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_CI}',
+                                            f'Equipo sin evento de instalación We en el punto {punto}.',
                                             'N',
                                             'Sin evento de instalación',
                                             'En proceso')
@@ -1678,7 +1681,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 elif location_CI != f'[{proyecto}] {punto}':
                                     detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, 
-                                                f'Equipo pasa de {location_CI} a {punto}). Validar {nombre_archivo_CI}')
+                                                f'Equipo pasa de {location_CI} a {punto})')
                                     
                                     #Notificación por cambio de ubicación
 
@@ -1713,7 +1716,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     #Iterando sobre las solicitudes que tiene el equipo
                                     if request_ids_CI:
                                     
-                                        interruptor_MP = True   
+                                        interruptor_CI = True   
                                         interest_requests_CI = {} 
                                         for ids_CI in request_ids_CI:
                                             campos_de_interes_CI = ['schedule_date', 'stage_id', 'name', 'archive']
@@ -1881,8 +1884,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     update_close_date_CI = odoo_client.write(
                                                         'maintenance.request',
                                                         [id_CI], 
-                                                        close_date_MP
+                                                        close_date_CI
                                                     )
+
 
                         
                                                     if update_stage_CI:
@@ -2058,8 +2062,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         fields_values_OT_CI
                                                     )
                                                 
-                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_MP, serial_MP, id,
-                                                            f'Se crea con éxito el registro de calibración {created_request_MP}')
+                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id,
+                                                            f'Se crea con éxito el registro de calibración {created_request_CI}')
                                                 
                                                 inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
                                                             'Se crea con éxito el registro de extracción de sonda',
@@ -2213,7 +2217,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             'Nuevo')
                         
                         except Exception as e:
-                            print(f"Error al buscar equipo en base de Odoo MP: {e}")                
+                            print(f"Error al buscar equipo en base de Odoo CI: {e}")                
                     
                 
                 elif id == "I":
@@ -3398,11 +3402,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                             f'Equipo sin plan de mantenimiennto en sistema')
 
-                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                    f'Equipo sin plan de mantenimiennto en sistema',
-                                                    'N',
-                                                    'MP sin programar',
-                                                    'En proceso')
+                                                # inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
+                                                #     f'Equipo sin plan de mantenimiennto en sistema',
+                                                #     'N',
+                                                #     'MP sin programar',
+                                                #     'En proceso')
 
 
                                         # Caso en que el equipo no tiene solicitudes de ninguna naturaleza 
@@ -3564,11 +3568,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
                                                         f'Equipo sin plan de mantenimiennto en sistema')
 
-                                            inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                f'Equipo sin plan de mantenimiennto en sistema',
-                                                'N',
-                                                'MP sin programar',
-                                                'En proceso')
+                                            # inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
+                                            #     f'Equipo sin plan de mantenimiennto en sistema',
+                                            #     'N',
+                                            #     'MP sin programar',
+                                            #     'En proceso')
                                             
             
                                     except Exception as e: 
