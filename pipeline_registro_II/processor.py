@@ -76,7 +76,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             "Matías Pomar": 164,
             "Rodrigo López": 172,
             "Tomás Bustamante": 178,
-            "Elías Sanchez": 5432
+            "Elías Sanchez": 5432,
+            "Cristian Cardenas": 5544
         }
 
         #Puntos que efectivamente se visitaron
@@ -367,12 +368,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     try:
                                         star_location = odoo_client.message_post(
                                             'maintenance.equipment',
-                                            number_equipment_MC,
+                                            id_number_MC,
                                             f"<p><b>Equipo sin evento de instalación We.</b></p><<p>Ubicación actual según OT-{ot}: {punto}</p>"
                                         )
 
                                         #trabajos sobre equipos que no estan con punto asignado
-                                        inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, odoo_client,
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
                                             f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MC}',
                                             'N',
                                             'Sin evento de instalación',
@@ -385,7 +386,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                     
 
                                 elif location_MC != f'[{proyecto}] {punto}':
-                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, 
+                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
                                                 f'Equipo pasa de {location_MC} a {punto}). Validar cambio')
                                     
                                     #Notificación por cambio de ubicación
@@ -394,11 +395,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         
                                         new_location_MC = odoo_client.message_post(
                                             'maintenance.equipment',
-                                            number_equipment_MC,
+                                            id_number_MC,
                                             f"<p><b>La ubicación a cambiado.</b></p><p><b>Nueva ubicación según OT-{ot}:</b> {location_MC} => [{proyecto}] {punto}</p>"
                                         )
 
-                                        inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_MC, serial_MC, id, odoo_client,
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
                                                 f'Equipo pasa de {location_MC} a {punto}). Validar {nombre_archivo_MC}',
                                                 'N',
                                                 'Cambio de ubicación',
