@@ -251,7 +251,7 @@ flowchart TD
 
 ### 6.3 Diferencia por Estado Operativo
 
-| Operativo     | stage_id       | Acciones adicionales                                                  |
+| Operativo     | stage_id       | Acciones adicionale                                                   |
 | ------------- | -------------- | --------------------------------------------------------------------- |
 | **Sí** | 5 (Finalizado) | Asignar `close_date`, `x_studio_tcnico`, cerrar `mail.activity` |
 | **No**  | 3 (En proceso) | Adjuntar PDF como `ir.attachment`, `message_post` con ubicación  |

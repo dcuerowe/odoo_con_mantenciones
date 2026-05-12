@@ -918,7 +918,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         except FileNotFoundError:
                             exit()
 
-                        
 
                         #ACTUALIZACIÓN DE REQUEST
                         
