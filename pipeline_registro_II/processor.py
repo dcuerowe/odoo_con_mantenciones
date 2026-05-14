@@ -3305,7 +3305,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 elif operativo_MP == 'Sí':
                                                     try:
                                                         fields_values_OT_MP = {
-                                                            'name': f"Mantenimiento Correctivo | {tipo_MP} {modelo_MP}",
+                                                            'name': f"Mantenimiento Preventivo | {tipo_MP} {modelo_MP}",
                                                             'equipment_id': number_equipment_MP, #Aquí debemos usar el ID númerico de la sonda
                                                             'stage_id': '5', # 5 Finalizado
                                                             'description': f"{obs_MP}",
