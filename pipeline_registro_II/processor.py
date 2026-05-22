@@ -47,6 +47,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             'T': 'Tablero'
         }
 
+        R_type = ['E', 'I']
+
 
         I_type = ['I', 'T'] 
         I_translate = {
@@ -57,8 +59,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
         id_mantencion = {'MC': 'Mantención Correctiva',
                         'MP': 'Mantención Preventiva',
                         'I': 'Instalación',
-                        'CI': 'Calibración',
-                        'CF': 'Configuración'}
+                        'R': 'Reemplazo/Extracción',
+                        'CF': 'Configuración/Ajustes'}
         
         # intalaciones_interes = ['Tablero', 'Caudalímetro', 'Sensor de nivel', 'Sonda multiparamétrica', 'Otro']
 
