@@ -1,6 +1,6 @@
 # Documentación Técnica — `processor.py`
 
-> **Archivo:** `pipeline_registro_II/processor.py` · **~3 650 líneas** · Última revisión: Mayo 2026
+> **Archivo:** `pipeline_registro_II/processor.py` · **~4 346 líneas** · Última revisión: 2026-05-26
 
 ---
 
@@ -14,13 +14,15 @@ flowchart LR
     B --> C{Tipo de Trabajo}
     C --> D[MC - Correctiva]
     C --> E[CF - Configuración]
-    C --> F[CI - Calibración]
+    C --> F[R - Reemplazo/Extracción]
     C --> G[I - Instalación]
     C --> H[MP - Preventiva]
     D & E & F & G & H --> I[Odoo ERP]
-    D & E  & G & H --> J[Informe PDF]
+    D & E & F & G & H --> J[Informe PDF]
     D & E & F & G & H --> K[Notificaciones inbox]
 ```
+
+> **Nota:** Existía un módulo `CI` (Calibración) independiente que fue **absorbido por el módulo R** (rama `alcance_R == "Ciclo de calibración"`). En el código actual no existe `elif id == "CI":`; las solicitudes de Calibración se siguen creando, pero desde R.
 
 ---
 
@@ -59,25 +61,30 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 ### 3.1 Tipos de Trabajo Soportados
 
 ```python
-id_tipo_de_trabajo = ['MP', 'MC', 'I', 'CI', 'CF']
+id_tipo_de_trabajo = ['MP', 'MC', 'I', 'CI', 'CF']  # ⚠ no incluye 'R'
 ```
 
-| ID     | Nombre Completo        | `maintenance_type` en Odoo |
-| ------ | ---------------------- | ---------------------------- |
-| `MC` | Mantención Correctiva | `corrective`               |
-| `MP` | Mantención Preventiva | `preventive`               |
-| `I`  | Instalación           | `False` (sin tipo)         |
-| `CI` | Calibración           | `preventive`               |
-| `CF` | Configuración         | `preventive`               |
+Ramas realmente implementadas en el loop principal (`for id in id_tipos_realizados`):
 
-### 3.2 Subtipos de MP e Instalación
+| ID     | Nombre Completo                  | `maintenance_type` en Odoo                                   |
+| ------ | -------------------------------- | -------------------------------------------------------------- |
+| `MC` | Mantención Correctiva           | `corrective`                                                 |
+| `MP` | Mantención Preventiva           | `preventive`                                                 |
+| `I`  | Instalación                     | `False` (sin tipo)                                           |
+| `CF` | Configuración                   | `preventive`                                                 |
+| `R`  | Reemplazo/Extracción            | `preventive` para Calibración interna; `False` para Extracción/Instalación |
 
-Tanto MP como I operan sobre dos contextos: **Instrumento (I)** y **Tablero (T)**.
+> **Inconsistencia conocida:** `id_tipo_de_trabajo` no se actualizó al agregar R y el filtro `id_tipos_interes` (L160-164) excluye 'R'. Hoy ese filtro no se usa para iterar (el loop real es sobre `id_tipos_realizados`), por lo que R se procesa igual, pero la lista queda desfasada.
 
-```python
-MP_type = ['T', 'I']          # Tablero, Instrumento (Dispositivo)
-I_type  = ['I', 'T']          # Instrumento (dispositivo), Tablero
-```
+> **CI ya no es módulo propio:** `id_mantencion` aún define `'R': 'Reemplazo/Extracción'` y `'E': 'Calibración'` (este último, semánticamente equivocado — E es Extracción). El R-block ignora `id_mantencion` y escribe literales `'Extracción'`, `'Calibración'`, `'Instalación'` en `x_studio_tipo_de_trabajo`.
+
+### 3.2 Subtipos por Módulo
+
+| Módulo | Lista de subtipos      | Significado de cada letra                          |
+| ------- | ---------------------- | -------------------------------------------------- |
+| MP      | `MP_type = ['T', 'I']` | Tablero, Instrumento (Dispositivo)                 |
+| I       | `I_type  = ['I', 'T']` | Instrumento (Dispositivo), Tablero                 |
+| R       | `R_type  = ['E', 'I']` | Extracción (equipo que sale), Instalación (equipo que entra) |
 
 ### 3.3 Mapeo de Operadores
 
@@ -102,13 +109,13 @@ flowchart TD
     C --> D[Loop por cada punto visitado i]
     D --> E[Extraer tipos de trabajo realizados]
     E --> F[Parsear nombre de proyecto y punto de monitoreo]
-    F --> G[Contar instancias por tipo: MC, CF, CI, MP-I, MP-T, I-I, I-T]
+    F --> G[Contar instancias por tipo: MC, CF, R-E, R-I, MP-I, MP-T, I-I, I-T]
     G --> H[Extraer imágenes y observaciones generales]
     H --> I[Loop por cada tipo de trabajo realizado]
     I --> J{"¿Tipo?"}
     J -->|MC| K[Módulo MC]
     J -->|CF| L[Módulo CF]
-    J -->|CI| M[Módulo CI]
+    J -->|R| M[Módulo R]
     J -->|I| N[Módulo I]
     J -->|MP| O[Módulo MP]
 ```
@@ -149,7 +156,8 @@ Se generan diccionarios de conteo:
 
 - `conteo_MP = {'I': n, 'T': m}` — MP por subtipo
 - `conteo_I  = {'I': n, 'T': m}` — Instalación por subtipo
-- `conteo_instancias_MC`, `conteo_instancias_CF`, `conteo_instancias_CI` — contadores simples
+- `conteo_R  = {'E': n, 'I': m}` — Reemplazo por subtipo
+- `conteo_instancias_MC`, `conteo_instancias_CF`, `conteo_instancias_CI`, `conteo_instancias_E` — contadores simples (CI y E ya no tienen rama propia; sus contadores quedaron como código muerto)
 
 ### 4.4 Variables Globales del Punto (L263–269)
 
@@ -307,60 +315,121 @@ El campo `description` se compone como HTML:
 
 ---
 
-## 8. Módulo CI — Calibración
+## 8. Módulo R — Reemplazo/Extracción
 
-**Líneas:** 1593–2220 · **Prefijo columnas:** `{i}.2.{equipo} CI | Campo`
+**Líneas:** 1631–2913 · **Prefijo columnas:** `{i}.2.{equipo} R | Campo` (generales) y `{i}.2.{equipo} R ({t}) | Campo` (específicos del subtipo)
 
-### 8.1 Campos Extraídos
+> Este módulo absorbió la lógica del antiguo módulo CI. Una operación de reemplazo se modela como un par de subtrabajos: la pieza que sale (`t = 'E'`) y la pieza que entra (`t = 'I'`).
 
-| Campo         | Clave formulario                                            |
-| ------------- | ----------------------------------------------------------- |
-| `etapa_CI`  | `CI \| Etapa` → `"Extracción"` o `"Re-instalación"` |
-| `modelo_CI` | `CI \| Modelo`                                             |
-| `serial_CI` | `CI \| N° de serie`                                       |
-| `obs_CI`    | `CI \| Observación`                                       |
-| `tipo_CI`   | Hardcoded:`'Sonda multiparamétrica'`                     |
+### 8.1 Doble Iteración (Extracción + Instalación)
 
-### 8.2 Modelo de Dos Fases
+```python
+R_type = ['E', 'I']
+for t in R_type:
+    for equipo in range(1, conteo_R[t]+1):
+```
 
-CI es el único módulo con un **modelo bifásico** basado en el campo `etapa_CI`:
+### 8.2 Campos Extraídos
+
+| Campo         | Origen                              | Clave |
+|---------------|-------------------------------------|-------|
+| `modelo_R`    | Específico `R ({t})`                | `R ({t}) \| Modelo` |
+| `serial_R`    | Específico `R ({t})`                | `R ({t}) \| N° de serie` |
+| `tipo_R`      | General                             | `R \| Tipo equipo/instrumento a reemplazar` |
+| `obs_R`       | General                             | `R \| Observación` |
+| `alcance_R`   | General                             | `R \| Motivo de reemplazo` |
+| `destino_R`   | Específico `R (E)` (solo E)         | `R (E) \| Destino` (`None` cuando `t == 'I'`) |
+| `trabajo_R`   | Asignado a `t`                      | — |
+
+### 8.3 Bifurcación por Motivo del Reemplazo
+
+R implementa un modelo bifásico basado en `alcance_R`:
 
 ```mermaid
 flowchart TD
-    A["Buscar solicitudes CI: preventive + Calibración"] --> B{"¿Hay solicitudes de interés?"}
-    B -->|Sí| C[Seleccionar: en proceso o más cercana]
-    B -->|No| D[Crear nueva solicitud]
-  
-    C --> E{"¿Etapa?"}
-    E -->|Extracción| F{"¿Solicitud ya en proceso?"}
-    F -->|"Sí stage=3"| F1[ANOMALÍA: Extracción duplicada]
-    F -->|No| F2["Actualizar a stage=3 + técnico + message_post punto extracción"]
-  
-    E -->|Re-instalación| G{"¿Solicitud en proceso?"}
-    G -->|"No stage!=3"| G1[ANOMALÍA: Re-instalación sin extracción previa]
-    G -->|"Sí stage=3"| G2["Actualizar a stage=5 + close_date + feedback actividad"]
-  
-    D --> H{"¿Etapa?"}
-    H -->|Extracción| I["Crear con stage=3"]
-    H -->|Re-instalación| J["Crear con stage=5 + close_date + feedback"]
+    A{"alcance_R"}
+    A -->|"Ciclo de calibración"| B[Flujo de calibración]
+    A -->|"Otro motivo (daño / cambio)"| C[Flujo de daño]
+
+    B --> B1{"t"}
+    B1 -->|E| BE[Equipo retirado para calibrar]
+    B1 -->|I| BI[Equipo de reemplazo instalado]
+
+    C --> C1{"t"}
+    C1 -->|E| CE[Extracción por daño]
+    C1 -->|I| CI[Instalación de reemplazo]
 ```
 
-### 8.3 Validaciones de Coherencia
+### 8.4 Flujo "Ciclo de Calibración" + `t = 'E'`
 
-| Situación                                                             | Resultado                                                            |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Extracción cuando la solicitud ya está en proceso (`stage=3`)      | Anomalía: "Extracción cuando la sonda no se encuentra en el punto" |
-| Re-instalación cuando la solicitud NO está en proceso (`stage!=3`) | Anomalía: "Re-instalación cuando la sonda no ha sido extraída"    |
+Subbifurca por `destino_R`:
 
-### 8.4 Sin Generación de PDF
+```mermaid
+flowchart TD
+    A{"destino_R"}
+    A -->|"Laboratorio | Metrocal"| B[Buscar solicitudes CI 'Calibración']
+    A -->|"Bodega cliente / otro"| Z[Crear solo Extracción]
 
-A diferencia de los otros módulos, CI **no genera informe PDF** ni adjunta archivos `ir.attachment` a las solicitudes.
+    B --> B1{"¿Existen solicitudes CI?"}
+    B1 -->|Sí| C[Seleccionar la más cercana a fecha + archivar anteriores]
+    C --> C1["update: stage=3, team=2 Metrocal, x_studio_tcnico=5118"]
+    C1 --> C2["Crear Extracción stage=5 + close_date + feedback actividad"]
+    C2 --> C3["Mover equipo a x_studio_location=593 (Laboratorio)"]
+
+    B1 -->|No| D["Crear Calibración stage=3 + team=2 Metrocal"]
+    D --> D1["Crear Extracción stage=5 + close_date + feedback"]
+    D1 --> D2["Mover equipo a x_studio_location=593"]
+
+    Z --> Z1["Crear Extracción stage=5 + close_date + feedback"]
+    Z1 --> Z2["Mover equipo a x_studio_location=594 (Bodega cliente)"]
+```
+
+### 8.5 Flujo "Ciclo de Calibración" + `t = 'I'`
+
+El equipo que **entra** al punto en reemplazo del que salió a calibrar:
+
+1. Buscar solicitudes `preventive` + `Calibración` del equipo.
+2. Si alguna está en proceso (`stage_id=3`) tomarla; si no, la más cercana a `fecha` (y archivar anteriores).
+3. Actualizar esa solicitud a `stage=5`, team Metrocal, técnico Metrocal.
+4. Crear solicitud de **Instalación** (`stage=5` + `close_date` + feedback de actividad).
+5. Actualizar `x_studio_location` del equipo a `id_punto` con `assign_date=fecha`.
+
+### 8.6 Flujo "Otro motivo" (daño / cambio operativo)
+
+```mermaid
+flowchart TD
+    A{"t"}
+    A -->|E| B["Crear Extracción (stage=5 inicial 4, luego write a 5) + close_date"]
+    B --> B1["new_location_E: 594 si destino='Bodega cliente', 593 si 'Laboratorio | Metrocal', si no False"]
+    B1 --> B2["archive=True salvo alcance_R == 'Otro'"]
+
+    A -->|I| C["Crear Instalación stage=5 + close_date + feedback"]
+    C --> C1["Actualizar x_studio_location=id_punto, assign_date=fecha"]
+```
+
+### 8.7 Followers Específicos del Módulo R
+
+Toda solicitud creada en R agrega como followers a:
+
+- `5205`: Felipe Riquelme
+- `172`: Rodrigo López
+
+(El `inbox()` base sigue notificando a 147/172/158.)
+
+### 8.8 Particularidades y Trampas
+
+- **Reemplaza al antiguo módulo CI**: la lógica de Extracción → Calibración → Re-instalación se mueve aquí, partida por subtipo `t` y por `alcance_R == "Ciclo de calibración"`.
+- **No usa `id_mantencion[id]`**: cada request escribe literales `'Extracción'`, `'Calibración'`, `'Instalación'` en `x_studio_tipo_de_trabajo`.
+- **Ubicaciones hardcoded**: `593 = Laboratorio | Metrocal`, `594 = Bodega cliente`. Cambian entre productivo y test.
+- **Team/técnico Metrocal hardcoded**: `maintenance_team_id = 2`, `x_studio_tcnico = 5118`.
+- **Conteo de prefijos R**: usa `+4` igual que el resto, pero ` R (E) |` no encaja con la convención (corta en `R (`); el `len()` igual da el resultado correcto porque sólo cuenta únicos por equipo.
+- **`filter(like=filtro_general)` con `filtro_general = "{i}.2.{equipo} R"`** trae también columnas `R (E) |`/`R (I) |`, por lo que `columnas_equipo_R` queda con duplicados (no rompe porque `to_dict` colapsa, pero es frágil).
 
 ---
 
 ## 9. Módulo I — Instalación
 
-**Líneas:** 2223–2912 · **Prefijo columnas:** `{i}.2.{equipo} I ({t}) | Campo`
+**Líneas:** 2917–3605 · **Prefijo columnas:** `{i}.2.{equipo} I ({t}) | Campo`
 
 ### 9.1 Doble Iteración (Instrumento + Tablero)
 
@@ -419,7 +488,7 @@ flowchart TD
 
 ## 10. Módulo MP — Mantención Preventiva
 
-**Líneas:** 2914–3653 · **Prefijo columnas:** `{i}.2.{equipo} MP ({t}) | Campo`
+**Líneas:** 3608–4345 · **Prefijo columnas:** `{i}.2.{equipo} MP ({t}) | Campo`
 
 ### 10.1 Doble Iteración (Instrumento + Tablero)
 
@@ -459,15 +528,18 @@ Cuando el equipo **no tiene solicitudes activas ni históricas**, además de cre
 
 ### 11.1 Generación de Informe PDF
 
-Todos los módulos (excepto CI) generan un informe profesional vía `informe_pdf_profesional()` con parámetros: punto, OT, técnico, proyecto, fecha, cliente, tipo, modelo, serial, tipo de trabajo, alcance, punto, observaciones, imágenes y número de equipo.
+Todos los módulos vigentes (MC, CF, R, I, MP) generan un informe profesional vía `informe_pdf_profesional()` con parámetros: punto, OT, técnico, proyecto, fecha, cliente, tipo, modelo, serial, tipo de trabajo, alcance, punto, observaciones, imágenes y número de equipo.
 
 El PDF se codifica en **base64** para adjuntarse como `ir.attachment` o almacenarse en `x_studio_informe`.
+
+> **Nota R:** R pasa `t` (`'E'` o `'I'`) como argumento `trabajo`, no `'R'`. El diccionario `id_tipo_mantención` en `report_generator.py` mapea esas letras a 'extracción' / 'instalación'.
 
 ### 11.2 Nomenclatura de Archivos
 
 ```
-informe_OT-{ot}_{punto}_{tipo}_{equipo}.pdf           # MC, CF, CI, I
+informe_OT-{ot}_{punto}_{tipo}_{equipo}.pdf            # MC, CF, I
 informe_OT-{ot}_{punto}_{tipo}_{subtipo}_{equipo}.pdf  # MP (incluye T/I)
+informe_OT-{ot}_{punto}_R_{equipo}.pdf                  # R (un PDF por par E/I)
 ```
 
 ### 11.3 Registro en Inbox (`inbox()`)
@@ -486,17 +558,17 @@ Cuando una solicitud se finaliza (`stage=5`), el pipeline busca y cierra la acti
 
 ## 12. Tabla Comparativa de Módulos
 
-| Característica                      | MC             | CF                 | CI                | I            | MP             |
-| ------------------------------------ | -------------- | ------------------ | ----------------- | ------------ | -------------- |
-| **Subtipo (I/T)**              | No             | No                 | No                | Sí          | Sí            |
-| **Genera PDF**                 | Sí            | Sí                | No                | Sí          | Sí            |
-| **Modelo bifásico**           | No             | No                 | Sí (Ext/Re-inst) | No           | No             |
-| **Selección por proximidad**  | No             | Sí                | Sí               | No (primera) | Sí            |
-| **Archiva solicitudes viejas** | No             | Sí                | Sí               | No           | Sí            |
-| **Escribe ubicación equipo**  | No             | No                 | No                | Sí          | No             |
-| **`maintenance_type` Odoo**  | `corrective` | `preventive`     | `preventive`    | `False`    | `preventive` |
-| **Campo alcance**              | No             | `Tipo de Ajuste` | `Etapa`         | Condicional  | No             |
-| **Valida stock.move.line**     | Sí            | Sí                | Sí               | Sí          | Sí            |
+| Característica                  | MC             | CF                 | R                                                  | I            | MP             |
+| -------------------------------- | -------------- | ------------------ | -------------------------------------------------- | ------------ | -------------- |
+| **Subtipo**                      | No             | No                 | Sí (`E`/`I`)                                       | Sí (`I`/`T`) | Sí (`I`/`T`)   |
+| **Genera PDF**                   | Sí             | Sí                 | Sí                                                 | Sí           | Sí             |
+| **Modelo bifásico**              | No             | No                 | Sí (Calibración vs Daño × E/I)                     | No           | No             |
+| **Selección por proximidad**     | No             | Sí                 | Sí (sub-flujo CI interno)                          | No (primera) | Sí             |
+| **Archiva solicitudes viejas**   | No             | Sí                 | Sí (en sub-flujo CI)                               | No           | Sí             |
+| **Escribe ubicación equipo**     | No             | No                 | Sí (593/594/id_punto)                              | Sí           | No             |
+| **`maintenance_type` Odoo**      | `corrective`   | `preventive`       | `preventive` (Calibración) / `False` (Ext/Inst)    | `False`      | `preventive`   |
+| **Campo alcance**                | No             | `Tipo de Ajuste`   | `Motivo de reemplazo`                              | Condicional  | No             |
+| **Valida stock.move.line**       | Sí             | Sí                 | Sí                                                 | Sí           | Sí             |
 
 ---
 

@@ -166,7 +166,8 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         'MC' : 'https://wetechscl.sharepoint.com/sites/CalidaddelDato/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FCalidaddelDato%2FDocumentos%20compartidos%2F04%2E%20Instalaci%C3%B3n%20y%20Mantenimiento%2FTrazabilidad%20de%20mantenciones%20y%20calibraciones%2FInformes%20de%20mantenci%C3%B3n&viewid=e9007fb8%2Da77d%2D42bb%2D9edb%2D3f9c92e72ff4',
         'CF' : 'https://wetechscl.sharepoint.com/sites/CalidaddelDato/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FCalidaddelDato%2FDocumentos%20compartidos%2F04%2E%20Instalaci%C3%B3n%20y%20Mantenimiento%2FTrazabilidad%20de%20mantenciones%20y%20calibraciones%2FInformes%20de%20mantenci%C3%B3n&viewid=e9007fb8%2Da77d%2D42bb%2D9edb%2D3f9c92e72ff4',
         'I' : 'https://wetechscl.sharepoint.com/sites/CalidaddelDato/Documentos%20compartidos/Forms/AllItems.aspx?id=%2Fsites%2FCalidaddelDato%2FDocumentos%20compartidos%2F04%2E%20Instalaci%C3%B3n%20y%20Mantenimiento%2FTrazabilidad%20de%20mantenciones%20y%20calibraciones%2FInformes%20de%20instalaci%C3%B3n&viewid=e9007fb8%2Da77d%2D42bb%2D9edb%2D3f9c92e72ff4',
-        'CI': False
+        'CI': False,
+        'E': False
     }
 
     estados = {
@@ -221,7 +222,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
     follow = odoo_client.message_subscribe(
         'x_inbox_integracion',
         [created_inbox],
-        [147, 172, 158]
+        [5205, 172, 158]
     )
 
     if informe_name != False and informe_data != False:
@@ -247,7 +248,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         created_inbox,
         f"<b>Caso a ser revisado:</b> {id_tipo} | {id_etiqueta}",
         message_type='notification',
-        partner_ids=[147, 172],
+        partner_ids=[5205, 172],
         attachment_ids=[informe] if informe else [])
     
     if id_etiqueta == "Creación en espera":
