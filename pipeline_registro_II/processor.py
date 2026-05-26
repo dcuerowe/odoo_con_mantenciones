@@ -47,6 +47,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             'T': 'Tablero'
         }
 
+        R_type = ['E', 'I']
+
 
         I_type = ['I', 'T'] 
         I_translate = {
@@ -57,7 +59,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
         id_mantencion = {'MC': 'Mantención Correctiva',
                         'MP': 'Mantención Preventiva',
                         'I': 'Instalación',
-                        'CI': 'Calibración',
+                        'R': 'Reemplazo/Extracción',
+                        'E': 'Calibración',
                         'CF': 'Configuración'}
         
         # intalaciones_interes = ['Tablero', 'Caudalímetro', 'Sensor de nivel', 'Sonda multiparamétrica', 'Otro']
@@ -160,7 +163,42 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                     id_tipos_interes.append(tipo)
             id_tipos_interes #[MC, MP]
             
-            #Cantidad de MP realizadas
+            #Cantidad de reemplazos
+
+            R_E_prefijo = set()
+            for col in df_visita.columns:
+                if ' R (E) |' in col:
+                    prefix_end_index = col.find(' R (E) |') + 4
+                    prefix = col[:prefix_end_index].strip()
+                    R_E_prefijo.add(prefix)
+            conteo_instancias_R_E = len(R_E_prefijo)
+
+            # print(conteo_instancias_R_E)
+
+            R_I_prefijo = set()
+            for col in df_visita.columns:
+                if ' R (I) |' in col:
+                    prefix_end_index = col.find(' R (I) |') + 4
+                    prefix = col[:prefix_end_index].strip()
+                    R_I_prefijo.add(prefix)
+            conteo_instancias_R_I = len(R_I_prefijo)
+
+            # print(conteo_instancias_R_I)
+
+            conteo_R = {
+                'E': conteo_instancias_R_E,
+                'I': conteo_instancias_R_I
+            }
+
+            E_prefijo = set()
+            for col in df_visita.columns:
+                if ' E |' in col:
+                    prefix_end_index = col.find(' E |') + 4
+                    prefix = col[:prefix_end_index].strip()
+                    E_prefijo.add(prefix)
+            conteo_instancias_E = len(E_prefijo)
+
+
 
             #Conteo de instalaciones de instrumentos
             I_I_prefijo = set()
@@ -471,7 +509,13 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_MC
                                                 )
-                                                
+
+                                                follow = odoo_client.message_subscribe(
+                                                    'maintenance.request',
+                                                    [created_request_MC],
+                                                    [5205, 172]
+                                                )
+
                                                 #Resgistro en resumen
                                                 detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id,
                                                             f'Se crea con éxito el registro de mantenimiento {created_request_MC}')
@@ -527,6 +571,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 created_request_MC = odoo_client.create(
                                                     'maintenance.request',
                                                     fields_values_OT_MC
+                                                )
+
+                                                follow = odoo_client.message_subscribe(
+                                                    'maintenance.request',
+                                                    [created_request_MC],
+                                                    [5205, 172]
                                                 )
 
                                                 #Hacemos la escritura para que se actualice la fecha de cierre
@@ -705,8 +755,14 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                                 update_stage_MC = odoo_client.write(
                                                     'maintenance.request',
-                                                    [ids_MC], 
+                                                    [ids_MC],
                                                     update_MC
+                                                )
+
+                                                follow = odoo_client.message_subscribe(
+                                                    'maintenance.request',
+                                                    [ids_MC],
+                                                    [5205, 172]
                                                 )
 
                                                 close_date_MC = {
@@ -770,9 +826,15 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                                 update_stage_MC = odoo_client.write(
                                                     'maintenance.request',
-                                                    [ids_MC], 
+                                                    [ids_MC],
                                                     update_MC
-                                                )   
+                                                )
+
+                                                follow = odoo_client.message_subscribe(
+                                                    'maintenance.request',
+                                                    [ids_MC],
+                                                    [5205, 172]
+                                                )
 
                                                 if update_stage_MC:
                                                     detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
@@ -918,7 +980,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         except FileNotFoundError:
                             exit()
 
-                        
 
                         #ACTUALIZACIÓN DE REQUEST
                         
@@ -1103,8 +1164,14 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                                     update_stage_CF = odoo_client.write(
                                                         'maintenance.request',
-                                                        [id_CF], 
+                                                        [id_CF],
                                                         update_CF
+                                                    )
+
+                                                    follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [id_CF],
+                                                        [5205, 172]
                                                     )
 
                                                     close_date_CF = {
@@ -1169,9 +1236,15 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                                     update_stage_CF = odoo_client.write(
                                                         'maintenance.request',
-                                                        [id_CF], 
+                                                        [id_CF],
                                                         update_CF
-                                                    )   
+                                                    )
+
+                                                    follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [id_CF],
+                                                        [5205, 172]
+                                                    )
 
                                                     if update_stage_CF:
                                                         detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id, 
@@ -1227,7 +1300,13 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_CF
                                                     )
-                                                    
+
+                                                    follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_CF],
+                                                        [5205, 172]
+                                                    )
+
                                                     #Resgistro en resumen
                                                     detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id,
                                                                 f'Se crea con éxito el registro de configuración {created_request_CF}')
@@ -1282,6 +1361,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     created_request_CF = odoo_client.create(
                                                         'maintenance.request',
                                                         fields_values_OT_CF
+                                                    )
+
+                                                    follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_CF],
+                                                        [5205, 172]
                                                     )
 
                                                     #Hacemos la escritura para que se actualice la fecha de cierre
@@ -1380,7 +1465,13 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_CF
                                                 )
-                                                
+
+                                                follow = odoo_client.message_subscribe(
+                                                    'maintenance.request',
+                                                    [created_request_CF],
+                                                    [5205, 172]
+                                                )
+
                                                 #Resgistro en resumen
                                                 detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id,
                                                             f'Se crea con éxito el registro de configuración {created_request_CF}')
@@ -1435,6 +1526,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 created_request_CF = odoo_client.create(
                                                     'maintenance.request',
                                                     fields_values_OT_CF
+                                                )
+
+                                                follow = odoo_client.message_subscribe(
+                                                    'maintenance.request',
+                                                    [created_request_CF],
+                                                    [5205, 172]
                                                 )
 
                                                 #Hacemos la escritura para que se actualice la fecha de cierre
@@ -1591,635 +1688,1319 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
 
                 #Tratamiento para CI
-                if id == 'CI':
-                    for equipo in range(1, conteo_instancias_CI+1):
-                        filtro_CI = f"{i}.2.{equipo} CI"        
-                        columnas_equipo_CI = df_trabajo.filter(like=filtro_CI).columns.to_list()
-                        columnas_equipo_CI = ['#', 'user', f"{i}.1 Proyecto", 'Fecha visita ', 'Nombre del Cliente'] + columnas_equipo_CI
-                        
-                        #df trabajo se usa para la generación del informe
-                        df_trabajo_equipo_CI = df_trabajo[columnas_equipo_CI]
-                        dic_trabajo_CI = df_trabajo_equipo_CI.to_dict(orient='records')[0]
+                elif id == "R":
 
-                        #Elmentos propios del equipo
-                        etapa_CI = dic_trabajo_CI[f"{i}.2.{equipo} CI | Etapa"]
-                        modelo_CI = dic_trabajo_CI[f"{i}.2.{equipo} CI | Modelo"]
-                        serial_CI = dic_trabajo_CI[f'{i}.2.{equipo} CI | N° de serie']
-                        obs_CI = dic_trabajo_CI[f'{i}.2.{equipo} CI | Observación']
-                        tipo_CI = 'Sonda multiparamétrica'
+                    #Reemplazo completo
+                    for t in R_type:
+                        for equipo in range(1, conteo_R[t]+1):
 
-                        
-                        
-                        #Asegurando que el serial pase de float a int
-                        for llave, valor in dic_trabajo_CI.items():
-                                    if isinstance(valor,float):
-                                        dic_trabajo_CI[llave] = int(valor)
+                            # Cambio momentaneo para probar la OT 236
+                            if str(i) == '3' and equipo == 1:
+                                print(f"-> Omitiendo filtro {i}.2.{equipo} R ({t}) por columnas duplicadas")
+                                continue
 
-                        
-                        #Buscamos las request que existan para el equipo en cuestión
-                        try:
-                            equipment_CI = odoo_client.search_read(
-                                'maintenance.equipment',
-                                [['serial_no', '=', serial_CI]],
-                                limit=1
-                            )
-                        
-                            if equipment_CI:
-                                number_equipment_CI = equipment_CI[0]['id']
+                            filtro_general = f"{i}.2.{equipo} R"        
+                            columnas_general = df_trabajo.filter(like=filtro_general).columns.to_list()
 
-                                #Validación de ubicación
-                                if equipment_CI[0]['x_studio_location']:
-                                    location_CI = equipment_CI[0]['x_studio_location'][1]
-                                else:
-                                    location_CI = False
-                                
-                                #Equipo a reparar sin una instancia de instalación
-                                puntos_odoo = odoo_client.search_read(
-                                    'x_maintenance_location',
-                                    [],
-                                    fields=['id', 'x_name']
+                            filtro_R_E = f"{i}.2.{equipo} R ({t})"        
+                            columnas_R_E = df_trabajo.filter(like=filtro_R_E).columns.to_list()
+
+
+                            columnas_equipo_R = columnas_general + columnas_R_E
+
+                            
+                            # df trabajo se usa para la generación del informe
+                            df_trabajo_equipo_R = df_trabajo[columnas_equipo_R]
+                            dic_trabajo_R = df_trabajo_equipo_R.to_dict(orient='records')[0]
+
+                            # Elmentos propios del equipo
+                            modelo_R = dic_trabajo_R[f"{filtro_R_E} | Modelo"]
+                            tipo_R = dic_trabajo_R[f"{filtro_general} | Tipo equipo/instrumento a reemplazar"]
+                            serial_R = dic_trabajo_R[f'{filtro_R_E} | N° de serie']
+                            obs_R = dic_trabajo_R[f'{filtro_general} | Observación']
+                            alcance_R = dic_trabajo_R[f'{filtro_general} | Motivo de reemplazo']
+                            destino_R = dic_trabajo_R[f'{filtro_R_E} | Destino'] if t == "E" else None
+                            trabajo_R = t
+
+
+                            #Asegurando que el serial pase de float a int
+                            for llave, valor in dic_trabajo_R.items():
+                                        if isinstance(valor,float):
+                                            dic_trabajo_R[llave] = int(valor)
+
+                            # Generación de informe
+                            pdf_stream_R = informe_pdf_profesional(i, ot, tecnico, proyecto, fecha, cliente, tipo_R, modelo_R, serial_R, t, alcance_R, punto, obs_R, obs_generales, lista_imagenes, equipo)
+                            
+                            nombre_archivo_R = f"informe_OT-{ot}_{i}_{id}_{equipo}.pdf"
+
+                            pdf_stream_R.seek(0)
+
+                            try:
+                                contenido_pdf = pdf_stream_R.read()
+                                informe_codificado_R = base64.b64encode(contenido_pdf).decode('utf-8')
+                            except FileNotFoundError:
+                                exit()     
+
+                            #Validación de que el punto indicado exista
+                            id_punto = False
+                            try:
+                                equipment_R = odoo_client.search_read(
+                                    'maintenance.equipment',
+                                    [['serial_no', '=', serial_R]]
                                 )
 
-                                id_punto = None
-                                for p in puntos_odoo:
-                                    if p['x_name'] == f'[{proyecto}] {punto}':
-                                        id_punto = p['id']
-                                        break
-                                
-
-                                if not id_punto:
-                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, 
-                                            f'{punto} no se encuentra listado en Odoo y Connecteam')
-
-                                    inbox(ot, operators[tecnico], fecha, False, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
-                                            'M',
-                                            'Punto no existe en sistema',
-                                            'Nuevo')
-                                    continue
-                                
-
-                                if location_CI == False:
-
-                                    try:
-                                        star_location = odoo_client.message_post(
-                                            'maintenance.equipment',
-                                            number_equipment_CI,
-                                            f"<p>Equipo sin evento de instalación We.</p><<p>Ubicación actual según OT-{ot}: {punto}</p>"
-                                        )
-
-                                        #trabajos sobre equipos que no estan con punto asignado
-                                        inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                            f'Equipo sin evento de instalación We en el punto {punto}.',
-                                            'N',
-                                            'Sin evento de instalación',
-                                            'En proceso')
+                                if equipment_R:
                                     
-                                    except Exception as e:
-                                        print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')
-                    
+                                    # Validamos si el equipo cuenta con una ubicación
+                                    if equipment_R[0]['x_studio_location']:
+                                        location_R = equipment_R[0]['x_studio_location'][1]
+                                    else:
+                                        location_R = False
 
-                                elif location_CI != f'[{proyecto}] {punto}':
-                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, 
-                                                f'Equipo pasa de {location_CI} a {punto})')
-                                    
-                                    #Notificación por cambio de ubicación
+                                    # Indentificación del dispositivo dentro de odoo
+                                    number_equipment_R = equipment_R[0]['id']
 
-                                    try:
-                                        
-                                        new_location_CI = odoo_client.message_post(
-                                            'maintenance.equipment',
-                                            number_equipment_CI,
-                                            f"<p><b>La ubicación a cambiado.</b></p><p><b>Nueva ubicación según OT-{ot}:</b> {location_CI} => [{proyecto}] {punto}</p>"
-                                        )
-
-                                        inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                f'Equipo pasa de {location_CI} a {punto}). Validar',
-                                                'N',
-                                                'Cambio de ubicación',
-                                                'En proceso')
-                                                
-
-                                    except Exception as e:
-                                        print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')  
-
-                                try:
-                                    domain_filter = [['equipment_id', '=', number_equipment_CI],
-                                                    ['maintenance_type', '=', 'preventive'],
-                                                    ['x_studio_tipo_de_trabajo', '=', 'Calibración']] #Productivo: x_studio_tipo_trabajo
-
-                                    request_ids_CI = odoo_client.search(
-                                        'maintenance.request',
-                                        domain_filter,
+                                    # Diccionarios de puntos
+                                    puntos_odoo = odoo_client.search_read(
+                                        'x_maintenance_location',
+                                        [],
+                                        fields=['id', 'x_name']
                                     )
-                                    
-                                    #Iterando sobre las solicitudes que tiene el equipo
-                                    if request_ids_CI:
-                                    
-                                        interruptor_CI = True   
-                                        interest_requests_CI = {} 
-                                        for ids_CI in request_ids_CI:
-                                            campos_de_interes_CI = ['schedule_date', 'stage_id', 'name', 'archive']
-                                            try:
-                                                request_data_CI = odoo_client.read(
-                                                    'maintenance.request',
-                                                    [ids_CI],
-                                                    fields=campos_de_interes_CI
-                                                )
-                                                
-                                                stage_id_CI = request_data_CI[0].get('stage_id') 
-                                                schedule_date_CI = request_data_CI[0].get('schedule_date')
-                                                name_CI = request_data_CI[0].get('name')
-                                                archived_CI = request_data_CI[0].get('archive')
 
-                                                #Solicitudes sin "Fecha programada"
-                                                if schedule_date_CI == False or archived_CI == True:
-                                                    continue
-                                                #Solicitudes con fecha y finalizadas
-                                                elif schedule_date_CI != False and stage_id_CI[0] == 5: #Finalizado
-                                                    continue
-                                                #Solicitudes con fecha y en desecho
-                                                elif schedule_date_CI != False and stage_id_CI[0] == 4: #Desechar
-                                                    continue
-                                                else:
-                                                    interest_requests_CI[ids_CI] = [schedule_date_CI, stage_id_CI, name_CI]
-                                            
-                                                 
-                                            except Exception as e:
-                                                print(e)
+                                    # Validamos que el punto marcado en el formulario exista en Odoo
+                                    id_punto = None
+                                    for p in puntos_odoo:
+                                        if p['x_name'] == f'[{proyecto}] {punto}':
+                                            id_punto = p['id']
+                                            break
+                                
+                                    if not id_punto:
 
-                                        #Buscamos la solicitud mas cercana a la fecha de realización del trabajo o aquella que se encuentra "en proceso"
-                                        if interest_requests_CI:
-                                            #Interruptor abierto por defecto para la no exitencia de un caso en proceso
-                                            interruptor_CI = True
-                                            id_CI = None
+                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, id, 
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam')
 
-                                            #Tratamiento para 
-                                            for e in interest_requests_CI.keys():
-                                                
-                                             #   Interruptor cerrado si encuentra un caso en proceso
-                                                if interest_requests_CI[e][1][0] == 3: #En proceso
-                                                    interruptor_CI = False
-                                                    id_CI = e
-                                                    break
-                                            
-                                            #Si el interruptor sigue abierto, buscamos la solictud mas cercana a la fecha de realización del trabajo
-                                            if interruptor_CI:
-                                                id_CI = min(interest_requests_CI.keys(), key=lambda x: abs(pd.to_datetime(interest_requests_CI[x][0]) - pd.to_datetime(fecha)))
-                                                
-                                             #   Archivamos las solicitudes anteriores a la escogida
-                                                for x in interest_requests_CI.keys():
-                                                    if interest_requests_CI[x][0] < interest_requests_CI[id_CI][0]:
+                                        inbox(ot, operators[tecnico], fecha, False, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                                'M',
+                                                'Punto no existe en sistema',
+                                                'Nuevo',
+                                                nombre_archivo_R,
+                                                informe_codificado_R)
+                                        
+                                        continue                       
+
+                                    if alcance_R == "Ciclo de calibración":
+
+                                        #Evaluación para el equipo que se instala
+
+                                        if t == "E":
+
+                                            if destino_R == "Laboratorio | Metrocal":
+                                                # Bajo este tratamiento lo que se nusca es crear le requeste de calibración, de extracción y actualizar la ubicación a laboratorio
+
+
+                                                #Buscamos si hay calibración programada
+                                                try:
+                                                    domain_filter = [['equipment_id', '=', number_equipment_R],
+                                                                    ['maintenance_type', '=', 'preventive'],
+                                                                    ['x_studio_tipo_de_trabajo', '=', 'Calibración']] #Productivo: x_studio_tipo_trabajo
+
+                                                    request_ids_CI = odoo_client.search(
+                                                        'maintenance.request',
+                                                        domain_filter,
+                                                    )
+
+
+                                                    # Iterando sobre las solicitudes de calibración que tiene el equipo
+                                                    if request_ids_CI:
+                                                    
+                                                        interruptor_CI = True   
+                                                        interest_requests_CI = {}
+
+                                                        for ids_CI in request_ids_CI:
+                                                            campos_de_interes_CI = ['schedule_date', 'stage_id', 'name', 'archive']
+                                                            
+                                                            try:
+                                                                request_data_CI = odoo_client.read(
+                                                                    'maintenance.request',
+                                                                    [ids_CI],
+                                                                    fields=campos_de_interes_CI
+                                                                )
+                                                                
+                                                                stage_id_CI = request_data_CI[0].get('stage_id') 
+                                                                schedule_date_CI = request_data_CI[0].get('schedule_date')
+                                                                name_CI = request_data_CI[0].get('name')
+                                                                archived_CI = request_data_CI[0].get('archive')
+
+                                                                # Solicitudes sin "Fecha programada"
+                                                                if schedule_date_CI == False or archived_CI == True:
+                                                                    continue
+                                                                # Solicitudes con fecha y finalizadas
+                                                                elif schedule_date_CI != False and stage_id_CI[0] == 5: #Finalizado
+                                                                    continue
+                                                                # Solicitudes con fecha y en desecho
+                                                                elif schedule_date_CI != False and stage_id_CI[0] == 4: #Desechar
+                                                                    continue
+
+                                                                # Solicitudes con fecha y en proceso    
+                                                                elif schedule_date_CI != False and stage_id_CI[0] == 3:
+                                                                    continue    
+                                                                
+
+                                                                else:
+
+                                                                    # Nos intetesan las que esten programadas o en proceso
+                                                                    interest_requests_CI[ids_CI] = [schedule_date_CI, stage_id_CI, name_CI]
+                                                            
+                                                                    interruptor_CI = False
+                                                                
+                                                            except Exception as e:
+                                                                print(e)
+                                                        
+                                                        # Buscamos la solicitud mas cercana a la fecha de realización del trabajo
+                                                        if interest_requests_CI:
+
+                                                            id_CI = min(interest_requests_CI.keys(), key=lambda x: abs(pd.to_datetime(interest_requests_CI[x][0]) - pd.to_datetime(fecha)))
+                                                            
+                                                            # Archivamos las solicitudes anteriores a la escogida
+                                                            for x in interest_requests_CI.keys():
+                                                                if interest_requests_CI[x][0] < interest_requests_CI[id_CI][0]:
+                                                                    try:
+                                                                        archive_CI = {
+                                                                            'archive': True,
+                                                                        }
+                                                                        update_stage_CI = odoo_client.write(
+                                                                            'maintenance.request',
+                                                                            [x], 
+                                                                            archive_CI
+                                                                        )
+                                                                    except Exception as e:
+                                                                        print(f"Error al archivar la solicitud {interest_requests_CI[x][2]}: {e}")
+
+                                                            try:
+                                                                # Atualizando su estado a en proceso
+                                                                update_CI = {
+                                                                    'stage_id': 3,
+                                                                    'maintenance_team_id': 2 , # Metrocal
+                                                                    'x_studio_tcnico': 5118 # Metrocal
+                                                                }
+
+                                                                follow = odoo_client.message_subscribe(
+                                                                    'maintenance.request',
+                                                                    [id_CI],
+                                                                    [5205, 172]
+                                                                )
+
+                                                                update_stage_CI = odoo_client.write(
+                                                                    'maintenance.request',
+                                                                    [id_CI], 
+                                                                    update_CI
+                                                                )   
+
+                                                                # 172: Rodrigo
+                                                                # 5205: Felipe Riquelme
+                                                                # 158: Juan
+                                        
+                                                            except Exception as e:
+                                                                print(f"Error al actualizar estado de calibración request: {e}")
+                                                                traceback.print_exc()
+                                                                continue
+
+                                                            
+                                                            # Creación de request de Extracción
+                                                            try:
+                                                                fields_values_OT_E = {
+                                                                    'name': f"Extracción | {tipo_R} {modelo_R}",
+                                                                    'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                                    'stage_id': '5', # 3 Finalizado
+                                                                    'x_studio_tipo_de_trabajo': 'Extracción',
+                                                                    # 'x_studio_etiqueta_1': id_mantencion[id],
+                                                                    'schedule_date': fecha,
+                                                                    'description': punto,
+                                                                    'x_studio_informe': informe_codificado_R
+                                                                }
+
+                                                                created_request_E = odoo_client.create(
+                                                                    'maintenance.request',
+                                                                    fields_values_OT_E
+                                                                )
+
+                                                                follow = odoo_client.message_subscribe(
+                                                                        'maintenance.request',
+                                                                        [created_request_E],
+                                                                        [5205, 172]
+                                                                    )
+
+                                                                # Hacemos la escritura para que se actualice la fecha de cierre
+                                                                stage_E = {
+                                                                    'stage_id': 5,
+                                                                }
+
+                                                                update_stage_E = odoo_client.write(
+                                                                    'maintenance.request',
+                                                                    [created_request_E], 
+                                                                    stage_E
+                                                                )
+
+                                                                close_date_E = {
+                                                                    'close_date': fecha,
+                                                                    'x_studio_tcnico': operators[tecnico]
+                                                                }
+
+                                                                update_close_date_E = odoo_client.write(
+                                                                    'maintenance.request',
+                                                                    [created_request_E], 
+                                                                    close_date_E
+                                                                )
+
+                                                                
+                                                                # Resgistro en resumen
+                                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, 'E',
+                                                                            f'Se crea con éxito el registro de mantenimiento {created_request_E}')
+
+                                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                                        'Se crea con éxito el registro de mantenimiento',
+                                                                        'A',
+                                                                        False,
+                                                                        'Resuelto')
+
+                                                            
+                                                                #Actualizamos la actividad que se genera por defecto
+                                                                try:
+                                                                    # Buscamos el ID de la actividad existente para la OT_number
+                                                                    actividad_id_E = odoo_client.search_read(
+                                                                        'mail.activity',
+                                                                        [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_E]],
+                                                                        limit=1
+                                                                    )
+
+                                                                    # Actualizando actividad
+                                                                    try:
+                                                                        actividad_number_E = actividad_id_E[0]['id']
+                                                                        odoo_client.action_feedback(
+                                                                            'mail.activity',
+                                                                            [actividad_number_E],
+                                                                            f"Completado desde API"
+                                                                        )
+
+                                                                    except Exception as e:
+                                                                        print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
+                                                                        continue        
+                                                                except Exception as e:
+                                                                    print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
+                                                                    continue   
+
+                                                            except Exception as e:
+                                                                print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                                print(traceback.format_exc())
+                                                                continue
+
+                                                            
+                        
+                                                            #Actualizamos ubicación del equipo
+                                                            try:
+                                                                new_location_CI = {
+                                                                    'x_studio_location': 593, # Laboratorio
+                                                                    'assign_date': False,
+                                                                }
+                                                                # Actualizamos la ubicación en el perfil del equipo
+                                                                
+                                                                update_location_CI = odoo_client.write(
+                                                                    'maintenance.equipment',
+                                                                    [number_equipment_R], 
+                                                                    new_location_CI
+                                                                )
+                                                            except Exception as e:
+                                                                print(e)
+                                                                print(traceback.format_exc())
+
+
+                                                        # El equipo tiene todas sus solicitudes de calibración previas terminadas    
+                                                        else:
+
+                                                            # creamos la solicitud de calibración
+                                                            try:
+                                                                fields_values_OT_CI = {
+                                                                    'name': f"Calibración | {tipo_R} {modelo_R}",
+                                                                    'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                                    'stage_id': '3', # 3 En proceso 
+                                                                    'x_studio_tipo_de_trabajo': 'Calibración',
+                                                                    # 'x_studio_etiqueta_1': id_mantencion[id],
+                                                                    'schedule_date': fecha
+                                                                }
+
+                                                                created_request_CI = odoo_client.create(
+                                                                    'maintenance.request',
+                                                                    fields_values_OT_CI
+                                                                )
+
+                                                                follow = odoo_client.message_subscribe(
+                                                                        'maintenance.request',
+                                                                        [created_request_CI],
+                                                                        [5205, 172]
+                                                                    )
+
+                                                                fields_team_CI = {
+                                                                    'maintenance_team_id': 2 , # Metrocal
+                                                                    'x_studio_tcnico': 5118 # Metrocal
+                                                                }
+
+                                                                update_team_CI = odoo_client.write(
+                                                                    'maintenance.request',
+                                                                    [created_request_CI], 
+                                                                    fields_team_CI
+                                                                )
+                                                                
+                                                                # Resgistro en resumen
+                                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, 'CI',
+                                                                            f'Se crea con éxito el registro de calibración {created_request_CI}')
+
+                                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, 'CI', odoo_client,
+                                                                        'Se crea con éxito el registro de calibración',
+                                                                        'A',
+                                                                        False,
+                                                                        'Resuelto')
+                                                        
+                                                            except Exception as e:
+                                                                print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                                print(traceback.format_exc())
+                                                                continue
+
+
+                                                            # Creación de request de Extracción
+                                                            try:
+                                                                fields_values_OT_E = {
+                                                                    'name': f"Extracción | {tipo_R} {modelo_R}",
+                                                                    'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                                    'stage_id': '5', # 3 Finalizado
+                                                                    'x_studio_tipo_de_trabajo': 'Extracción',
+                                                                    # 'x_studio_etiqueta_1': id_mantencion[id],
+                                                                    'schedule_date': fecha,
+                                                                    'description': punto,
+                                                                    'x_studio_informe': informe_codificado_R
+                                                                }
+
+                                                                created_request_E = odoo_client.create(
+                                                                    'maintenance.request',
+                                                                    fields_values_OT_E
+                                                                )
+
+                                                                follow = odoo_client.message_subscribe(
+                                                                        'maintenance.request',
+                                                                        [created_request_E],
+                                                                        [5205, 172]
+                                                                    )
+
+                                                                # Hacemos la escritura para que se actualice la fecha de cierre
+                                                                stage_E = {
+                                                                    'stage_id': 5,
+                                                                }
+
+                                                                update_stage_E = odoo_client.write(
+                                                                    'maintenance.request',
+                                                                    [created_request_E], 
+                                                                    stage_E
+                                                                )
+
+                                                                close_date_E = {
+                                                                    'close_date': fecha,
+                                                                    'x_studio_tcnico': operators[tecnico]
+                                                                }
+
+                                                                update_close_date_E = odoo_client.write(
+                                                                    'maintenance.request',
+                                                                    [created_request_E], 
+                                                                    close_date_E
+                                                                )
+
+                                                                
+                                                                # Resgistro en resumen
+                                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, t,
+                                                                            f'Se crea con éxito el registro de mantenimiento {created_request_E}')
+
+                                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                                        'Se crea con éxito el registro de mantenimiento',
+                                                                        'A',
+                                                                        False,
+                                                                        'Resuelto')
+
+
+                                                                #Actualizamos la actividad que se genera por defecto
+
+                                                                try:
+                                                                    # Buscamos el ID de la actividad existente para la OT_number
+                                                                    actividad_id_E = odoo_client.search_read(
+                                                                        'mail.activity',
+                                                                        [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_E]],
+                                                                        limit=1
+                                                                    )
+
+                                                                    # Actualizando actividad
+                                                                    try:
+                                                                        actividad_number_E = actividad_id_E[0]['id']
+                                                                        odoo_client.action_feedback(
+                                                                            'mail.activity',
+                                                                            [actividad_number_E],
+                                                                            f"Completado desde API"
+                                                                        )
+
+                                                                    except Exception as e:
+                                                                        print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
+                                                                        continue        
+                                                                except Exception as e:
+                                                                    print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
+                                                                    continue   
+                                                                
+
+
+                                                            except Exception as e:
+                                                                print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                                print(traceback.format_exc())
+                                                                continue
+
+                                                            #Actualizamos ubicación del equipo
+
+                                                            try:
+                                                                new_location_CI = {
+                                                                    'x_studio_location': 593, # Laboratorio
+                                                                    'assign_date': False,
+                                                                }
+                                                                # Actualizamos la ubicación en el perfil del equipo
+                                                                
+                                                                update_location_CI = odoo_client.write(
+                                                                    'maintenance.equipment',
+                                                                    [number_equipment_R], 
+                                                                    new_location_CI
+                                                                )
+                                                            except Exception as e:
+                                                                print(e)
+                                                                print(traceback.format_exc())
+
+                                                    # Equipo sin ningun trabajo de calibración previo
+                                                    else:
                                                         try:
-                                                            archive_CI = {
-                                                                'archive': True,
+                                                            fields_values_OT_CI = {
+                                                                'name': f"Calibración | {tipo_R} {modelo_R}",
+                                                                'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                                'stage_id': '3', # 3 En proceso 
+                                                                'x_studio_tipo_de_trabajo': 'Calibración',
+                                                                # 'x_studio_etiqueta_1': id_mantencion[id],
+                                                                'schedule_date': fecha
                                                             }
-                                                            update_stage_CI = odoo_client.write(
+
+                                                            created_request_CI = odoo_client.create(
                                                                 'maintenance.request',
-                                                                [x], 
-                                                                archive_CI
+                                                                fields_values_OT_CI
+                                                            )
+
+                                                            follow = odoo_client.message_subscribe(
+                                                                    'maintenance.request',
+                                                                    [created_request_CI],
+                                                                    [5205, 172]
+                                                                )
+
+                                                            fields_team_CI = {
+                                                                'maintenance_team_id': 2 , # Metrocal
+                                                                'x_studio_tcnico': 5118 # Metrocal
+                                                            }
+
+                                                            update_team_CI = odoo_client.write(
+                                                                'maintenance.request',
+                                                                [created_request_CI], 
+                                                                fields_team_CI
+                                                            )
+                                                            
+                                                            # Resgistro en resumen
+                                                            detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, 'CI',
+                                                                        f'Se crea con éxito el registro de calibración {created_request_CI}')
+
+                                                            inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, 'CI', odoo_client,
+                                                                    'Se crea con éxito el registro de calibración',
+                                                                    'A',
+                                                                    False,
+                                                                    'Resuelto')
+                                                    
+                                                        except Exception as e:
+                                                            print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                            print(traceback.format_exc())
+                                                            continue
+
+
+                                                        # Creación de request de Extracción
+                                                        try:
+                                                            fields_values_OT_E = {
+                                                                'name': f"Extracción | {tipo_R} {modelo_R}",
+                                                                'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                                'stage_id': '5', # 3 Finalizado
+                                                                'x_studio_tipo_de_trabajo': 'Extracción',
+                                                                # 'x_studio_etiqueta_1': id_mantencion[id],
+                                                                'schedule_date': fecha,
+                                                                'description': punto,
+                                                                'x_studio_informe': informe_codificado_R
+                                                            }
+
+                                                            created_request_E = odoo_client.create(
+                                                                'maintenance.request',
+                                                                fields_values_OT_E
+                                                            )
+
+                                                            follow = odoo_client.message_subscribe(
+                                                                    'maintenance.request',
+                                                                    [created_request_E],
+                                                                    [5205, 172]
+                                                                )
+
+                                                            # Hacemos la escritura para que se actualice la fecha de cierre
+                                                            stage_E = {
+                                                                'stage_id': 5,
+                                                            }
+
+                                                            update_stage_E = odoo_client.write(
+                                                                'maintenance.request',
+                                                                [created_request_E], 
+                                                                stage_E
+                                                            )
+
+                                                            close_date_E = {
+                                                                'close_date': fecha,
+                                                                'x_studio_tcnico': operators[tecnico]
+                                                            }
+
+                                                            update_close_date_E = odoo_client.write(
+                                                                'maintenance.request',
+                                                                [created_request_E], 
+                                                                close_date_E
+                                                            )
+
+                                                            
+                                                            # Resgistro en resumen
+                                                            detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, t,
+                                                                        f'Se crea con éxito el registro de mantenimiento {created_request_E}')
+
+                                                            inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                                    'Se crea con éxito el registro de mantenimiento',
+                                                                    'A',
+                                                                    False,
+                                                                    'Resuelto')
+
+
+                                                            #Actualizamos la actividad que se genera por defecto
+
+                                                            try:
+                                                                # Buscamos el ID de la actividad existente para la OT_number
+                                                                actividad_id_E = odoo_client.search_read(
+                                                                    'mail.activity',
+                                                                    [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_E]],
+                                                                    limit=1
+                                                                )
+
+                                                                # Actualizando actividad
+                                                                try:
+                                                                    actividad_number_E = actividad_id_E[0]['id']
+                                                                    odoo_client.action_feedback(
+                                                                        'mail.activity',
+                                                                        [actividad_number_E],
+                                                                        f"Completado desde API"
+                                                                    )
+
+                                                                except Exception as e:
+                                                                    print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
+                                                                    continue        
+                                                            except Exception as e:
+                                                                print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
+                                                                continue   
+
+                                                        except Exception as e:
+                                                            print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                            print(traceback.format_exc())
+                                                            continue
+
+                                                        #Actualizamos ubicación del equipo
+
+                                                        try:
+                                                            new_location_CI = {
+                                                                'x_studio_location': 593, # Laboratorio
+                                                                'assign_date': False,
+                                                            }
+                                                            # Actualizamos la ubicación en el perfil del equipo
+                                                            
+                                                            update_location_CI = odoo_client.write(
+                                                                'maintenance.equipment',
+                                                                [number_equipment_R], 
+                                                                new_location_CI
                                                             )
                                                         except Exception as e:
-                                                            print(f"Error al archivar la solicitud {interest_requests_CI[x][2]}: {e}")
-                                            
-
-                                            if etapa_CI == "Extracción":
-                                                
-                                                if interest_requests_CI[id_CI][1][0] == 3:
-
-                                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, 
-                                                                f'Registro de extracción cuando la sonda no se enceuntra en el punto')
-                                                    
-                                                    inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                                'Registro de extraccción cuando la sonda no se encuentra en el punto',
-                                                                'M',
-                                                                False,
-                                                                'Nuevo')
-                                                    
-                                                    continue
-
-                                                try:
-                                                   # Atualizando su estado a Finalizado
-                                                    update_CI = {
-                                                        'stage_id': 3,
-                                                 
-                                                    }
-
-                                                    update_stage_CI = odoo_client.write(
-                                                        'maintenance.request',
-                                                        [id_CI], 
-                                                        update_CI
-                                                    )
-
-                                                    tec_CI = {
-                                                    'x_studio_tcnico': operators[tecnico]
-                                                    }
-
-                                                    update_close_date_CI = odoo_client.write(
-                                                        'maintenance.request',
-                                                        [id_CI], 
-                                                        tec_CI
-                                                    )
-
-
-                                                    if update_stage_CI:
-                                                        detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, 
-                                                                    f'Se registra con exito la instancia de extracción para la calibración: {name_CI}')
+                                                            print(e)
+                                                            print(traceback.format_exc())
                                                         
-                                                        inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                                    'Se regista con exito la instancia de extracción',
-                                                                    'A',
-                                                                    False,
-                                                                    'Resuelto')
-                                                            
-                                                        #Actualización de bitácora
-                                                        star_location = odoo_client.message_post(
-                                                            'maintenance.request',
-                                                            id_CI,
-                                                            f"Punto de extracción: [{proyecto}] {punto}"
-                                                        )
-                                                      
-                                                      #   Buscamos el ID de la actividad existente para la OT
-                                                                
                                                 except Exception as e:
-                                                    print(f"Error al actualizar estado de solicitud de mantenimiento MP: {e}")
-                                                    traceback.print_exc()
-                                                    continue
-                                            
+                                                            print(e)
+
+
+
                                             else:
-                                                
-                                                if interest_requests_CI[id_CI][1][0] != 3:
-
-                                                    detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, 
-                                                                f'Registro de re-instalación cuando no se ha extraido la sonda')
-                                                    
-                                                    inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                                'Registro de re-instalación cuando la sonda no ha sido extraida del punto',
-                                                                'M',
-                                                                False,
-                                                                'Nuevo')
-                                                    
-                                                    continue
-
-
+                                                # Tratamiento solo creando el trabajo de extracción y cambiando la ubicación a bodega cliente
+                                                # Creación de request de Extracción
                                                 try:
-                                                    #Atualizando su estado a Finalizado
-                                                    update_CI = {
+                                                    fields_values_OT_E = {
+                                                        'name': f"Extracción | {tipo_R} {modelo_R}",
+                                                        'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                        'stage_id': '5', # 3 Finalizado
+                                                        'x_studio_tipo_de_trabajo': 'Extracción',
+                                                        # 'x_studio_etiqueta_1': id_mantencion[id],
+                                                        'schedule_date': fecha,
+                                                        'description': punto,
+                                                        'x_studio_informe': informe_codificado_R
+                                                    }
+
+                                                    created_request_E = odoo_client.create(
+                                                        'maintenance.request',
+                                                        fields_values_OT_E
+                                                    )
+
+                                                    follow = odoo_client.message_subscribe(
+                                                            'maintenance.request',
+                                                            [created_request_E],
+                                                            [5205, 172]
+                                                        )
+
+                                                    # Hacemos la escritura para que se actualice la fecha de cierre
+                                                    stage_E = {
                                                         'stage_id': 5,
-                                                  
                                                     }
 
-                                                    update_stage_CI = odoo_client.write(
+                                                    update_stage_E = odoo_client.write(
                                                         'maintenance.request',
-                                                        [id_CI], 
-                                                        update_CI
+                                                        [created_request_E], 
+                                                        stage_E
                                                     )
 
-
-                                                    close_date_CI = {
+                                                    close_date_E = {
                                                         'close_date': fecha,
-                                                    'x_studio_tcnico': operators[tecnico]
+                                                        'x_studio_tcnico': operators[tecnico]
                                                     }
 
-                                                    update_close_date_CI = odoo_client.write(
+                                                    update_close_date_E = odoo_client.write(
                                                         'maintenance.request',
-                                                        [id_CI], 
-                                                        close_date_CI
+                                                        [created_request_E], 
+                                                        close_date_E
                                                     )
 
+                                                    
+                                                    # Resgistro en resumen
+                                                    detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, t,
+                                                                f'Se crea con éxito el registro de mantenimiento {created_request_E}')
 
-                        
-                                                    if update_stage_CI:
-                                                        detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, 
-                                                                    f'Se registra con exito la instancia de re-instalación para la calibración: {name_CI}')
-                                                        
-                                                        inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                                    'Se regista con exito la instancia de re-instalación',
-                                                                    'A',
-                                                                    False,
-                                                                    'Resuelto')
-                                                            
-                                                        #Actualización de bitácora
+                                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                            'Se crea con éxito el registro de mantenimiento',
+                                                            'A',
+                                                            False,
+                                                            'Resuelto')
+
+                                                    
+                                                    #Actualizamos la actividad que se genera por defecto
+
+                                                    try:
+                                                        # Buscamos el ID de la actividad existente para la OT_number
+                                                        actividad_id_E = odoo_client.search_read(
+                                                            'mail.activity',
+                                                            [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_E]],
+                                                            limit=1
+                                                        )
+
+                                                        # Actualizando actividad
                                                         try:
-                                                            actividad_id_CI = odoo_client.search_read(
+                                                            actividad_number_E = actividad_id_E[0]['id']
+                                                            odoo_client.action_feedback(
                                                                 'mail.activity',
-                                                                [['res_model', '=', 'maintenance.request'], ['res_id', '=', id_CI]],
-                                                                limit=1
+                                                                [actividad_number_E],
+                                                                f"Completado desde API"
                                                             )
 
-                                                            #Actualizando actividad
-                                                            if actividad_id_CI:
+                                                        except Exception as e:
+                                                            print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
+                                                            continue        
+                                                    except Exception as e:
+                                                        print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
+                                                        continue   
+
+
+                                                except Exception as e:
+                                                    print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                    print(traceback.format_exc())
+                                                    continue
+
+                                                #Actualizamos ubicación del equipo
+
+                                                try:
+                                                    new_location_CI = {
+                                                        'x_studio_location': 594, # Bodega cliente
+                                                        'assign_date': False,
+                                                    }
+                                                    # Actualizamos la ubicación en el perfil del equipo
+                                                    
+                                                    update_location_CI = odoo_client.write(
+                                                        'maintenance.equipment',
+                                                        [number_equipment_R], 
+                                                        new_location_CI
+                                                    )
+                                                except Exception as e:
+                                                    print(e)
+                                                    print(traceback.format_exc())
+
+
+                                        else:
+                                            # Tratamiento para el equipo que se instala
+
+                                            try:
+
+                                                domain_filter = [['equipment_id', '=', number_equipment_R],
+                                                                ['maintenance_type', '=', 'preventive'],
+                                                                ['x_studio_tipo_de_trabajo', '=', 'Calibración']] #Productivo: x_studio_tipo_trabajo
+
+                                                request_ids_CI = odoo_client.search(
+                                                    'maintenance.request',
+                                                    domain_filter,
+                                                )
+
+
+                                                # Iterando sobre las solicitudes de calibración que tiene el equipo
+                                                if request_ids_CI:
+                                                
+                                                    interruptor_CI = True   
+                                                    interest_requests_CI = {}
+
+                                                    for ids_CI in request_ids_CI:
+                                                        campos_de_interes_CI = ['schedule_date', 'stage_id', 'name', 'archive']
+
+                                                        try:
+                                                            request_data_CI = odoo_client.read(
+                                                                'maintenance.request',
+                                                                [ids_CI],
+                                                                fields=campos_de_interes_CI
+                                                            )
+
+                                                            stage_id_CI = request_data_CI[0].get('stage_id')
+                                                            schedule_date_CI = request_data_CI[0].get('schedule_date')
+                                                            name_CI = request_data_CI[0].get('name')
+                                                            archived_CI = request_data_CI[0].get('archive')
+
+                                                            # Solicitudes sin "Fecha programada"
+                                                            if schedule_date_CI == False or archived_CI == True:
+                                                                continue
+                                                            # Solicitudes con fecha y finalizadas
+                                                            elif schedule_date_CI != False and stage_id_CI[0] == 5: #Finalizado
+                                                                continue
+                                                            # Solicitudes con fecha y en desecho
+                                                            elif schedule_date_CI != False and stage_id_CI[0] == 4: #Desechar
+                                                                continue
+
+                                                            
+                                                            else:
+                                                                # Nos intetesan las que esten programadas o en proceso
+                                                                interest_requests_CI[ids_CI] = [schedule_date_CI, stage_id_CI, name_CI]
+                                                        
+                                                                interruptor_CI = False
+                                                            
+                                                        except Exception as e:
+                                                            print(e)
+                                                    
+                                                    # Buscamos la solicitud mas cercana a la fecha de realización del trabajo
+                                                    if interest_requests_CI:
+
+                                                        # Interruptor abierto por defecto para la no exitencia de un caso en proceso
+                                                        interruptor_CI = True
+                                                        id_CI = None
+
+                                                        for e in interest_requests_CI.keys():    
+                                                            # Interruptor cerrado si encuentra un caso en proceso
+                                                            if interest_requests_CI[e][1][0] == 3: #En proceso
+                                                                interruptor_CI = False
+                                                                id_CI = e
+                                                                break
+
+
+                                                        if interruptor_CI:
+                                                            id_CI = min(interest_requests_CI.keys(), key=lambda x: abs(pd.to_datetime(interest_requests_CI[x][0]) - pd.to_datetime(fecha)))
+                                                        
+                                                            # Archivamos las solicitudes anteriores a la escogida
+                                                            for x in interest_requests_CI.keys():
+                                                                if interest_requests_CI[x][0] < interest_requests_CI[id_CI][0]:
+                                                                    try:
+                                                                        archive_CI = {
+                                                                            'archive': True,
+                                                                        }
+                                                                        update_stage_CI = odoo_client.write(
+                                                                            'maintenance.request',
+                                                                            [x],
+                                                                            archive_CI
+                                                                        )
+                                                                    except Exception as e:
+                                                                        print(f"Error al archivar la solicitud {interest_requests_CI[x][2]}: {e}")
+
+                                                        try:
+                                                            # Atualizando su estado a finalizado
+                                                            update_CI = {
+                                                                'stage_id': 5,
+                                                                'maintenance_team_id': 2 , # Metrocal
+                                                                'x_studio_tcnico': 5118 # Metrocal
+                                                            }
+
+                                                            follow = odoo_client.message_subscribe(
+                                                                'maintenance.request',
+                                                                [id_CI],
+                                                                [5205, 172]
+                                                            )
+
+                                                            update_stage_CI = odoo_client.write(
+                                                                'maintenance.request',
+                                                                [id_CI], 
+                                                                update_CI
+                                                            )   
+
+                                                            #Actualizamos la actividad que se genera por defecto
+
+                                                            try:
+                                                                # Buscamos el ID de la actividad existente para la OT_number
+                                                                actividad_id_CI = odoo_client.search_read(
+                                                                    'mail.activity',
+                                                                    [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_CI]],
+                                                                    limit=1
+                                                                )
+
+                                                                # Actualizando actividad
                                                                 try:
                                                                     actividad_number_CI = actividad_id_CI[0]['id']
                                                                     odoo_client.action_feedback(
                                                                         'mail.activity',
                                                                         [actividad_number_CI],
-                                                                        f"<b>Punto de re-instalación:</b> [{proyecto}] {punto}"
+                                                                        f"Completado desde API"
                                                                     )
-                                                                    
+
                                                                 except Exception as e:
-                                                                    print(f"Error al actualizar estado de la actividad de mantenimiento: {e}")
+                                                                    print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
+                                                                    continue  
 
-                                                        except Exception as e:
-                                                            print(f"Error al listar de la actividad de mantenimiento: {e}")
-                                                
-                                                        # Buscamos el ID de la actividad existente para la OT
-                                                                
-                                                except Exception as e:
-                                                    print(f"Error al actualizar estado de solicitud de mantenimiento MP: {e}")
-                                                    traceback.print_exc()
-                                                    continue
-                                        
-                                        #Caso en que el equipo solo tiene solicitudes terminadas
-                                        else:
-                                        
-                                            if etapa_CI == "Extracción":
-                                                try:
-                                                    fields_values_OT_CI = {
-                                                        'name': f"Calibración | Sonda multiparamétrica {modelo_CI}",
-                                                        'equipment_id': number_equipment_CI, #Aquí debemos usar el ID númerico de la sonda
-                                                        'stage_id': '3', # 5 Finalizado
-                                                        'x_studio_tipo_de_trabajo': id_mantencion[id],
-                                                        # 'x_studio_etiqueta_1': id_mantencion[id],
-                                                        'description': obs_CI,
-                                                        'schedule_date': fecha,
-                                                        'x_studio_tcnico': operators[tecnico]
-
-                                                    }
-                                                    created_request_CI = odoo_client.create(
-                                                        'maintenance.request',
-                                                        fields_values_OT_CI
-                                                    )
-                                                    
-                                                    detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id,
-                                                                f'Se crea con éxito el registro de calibración {created_request_CI}')
-                                                    
-                                                    inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                                'Se crea con éxito el registro de extracción de sonda',
-                                                                'A',
-                                                                False,
-                                                                'Resuelto')
-
-                                                except Exception as e:
-                                                    print(f'Creación de instancia {e}')
-
-                                            elif etapa_CI == 'Re-instalación':
-                                                try:
-                                                    fields_values_OT_CI = {
-                                                        'name': f"Calibración | Sonda multiparamétrica {modelo_CI}",
-                                                        'equipment_id': number_equipment_CI, #Aquí debemos usar el ID númerico de la sonda
-                                                        'stage_id': '5', # 5 Finalizado
-                                                        'x_studio_tipo_de_trabajo': id_mantencion[id],
-                                                        # 'x_studio_etiqueta_1': id_mantencion[id],
-                                                        'description': obs_CI,
-                                                        'schedule_date': fecha,
-                                                    }
-
-                                                    created_request_CI = odoo_client.create(
-                                                        'maintenance.request',
-                                                        fields_values_OT_CI
-                                                    )
-
-                                                    #Hacemos la escritura para que se actualice la fecha de cierre
-                                                    update_stage_CI = {
-                                                        'stage_id': 5,
-                                                    }
-
-                                                    update_stage_CI = odoo_client.write(
-                                                        'maintenance.request',
-                                                        [created_request_CI], 
-                                                        update_stage_CI
-                                                    )
-
-                                                    update_close_date_CI = {
-                                                        'close_date': fecha,
-                                                        'x_studio_tcnico': operators[tecnico]
-                                                    }
-
-                                                    update_close_date_CI = odoo_client.write(
-                                                        'maintenance.request',
-                                                        [created_request_CI], 
-                                                        update_close_date_CI
-                                                    )
-
-                                                    #Resgistro en resumen
-                                                    
-                                                    detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id,
-                                                                f'Se crea con éxito el registro de calibración {created_request_CI}')
-                                                    
-                                                    inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                                'Se crea con éxito el registro de reinstalación de sonda',
-                                                                'A',
-                                                                False,
-                                                                'Resuelto')
-
-                                                    try:
-                                                        actividad_id_CI = odoo_client.search_read(
-                                                            'mail.activity',
-                                                            [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_CI]],
-                                                            limit=1
-                                                        )
-
-                                                       # Actualizando actividad
-                                                        if actividad_id_CI:
-                                                            try:
-                                                                actividad_number_CI = actividad_id_CI[0]['id']
-                                                                odoo_client.action_feedback(
-                                                                    'mail.activity',
-                                                                    [actividad_number_CI],
-                                                                    f"<b>Punto de re-instalación:</b> [{proyecto}] {punto}"
-                                                                )
-                                                                
                                                             except Exception as e:
-                                                                print(f"Error al actualizar estado de la actividad de mantenimiento: {e}")
+                                                                print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
+                                                                continue   
 
-                                                    except Exception as e:
-                                                        print(f"Error al listar de la actividad de mantenimiento: {e}")
-
-                                                except Exception as e:
-                                                    print(f'Error al crear intancia {e}')      
-                                            
-
-
-                                    #Caso cuando el equipo no tiene solicitudes programadas ni realizadas        
-                                    else:
-                                        
-                                        if etapa_CI == "Extracción":
-                                            try:
-                                                fields_values_OT_CI = {
-                                                    'name': f"Calibración | Sonda multiparamétrica {modelo_CI}",
-                                                    'equipment_id': number_equipment_CI, #Aquí debemos usar el ID númerico de la sonda
-                                                    'stage_id': '3', # 5 Finalizado
-                                                    'x_studio_tipo_de_trabajo': id_mantencion[id],
-                                                    # 'x_studio_etiqueta_1': id_mantencion[id],
-                                                    'description': obs_CI,
-                                                    'schedule_date': fecha,
-                                                    'x_studio_tcnico': operators[tecnico]
-                                                }
-
-                                                created_request_CI = odoo_client.create(
-                                                        'maintenance.request',
-                                                        fields_values_OT_CI
-                                                    )
-                                                
-                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id,
-                                                            f'Se crea con éxito el registro de calibración {created_request_CI}')
-                                                
-                                                inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                            'Se crea con éxito el registro de extracción de sonda',
-                                                            'A',
-                                                            False,
-                                                            'Resuelto')
+                                                            # 172: Rodrigo
+                                                            # 5205: Felipe Riquelme
+                                                            # 158: Juan
+                                    
+                                                        except Exception as e:
+                                                            print(f"Error al actualizar estado de calibración request: {e}")
+                                                            traceback.print_exc()
+                                                            continue
 
                                             except Exception as e:
-                                                print('Creación de instancia')
+                                                print(e)
+                                                traceback.print_exc()
 
-                                        elif etapa_CI == 'Re-instalación':
+
+
+                                            # Creación del trabajo de instalación
                                             try:
-                                                fields_values_OT_CI = {
-                                                    'name': f"Calibración | Sonda multiparamétrica {modelo_CI}",
-                                                    'equipment_id': number_equipment_CI, #Aquí debemos usar el ID númerico de la sonda
-                                                    'stage_id': '5', # 5 Finalizado
-                                                    'x_studio_tipo_de_trabajo': id_mantencion[id],
+                                                fields_values_OT_I = {
+                                                    'name': f"Instalación | {tipo_R} {modelo_R}",
+                                                    'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                    'stage_id': '5', # 3 Finalizado
+                                                    'x_studio_tipo_de_trabajo': 'Instalación',
                                                     # 'x_studio_etiqueta_1': id_mantencion[id],
-                                                    'description': obs_CI,
                                                     'schedule_date': fecha,
+                                                    'description': punto,
+                                                    'x_studio_informe': informe_codificado_R
                                                 }
 
-                                                created_request_CI = odoo_client.create(
+                                                created_request_I = odoo_client.create(
                                                     'maintenance.request',
-                                                    fields_values_OT_CI
+                                                    fields_values_OT_I
                                                 )
 
-                                                #Hacemos la escritura para que se actualice la fecha de cierre
-                                                update_stage_CI = {
+                                                follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_I],
+                                                        [5205, 172]
+                                                    )
+
+                                                # Hacemos la escritura para que se actualice la fecha de cierre
+                                                stage_I = {
                                                     'stage_id': 5,
                                                 }
 
-                                                update_stage_CI = odoo_client.write(
+                                                update_stage_I = odoo_client.write(
                                                     'maintenance.request',
-                                                    [created_request_CI], 
-                                                    update_stage_CI
+                                                    [created_request_I], 
+                                                    stage_I
                                                 )
 
-                                                update_close_date_CI = {
+                                                close_date_I = {
                                                     'close_date': fecha,
                                                     'x_studio_tcnico': operators[tecnico]
                                                 }
 
-                                                update_close_date_CI = odoo_client.write(
+                                                update_close_date_I = odoo_client.write(
                                                     'maintenance.request',
-                                                    [created_request_CI], 
-                                                    update_close_date_CI
+                                                    [created_request_I], 
+                                                    close_date_I
                                                 )
 
-                                                #Resgistro en resumen
-                    
-                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id,
-                                                            f'Se crea con éxito el registro de calibración {created_request_CI}')
                                                 
-                                                inbox(ot, operators[tecnico], fecha, id_punto, 'Sonda multiparamétrica', modelo_CI, serial_CI, id, odoo_client,
-                                                            'Se crea con éxito el registro de reinstalación de sonda',
-                                                            'A',
-                                                            False,
-                                                            'Resuelto')
+                                                # Resgistro en resumen
+                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, t,
+                                                            f'Se crea con éxito el registro de mantenimiento {created_request_I}')
 
-                                                #Actualización de la actividad por defecto 'Maintenance Request'
+                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                        'Se crea con éxito el registro de mantenimiento',
+                                                        'A',
+                                                        False,
+                                                        'Resuelto')
+
+
+                                                #Actualizamos la actividad que se genera por defecto
 
                                                 try:
-                                                    #Buscamos el ID de la actividad existente para la OT_number
-                                                    actividad_id_CI = odoo_client.search_read(
+                                                    # Buscamos el ID de la actividad existente para la OT_number
+                                                    actividad_id_I = odoo_client.search_read(
                                                         'mail.activity',
-                                                        [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_CI]],
+                                                        [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_I]],
                                                         limit=1
                                                     )
 
-                                                    #Actualizando actividad
+                                                    # Actualizando actividad
                                                     try:
-                                                        actividad_number_CI = actividad_id_CI[0]['id']
+                                                        actividad_number_I = actividad_id_I[0]['id']
                                                         odoo_client.action_feedback(
                                                             'mail.activity',
-                                                            [actividad_number_CI],
-                                                            f"Se ha completado desde API"
+                                                            [actividad_number_I],
+                                                            f"Completado desde API"
                                                         )
 
                                                     except Exception as e:
                                                         print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
                                                         continue        
-                                                    
                                                 except Exception as e:
                                                     print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
-                                                    continue 
+                                                    continue   
 
                                             except Exception as e:
-                                                print(f'Error al crear instancia: {e}')      
+                                                print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                print(traceback.format_exc())
+                                                continue
+
+                                            #Actualizamos ubicación del equipo
+
+                                            try:
+                                                new_location_I = {
+                                                    'x_studio_location': id_punto, # Bodega cliente
+                                                    'assign_date': fecha,
+                                                }
+                                                # Actualizamos la ubicación en el perfil del equipo
+
+                                                update_location_I = odoo_client.write(
+                                                    'maintenance.equipment',
+                                                    [number_equipment_R],
+                                                    new_location_I
+                                                )
+                                            except Exception as e:
+                                                print(e)
+                                                print(traceback.format_exc())
 
 
-                                except Exception as e:
-                                    print(f"Error al obtener información de la solicitudes de mantenimiento: {e}")
-                                    continue 
-                            else:
+                                    # Tratamiento de reemplazos ante daños
+                                    else: 
 
-                          
-                                detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CI, modelo_CI, serial_CI, id, 
-                                            f'N° de serie no encontrado en Odoo. Revisar OT | {ot}')
-                                
+                                        if t == 'E':
 
-                                punto_odoo = odoo_client.search_read(
-                                    'x_maintenance_location',
-                                    [['x_name', '=', f'[{proyecto}] {punto}']],
-                                    limit=1
-                                )
-                                
-                                if not punto_odoo:
-                                    id_punto = False
-                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CI, modelo_CI, serial_CI, id, 
-                                            f'{punto} no se encuentra listado en Odoo y Connecteam')
+                                            try:
+                                                fields_values_OT_E = {
+                                                    'name': f"Extracción | {tipo_R} {modelo_R}",
+                                                    'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                    'stage_id': '4', # Daño
+                                                    'x_studio_tipo_de_trabajo': 'Extracción',
+                                                    # 'x_studio_etiqueta_1': id_mantencion[id],
+                                                    'schedule_date': fecha,
+                                                    'description': punto,
+                                                    'x_studio_informe': informe_codificado_R
+                                                }
 
-                                    inbox(ot, operators[tecnico], fecha, False, tipo_CI, modelo_CI, serial_CI, id, odoo_client,
-                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
-                                            'M',
-                                            'Punto no existe en sistema',
-                                            'Nuevo')
-                                    continue        
-                               # Id del punto dentro de Odoo
+                                                created_request_E = odoo_client.create(
+                                                    'maintenance.request',
+                                                    fields_values_OT_E
+                                                )
 
+                                                follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_E],
+                                                        [5205, 172]
+                                                    )
+
+                                                # Hacemos la escritura para que se actualice la fecha de cierre
+                                                stage_E = {
+                                                    'stage_id': 5,
+                                                }
+
+                                                update_stage_E = odoo_client.write(
+                                                    'maintenance.request',
+                                                    [created_request_E], 
+                                                    stage_E
+                                                )
+
+                                                close_date_E = {
+                                                    'close_date': fecha,
+                                                    'x_studio_tcnico': operators[tecnico]
+                                                }
+
+                                                update_close_date_E = odoo_client.write(
+                                                    'maintenance.request',
+                                                    [created_request_E], 
+                                                    close_date_E
+                                                )
+
+                                                
+                                                # Resgistro en resumen
+                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, 'E',
+                                                            f'Se crea con éxito el registro de mantenimiento {created_request_E}')
+
+                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                        'Se crea con éxito el registro de mantenimiento',
+                                                        'A',
+                                                        False,
+                                                        'Resuelto')
+
+                                                #Actualizamos la actividad que se genera por defecto
+                                                try:
+                                                    # Buscamos el ID de la actividad existente para la OT_number
+                                                    actividad_id_E = odoo_client.search_read(
+                                                        'mail.activity',
+                                                        [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_E]],
+                                                        limit=1
+                                                    )
+
+                                                    # Actualizando actividad
+                                                    try:
+                                                        actividad_number_E = actividad_id_E[0]['id']
+                                                        odoo_client.action_feedback(
+                                                            'mail.activity',
+                                                            [actividad_number_E],
+                                                            f"Completado desde API"
+                                                        )
+
+                                                    except Exception as e:
+                                                        print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
+                                                        continue        
+                                                except Exception as e:
+                                                    print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
+                                                    continue   
+
+                                            except Exception as e:
+                                                print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                print(traceback.format_exc())
+                                                continue
+
+
+                                            #Actualizamos ubicación del equipo
+                                            try:
+                                                new_location_E = {
+                                                    'x_studio_location': 594 if destino_R == "Bodega cliente" else (593 if destino_R == 'Laboratorio | Metrocal' else False) , # Bodega cliente
+                                                    'assign_date': False,
+                                                    'archive': True if alcance_R != "Otro" else False
+                                                }
+                                                # Actualizamos la ubicación en el perfil del equipo
+                                                
+                                                update_location_E = odoo_client.write(
+                                                    'maintenance.equipment',
+                                                    [number_equipment_R], 
+                                                    new_location_E
+                                                )
+                                            except Exception as e:
+                                                print(e)
+                                                print(traceback.format_exc())
+
+                                    
+                                        else:
+                                            # Tratamiento 
+                                            try:
+                                                fields_values_OT_I = {
+                                                    'name': f"Instalación | {tipo_R} {modelo_R}",
+                                                    'equipment_id': number_equipment_R, #Aquí debemos usar el ID númerico de la sonda
+                                                    'stage_id': '5', # 3 Finalizado
+                                                    'x_studio_tipo_de_trabajo': 'Instalación',
+                                                    # 'x_studio_etiqueta_1': id_mantencion[id],
+                                                    'schedule_date': fecha,
+                                                    'description': punto,
+                                                    'x_studio_informe': informe_codificado_R
+                                                }
+
+                                                created_request_I = odoo_client.create(
+                                                    'maintenance.request',
+                                                    fields_values_OT_I
+                                                )
+
+                                                follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_I],
+                                                        [5205, 172]
+                                                    )
+
+                                                # Hacemos la escritura para que se actualice la fecha de cierre
+                                                stage_I = {
+                                                    'stage_id': 5,
+                                                }
+
+                                                update_stage_I = odoo_client.write(
+                                                    'maintenance.request',
+                                                    [created_request_I], 
+                                                    stage_I
+                                                )
+
+                                                close_date_I = {
+                                                    'close_date': fecha,
+                                                    'x_studio_tcnico': operators[tecnico]
+                                                }
+
+                                                update_close_date_I = odoo_client.write(
+                                                    'maintenance.request',
+                                                    [created_request_I], 
+                                                    close_date_I
+                                                )
+
+                                                
+                                                # Resgistro en resumen
+                                                detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, t,
+                                                            f'Se crea con éxito el registro de mantenimiento {created_request_I}')
+
+                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                        'Se crea con éxito el registro de mantenimiento',
+                                                        'A',
+                                                        False,
+                                                        'Resuelto')
+
+
+                                                #Actualizamos la actividad que se genera por defecto
+
+                                                try:
+                                                    # Buscamos el ID de la actividad existente para la OT_number
+                                                    actividad_id_I = odoo_client.search_read(
+                                                        'mail.activity',
+                                                        [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_I]],
+                                                        limit=1
+                                                    )
+
+                                                    # Actualizando actividad
+                                                    try:
+                                                        actividad_number_I = actividad_id_I[0]['id']
+                                                        odoo_client.action_feedback(
+                                                            'mail.activity',
+                                                            [actividad_number_I],
+                                                            f"Completado desde API"
+                                                        )
+
+                                                    except Exception as e:
+                                                        print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
+                                                        continue        
+                                                except Exception as e:
+                                                    print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
+                                                    continue   
+
+                                            except Exception as e:
+                                                print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
+                                                print(traceback.format_exc())
+                                                continue
+
+                                            #Actualizamos ubicación del equipo
+
+                                            try:
+                                                new_location_I = {
+                                                    'x_studio_location': id_punto, # Bodega cliente
+                                                    'assign_date': fecha,
+                                                }
+                                                # Actualizamos la ubicación en el perfil del equipo
+
+                                                update_location_I = odoo_client.write(
+                                                    'maintenance.equipment',
+                                                    [number_equipment_R],
+                                                    new_location_I
+                                                )
+                                            except Exception as e:
+                                                print(e)
+                                                print(traceback.format_exc())
+
+                                #El número se serie no se encuentra
                                 else:
-                                    id_punto = punto_odoo[0]['id']
+
+                                    punto_odoo = odoo_client.search_read(
+                                        'x_maintenance_location',
+                                        [['x_name', '=', f'[{proyecto}] {punto}']],
+                                        limit=1
+                                    )
+                                    
+                                    if not punto_odoo:
+                                        id_punto = False
+                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_R, modelo_R, serial_R, t, 
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam')
+
+                                        inbox(ot, operators[tecnico], fecha, False, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                                'M',
+                                                'Punto no existe en sistema',
+                                                'Nuevo',
+                                                nombre_archivo_R,
+                                                informe_codificado_R)
+                                        
+                                        continue
+
+                                    else: 
+                                        id_punto = punto_odoo[0]['id']
 
 
-                                domain = [
-                                    ('location_usage', '=', 'transit'),
-                                    ('location_dest_usage', '=', 'customer'),
-                                    ('lot_id.name', '=', serial_CI),
-                                    # ('reference', '=', 'WH/OUT/00189'),
-                                    ('state', 'not in', ['done', 'cancel'])  # Filtra para que NO sea 'done' ni 'cancel'
-                                ]
-
-                                search_read = odoo_client.search_read(
-                                    'stock.move.line',
-                                    domain,
-                                    limit=1
-                                )
 
 
-                                if search_read:
-                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_CI, modelo_CI, serial_CI, id, odoo_client,
-                                            f'N° de serie no encontrado en Odoo. Revisar OT',
-                                            'M',
-                                            'Creación en espera',
-                                            'Nuevo')
-                                else:
-                                    inbox(ot, operators[tecnico], fecha, id_punto, tipo_CI, modelo_CI, serial_CI, id, odoo_client,
-                                            f'N° de serie no encontrado en Odoo. Revisar OT',
-                                            'M',
-                                            'S/N no encontrado',
-                                            'Nuevo')
-                        
-                        except Exception as e:
-                            print(f"Error al buscar equipo en base de Odoo CI: {e}")                
-                    
-                
+                                    domain = [
+                                        ('location_usage', '=', 'transit'),
+                                        ('location_dest_usage', '=', 'customer'),
+                                        ('lot_id.name', '=', serial_R),
+                                        # ('reference', '=', 'WH/OUT/00189'),
+                                        ('state', 'not in', ['done', 'cancel'])  # Filtra para que NO sea 'done' ni 'cancel'
+                                    ]
+
+                                    search_read = odoo_client.search_read(
+                                        'stock.move.line',
+                                        domain,
+                                        limit=1
+                                    )
+
+
+                                    if search_read:
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                f'{alcance_R} | {destino_R}',
+                                                'M',
+                                                'Creación en espera',
+                                                'Nuevo',
+                                                nombre_archivo_R,
+                                                informe_codificado_R)
+                                    else:
+                                    
+                                        inbox(ot, operators[tecnico], fecha, id_punto, tipo_R, modelo_R, serial_R, t, odoo_client,
+                                                f'{alcance_R} | {destino_R}',
+                                                'M',
+                                                'S/N no encontrado',
+                                                'Nuevo',
+                                                nombre_archivo_R,
+                                                informe_codificado_R)
+                                        continue
+                            
+
+                            except Exception as e:
+                                print(f"Error al buscar equipo en base de Odoo R: {e}")
+                                print(traceback.format_exc())
+                                continue
+
+                            #Tratamiento para equipos en ciclo de calibración
+
+
+
                 elif id == "I":
                     #Iteramos sobre los tipos de mantenimientos
 
@@ -2300,7 +3081,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 
                                     if not id_punto:
 
-                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
+                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam')
 
                                         inbox(ot, operators[tecnico], fecha, False, tipo_I, modelo_I, serial_I, id, odoo_client,
@@ -2462,8 +3243,14 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                                         update_stage_I = odoo_client.write(
                                                             'maintenance.request',
-                                                            [id_I], 
+                                                            [id_I],
                                                             update_I
+                                                        )
+
+                                                        follow = odoo_client.message_subscribe(
+                                                            'maintenance.request',
+                                                            [id_I],
+                                                            [5205, 172]
                                                         )
 
                                                         close_date_I = {
@@ -2590,6 +3377,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             fields_values_OT_I
                                                         )
 
+                                                        follow = odoo_client.message_subscribe(
+                                                            'maintenance.request',
+                                                            [created_request_I],
+                                                            [5205, 172]
+                                                        )
+
                                                         # Hacemos la escritura para que se actualice la fecha de cierre
                                                         update_stage_I = {
                                                             'stage_id': 5,
@@ -2667,7 +3460,13 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             'maintenance.request',
                                                             fields_values_OT_I
                                                         )
-                                                        
+
+                                                        follow = odoo_client.message_subscribe(
+                                                            'maintenance.request',
+                                                            [created_request_II],
+                                                            [5205, 172]
+                                                        )
+
                                                         detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id,
                                                                     f'Se crea con éxito el registro de instalación {created_request_I}')
                                                         
@@ -2722,6 +3521,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     created_request_I = odoo_client.create(
                                                         'maintenance.request',
                                                         fields_values_OT_I
+                                                    )
+
+                                                    follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_I],
+                                                        [5205, 172]
                                                     )
 
                                                     # Hacemos la escritura para que se actualice la fecha de cierre
@@ -2802,7 +3607,13 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_I
                                                     )
-                                                    
+
+                                                    follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_II],
+                                                        [5205, 172]
+                                                    )
+
                                                     detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id,
                                                                 f'Se crea con éxito el registro de instalación {created_request_I}')
                                                     
@@ -3139,8 +3950,14 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                                         update_stage_MP = odoo_client.write(
                                                             'maintenance.request',
-                                                            [id_MP], 
+                                                            [id_MP],
                                                             update_MP
+                                                        )
+
+                                                        follow = odoo_client.message_subscribe(
+                                                            'maintenance.request',
+                                                            [id_MP],
+                                                            [5205, 172]
                                                         )
 
                                                         close_date_MP = {
@@ -3205,9 +4022,15 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                                         update_stage_MP = odoo_client.write(
                                                             'maintenance.request',
-                                                            [id_MP], 
+                                                            [id_MP],
                                                             update_MP
-                                                        )   
+                                                        )
+
+                                                        follow = odoo_client.message_subscribe(
+                                                            'maintenance.request',
+                                                            [id_MP],
+                                                            [5205, 172]
+                                                        )
 
                                                         if update_stage_MP:
                                                             detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
@@ -3263,7 +4086,13 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             'maintenance.request',
                                                             fields_values_OT_MP
                                                         )
-                                                        
+
+                                                        follow = odoo_client.message_subscribe(
+                                                            'maintenance.request',
+                                                            [created_request_MP],
+                                                            [5205, 172]
+                                                        )
+
                                                         # Resgistro en resumen
                                                         detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id,
                                                                     f'Se crea con éxito el registro de mantenimiento {created_request_MP}')
@@ -3318,6 +4147,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         created_request_MP = odoo_client.create(
                                                             'maintenance.request',
                                                             fields_values_OT_MP
+                                                        )
+
+                                                        follow = odoo_client.message_subscribe(
+                                                            'maintenance.request',
+                                                            [created_request_MP],
+                                                            [5205, 172]
                                                         )
 
                                                         # Hacemos la escritura para que se actualice la fecha de cierre
@@ -3429,7 +4264,13 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_MP
                                                     )
-                                                    
+
+                                                    follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_MP],
+                                                        [5205, 172]
+                                                    )
+
                                                     # Resgistro en resumen
                                                     detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id,
                                                                 f'Se crea con éxito el registro de mantenimiento {created_request_MP}')
@@ -3484,6 +4325,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     created_request_MP = odoo_client.create(
                                                         'maintenance.request',
                                                         fields_values_OT_MP
+                                                    )
+
+                                                    follow = odoo_client.message_subscribe(
+                                                        'maintenance.request',
+                                                        [created_request_MP],
+                                                        [5205, 172]
                                                     )
 
                                                     # Hacemos la escritura para que se actualice la fecha de cierre

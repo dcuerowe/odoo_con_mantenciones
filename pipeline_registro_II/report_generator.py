@@ -281,7 +281,8 @@ def informe_pdf_profesional(numero_visita, ot, tecnico, proyecto, fecha, cliente
     id_tipo_mantención = {'MC': 'mantención correctiva',
                     'MP': 'mantención preventiva',
                     'I': 'instalación',
-                    'CF': 'configuración'}
+                    'CF': 'configuración',
+                    'E': 'extracción'}
     # Configuración del archivo
     
     buffer = io.BytesIO()
