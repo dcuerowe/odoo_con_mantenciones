@@ -2,9 +2,11 @@
 Generador manual de informes PDF (report_generator.informe_pdf_profesional).
 
 Dos modos:
-  (1) Indicar una OT → la busca en Connecteam (últimas 20 submissions),
-      detecta las combinaciones (punto, tipo de trabajo, equipo) presentes,
-      extrae los 16 campos del PDF y te deja editar antes de generar.
+  (1) Indicar una OT → la busca en Connecteam. Primero mira las últimas 20
+      submissions (rápido); si la OT no está ahí, pide un rango de fechas y
+      pagina Connecteam por ese rango para recuperar OTs antiguas. Luego detecta
+      las combinaciones (punto, tipo de trabajo, equipo) presentes, extrae los 16
+      campos del PDF y te deja editar antes de generar.
   (2) Formulario manual desde cero: te pide los 16 campos uno por uno.
 
 Los PDFs se guardan en pipeline_registro_II/informes_pdf/ con el mismo formato
@@ -19,16 +21,24 @@ report_generator no conoce 'R', así que al generar el PDF se traduce al subtipo
 import re
 import sys
 import traceback
+from datetime import date, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from config import CONNECTEAM_API_KEY
-from connecteam_api import all_submission, form_structure, user as resolve_user
+from connecteam_api import (
+    all_submission,
+    form_structure,
+    submissions_by_date_range,
+    user as resolve_user,
+)
 from data_processing import ordenar_respuestas
 from report_generator import informe_pdf_profesional
 
 
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "informes_pdf"
+CHILE_TZ = ZoneInfo("America/Santiago")
 # Tipos de trabajo seleccionables. R (reemplazo) no lo conoce report_generator:
 # se traduce a su subtipo (E=extracción, I=instalación) al generar el PDF.
 VALID_TRABAJOS = ("MC", "MP", "I", "CF", "R")
@@ -47,11 +57,30 @@ PDF_ARG_ORDER = (
 # Connecteam fetch + detección
 # ---------------------------------------------------------------------------
 
-def fetch_ot_dataframe(ot):
-    """Descarga las últimas 20 submissions de Connecteam y devuelve la fila
-    correspondiente al # OT pedido. None si no aparece."""
+def _date_range_to_epoch(start_str, end_str):
+    """Convierte un rango 'YYYY-MM-DD' (hora de Chile) a (start, end) en epoch
+    SEGUNDOS. El rango cubre desde las 00:00:00 del día inicial hasta las
+    23:59:59 del día final (inclusive)."""
+    start = datetime.strptime(start_str, "%Y-%m-%d").replace(tzinfo=CHILE_TZ)
+    end = datetime.strptime(end_str, "%Y-%m-%d").replace(tzinfo=CHILE_TZ)
+    start_epoch = int(start.timestamp())
+    end_epoch = int((end + timedelta(days=1)).timestamp()) - 1
+    return start_epoch, end_epoch
+
+
+def fetch_ot_dataframe(ot, date_range=None):
+    """Devuelve la fila correspondiente al # OT pedido. None si no aparece.
+
+    - date_range=None            -> últimas 20 submissions (rápido, camino por
+      defecto; solo alcanza OTs recientes).
+    - date_range=(desde, hasta)  -> ambos 'YYYY-MM-DD'; pagina por rango de fecha
+      en Connecteam, permitiendo recuperar OTs antiguas."""
     schema = form_structure(CONNECTEAM_API_KEY)
-    subs = all_submission(CONNECTEAM_API_KEY)
+    if date_range is None:
+        subs = all_submission(CONNECTEAM_API_KEY)
+    else:
+        start_epoch, end_epoch = _date_range_to_epoch(*date_range)
+        subs = submissions_by_date_range(CONNECTEAM_API_KEY, start_epoch, end_epoch)
     df = ordenar_respuestas(schema, subs)
     if df.empty or "#" not in df.columns:
         return None
@@ -294,6 +323,27 @@ def generate_pdf(fields):
 # Modo 1 — búsqueda en Connecteam
 # ---------------------------------------------------------------------------
 
+def _ask_date_range():
+    """Pide un rango de fechas 'YYYY-MM-DD'. Devuelve (desde, hasta) o None si se
+    cancela / el formato es inválido. 'hasta' vacío = hoy."""
+    print("\nIngresa un rango de fechas para buscar más atrás (formato YYYY-MM-DD).")
+    desde = input("  Desde (vacío = cancelar): ").strip()
+    if not desde:
+        return None
+    hoy = date.today().isoformat()
+    hasta = input(f"  Hasta (vacío = hoy {hoy}): ").strip() or hoy
+    try:
+        datetime.strptime(desde, "%Y-%m-%d")
+        datetime.strptime(hasta, "%Y-%m-%d")
+    except ValueError:
+        print("Formato de fecha inválido (usa YYYY-MM-DD).")
+        return None
+    if desde > hasta:
+        print("'Desde' es posterior a 'Hasta'.")
+        return None
+    return (desde, hasta)
+
+
 def search_mode():
     raw = input("\n# OT a buscar en Connecteam: ").strip()
     try:
@@ -301,12 +351,22 @@ def search_mode():
     except ValueError:
         print("OT debe ser entero.")
         return
-    print("Descargando últimas 20 submissions de Connecteam...")
+
+    print("Buscando en las últimas 20 submissions de Connecteam...")
     df_ot = fetch_ot_dataframe(ot)
+
     if df_ot is None:
-        print(f"OT {ot} no aparece en las últimas 20 submissions. "
-              "Si es vieja, no se puede recuperar con all_submission().")
-        return
+        print(f"OT {ot} no está entre las últimas 20 submissions.")
+        date_range = _ask_date_range()
+        if date_range is None:
+            return
+        print(f"Buscando OT {ot} entre {date_range[0]} y {date_range[1]} "
+              "(esto pagina Connecteam, puede tardar)...")
+        df_ot = fetch_ot_dataframe(ot, date_range=date_range)
+        if df_ot is None:
+            print(f"OT {ot} no aparece en el rango {date_range[0]} a {date_range[1]}.")
+            return
+
     combos = detect_combinations(df_ot)
     if not combos:
         print("No se detectaron combinaciones (MC/CF/I/MP) en esta OT.")

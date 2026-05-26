@@ -3468,15 +3468,15 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         )
 
                                                         detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id,
-                                                                    f'Se crea con éxito el registro de instalación {created_request_I}')
-                                                        
+                                                                    f'Se crea con éxito el registro de instalación {created_request_II}')
+
                                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
                                                                     'Se crea con éxito el registro de instalación',
                                                                     'A',
                                                                     False,
                                                                     'Resuelto')
 
-                                                       
+
 
                                                         attachment_I = odoo_client.create(
                                                             "ir.attachment",
@@ -3615,8 +3615,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     )
 
                                                     detalle_op(exito, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id,
-                                                                f'Se crea con éxito el registro de instalación {created_request_I}')
-                                                    
+                                                                f'Se crea con éxito el registro de instalación {created_request_II}')
+
                                                     inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
                                                                 'Se crea con éxito el registro de instalación',
                                                                 'A',

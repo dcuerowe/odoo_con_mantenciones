@@ -64,7 +64,48 @@ def all_submission(API_key_connecteam):
 
     response = requests.get(url, headers=headers)
     response_json = response.json()
-    return response_json    
+    return response_json
+
+
+def submissions_by_date_range(API_key_connecteam, start_timestamp, end_timestamp,
+                              page_limit=100, max_pages=50):
+    """Descarga TODAS las submissions cuyo envío cae en [start, end] paginando
+    hasta agotar resultados.
+
+    Parámetros:
+        start_timestamp / end_timestamp (int): rango en epoch SEGUNDOS (igual unidad
+            que submissionTimestamp). Filtrado server-side vía submittingStartTimestamp
+            / submittingEndTime.
+        page_limit (int): tamaño de página (máx. 100 según la API).
+        max_pages (int): tope de páginas para no quedar en loop infinito
+            (max_pages * page_limit submissions como máximo).
+
+    Retorna:
+        dict con la MISMA forma que all_submission():
+        {"data": {"formSubmissions": [...]}}, para poder pasarlo directo a
+        data_processing.ordenar_respuestas().
+    """
+    headers = {"accept": "application/json",
+               "X-API-KEY": f"{API_key_connecteam}"}
+
+    todas = []
+    offset = 0
+    for _ in range(max_pages):
+        url = (f"https://api.connecteam.com/forms/v1/forms/{FORM_ID}/form-submissions"
+               f"?submittingStartTimestamp={int(start_timestamp)}"
+               f"&submittingEndTime={int(end_timestamp)}"
+               f"&limit={page_limit}&offset={offset}")
+        response = requests.get(url, headers=headers)
+        pagina = response.json().get("data", {}).get("formSubmissions", [])
+        if not pagina:
+            break
+        todas.extend(pagina)
+        # Última página: vino incompleta -> no hay más que pedir.
+        if len(pagina) < page_limit:
+            break
+        offset += page_limit
+
+    return {"data": {"formSubmissions": todas}}
 
 
 def form_structure(API_key_connecteam):
