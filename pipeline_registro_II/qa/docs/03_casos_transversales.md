@@ -194,6 +194,11 @@ y **L3** (genera el PDF real). Ref: [doc §11.1-11.2](../../flows/processor_docu
 
 Capa **L2** (spy). Ref: `data_processing.inbox` + [doc §11.3](../../flows/processor_documentation.md).
 
+> El **flujo de acción manual** que dispara cada etiqueta (qué hace el operario humano
+> según el nivel de falla) está documentado en
+> [`flows/gestion_manual_inbox.md`](../../flows/gestion_manual_inbox.md). Estos tests
+> verifican que el pipeline emite la etiqueta/origen correctos que alimentan ese flujo.
+
 ```mermaid
 flowchart LR
     A["inbox(...)"] --> B["create('x_inbox_integracion', fields)"]
