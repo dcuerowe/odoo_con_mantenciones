@@ -1695,9 +1695,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         for equipo in range(1, conteo_R[t]+1):
 
                             # Cambio momentaneo para probar la OT 236
-                            if str(i) == '3' and equipo == 1:
-                                print(f"-> Omitiendo filtro {i}.2.{equipo} R ({t}) por columnas duplicadas")
-                                continue
+                            # if str(i) == '3' and equipo == 1:
+                            #     print(f"-> Omitiendo filtro {i}.2.{equipo} R ({t}) por columnas duplicadas")
+                            #     continue
 
                             filtro_general = f"{i}.2.{equipo} R"        
                             columnas_general = df_trabajo.filter(like=filtro_general).columns.to_list()

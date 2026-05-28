@@ -1,4 +1,4 @@
-"""L2 · Componente — process_entrys, módulo CF (Configuración), TODAS las ramas.
+"""L2 · Componente — process_entrys, módulo CF (Configuración), todas las ramas.
 
 CF comparte el pipeline de validación con MC (S/N, ubicación, punto) y agrega
 selección por proximidad temporal + archivado (processor.py L947-1631):

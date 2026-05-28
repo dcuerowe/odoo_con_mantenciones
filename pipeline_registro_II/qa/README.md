@@ -1,16 +1,11 @@
 # QA — Integración Connecteam → Odoo
 
-> Carpeta de desarrollo y documentación de pruebas para el pipeline `pipeline_registro_II`.
-> Punto de entrada del sistema bajo prueba (SUT): `main.py:job()` → `processor.process_entrys()`.
+> Carpeta de desarrollo y documentación de pruebas para el pipeline `pipeline_registro_II`. Punto de entrada del sistema bajo prueba (SUT): `main.py:job()` → `processor.process_entrys()`.
 
-Esta carpeta contiene **dos cosas**:
+Esta carpeta contiene **dos elementos**:
 
-1. **Documentación de QA** (`docs/`): estrategia, requisitos, arquitectura de pruebas,
-   catálogos de casos por módulo y matriz de trazabilidad. Usa diagramas Mermaid
-   (flowcharts, sequence, requirement) que GitHub y VS Code renderizan nativamente.
-2. **Scaffolding ejecutable** (`scaffolding/`): suite `pytest` con un *spy* de
-   `OdooClient` para aislar la lógica sin escribir en Odoo, más una capa de
-   integración (smoke / E2E) contra el **test-Odoo** real.
+1. **Documentación de QA** (`docs/`): estrategia, requisitos, arquitectura de pruebas, catálogos de casos por módulo y matriz de trazabilidad. Usa diagramas Mermaid (flowcharts, sequence, requirement) que GitHub y VS Code renderizan nativamente.
+2. **Scaffolding ejecutable** (`scaffolding/`): suite `pytest` con un *spy* de `OdooClient` para aislar la lógica sin escribir en Odoo, más una capa de integración (smoke / E2E) contra el **test-Odoo** real.
 
 ---
 
@@ -89,23 +84,18 @@ $PY -m pytest qa/scaffolding -m "not integration" -v
 RUN_ODOO_INTEGRATION=1 $PY -m pytest qa/scaffolding -m integration -v
 ```
 
-`pytest.ini` define `testpaths` y el marker `integration`; `conftest.py` agrega
-`pipeline_registro_II/` al `sys.path` para que los tests importen `processor`,
-`data_processing`, etc., directamente.
+`pytest.ini` define `testpaths` y el marker `integration`; `conftest.py` agrega `pipeline_registro_II/` al `sys.path` para que los tests importen `processor`, `data_processing`, etc., directamente.
 
 ---
 
 ## Reglas de oro de este QA
 
-1. **No confíes en "no lanzó excepción".** El pipeline traga errores con
-   `try/except + continue` ([processor_documentation §14](../flows/processor_documentation.md)).
-   Todo caso debe afirmar **positivamente** un efecto observable (un `create`/`write`
-   con tales campos, un registro de inbox, un PDF adjunto), nunca solo ausencia de error.
-2. **La integración escribe en Odoo de verdad.** Solo contra `URL_TEST`. Nunca apuntar
-   los tests al Odoo productivo. Ver `config.py` (bloque comentado prod vs activo test).
-3. **El estado de dedup es global.** `check_new_sub` lee/escribe `form_entries.db`
-   commiteado. Los tests usan una DB temporal; jamás muten la real.
-4. **Los IDs son load-bearing y difieren prod/test.** Followers, etiquetas, tipos,
-   ubicaciones (`593/594`), equipos. La capa L3 es la única que valida que esos IDs
+1. **No confíes en "no lanzó excepción".** El pipeline traga errores con `try/except + continue` ([processor_documentation §14](../flows/processor_documentation.md)). Todo caso debe afirmar **positivamente** un efecto observable (un `create`/`write` con tales campos, un registro de inbox, un PDF adjunto), nunca solo ausencia de error.
+2. **La integración escribe en Odoo de verdad.** Solo contra `URL_TEST`. Nunca apuntar los tests al Odoo productivo. Ver `config.py` (bloque comentado prod vs activo test).
+3. **El estado de dedup es global.** `check_new_sub` lee/escribe `form_entries.db` commiteado. Los tests usan una DB temporal; jamás muten la real.
+4. **Los IDs son load-bearing y difieren prod/test.** Followers, etiquetas, tipos, ubicaciones (`593/594`), equipos. La capa L3 es la única que valida que esos IDs
    existan en el test-Odoo.
+
+```
+
 ```

@@ -4,7 +4,8 @@
 > Requisitos definidos en [01](01_estrategia_y_requisitos.md). Casos en [03](03_casos_transversales.md)–[08](08_modulo_MP.md).
 > Estado: `Implementado` · `Parcial` (algunos casos en código) · `Documentado` (sin código) · `No cubierto`.
 
-**Ejecución al 2026-05-26:** 68 pruebas verdes.
+**Ejecución al 2026-05-27:** 77 pruebas verdes. Evidencia reproducible y vinculación
+con los objetos reales del test-Odoo en [`RESULTADOS.md`](../RESULTADOS.md).
 
 - **L1 unitario (12):** `ordenar_respuestas` (8) + `check_new_sub` (4).
 - **L2 componente (46), todas las ramas por módulo con OdooSpy:** MC 12, CF 9, I 9,
@@ -12,8 +13,13 @@
   transferencia), ubicación (False / distinta / coincide), crear y actualizar × operativo
   Sí/No, selección por proximidad + archivado (CF/MP), primera-activa (I), y el flujo
   bifásico de R (daño y calibración Lab→593 / Bodega→594 / entrante→punto).
-- **L3 integración real (10):** 4 de solo lectura + 6 E2E de escritura de punta a punta
-  (MC, CF, MP, I×2, R) que verifican el **movimiento real de `x_studio_location`**.
+- **L3 integración real (19):** 4 de solo lectura + 15 E2E de escritura de punta a punta.
+  Además del camino feliz por módulo y el **movimiento real de `x_studio_location`**
+  (I→punto, R→593/594/punto), cubren en Odoo real: enrutamiento de excepciones al inbox
+  (S/N no encontrado, Punto no existe), `operativo=No` (stage 3 + adjunto; incluye la
+  regresión de OBS-10 en I), vincular a solicitud existente, proximidad + archivado (MP),
+  y verificación de campos del request creado. El reporte lista los 42 registros reales
+  creados (solicitudes, inbox, adjuntos) vinculados a su prueba.
 
 Comandos en [README](../README.md).
 
