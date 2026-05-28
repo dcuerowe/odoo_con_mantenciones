@@ -81,6 +81,28 @@ def test_mc_consulta_equipo_por_serial(patch_externals, spy):
     assert eq and eq[0].args[0] == [["serial_no", "=", "SN-XYZ"]], spy.dump()
 
 
+def test_mc_serial_float_no_se_normaliza_obs11(patch_externals, spy):  # OBS-11 (testigo)
+    """Defecto conocido: un serial puramente numérico que pandas infiere como float
+    (p.ej. 24000.0) se usa TAL CUAL en la búsqueda exacta `[['serial_no','=',...]]`.
+
+    El bloque "asegurar float->int" (processor.py L340-342) corre DESPUÉS de capturar
+    `serial_MC` y solo muta el dict, no la variable usada en `search_read`. Resultado:
+    se busca con float 24000.0 contra un campo char "24000" -> no calza -> el equipo
+    "desaparece" aunque exista, y todo el módulo cae al fallback de S/N no encontrado.
+
+    Este test es un TESTIGO del defecto (caracterización): afirma el comportamiento
+    actual. Al corregir OBS-11 (normalizar a string limpio antes del search) debe
+    actualizarse para exigir `"24000"`."""
+    spy.set_default("search_read", "maintenance.equipment", [])
+    _run(spy, _mc_dataframe(serial=24000.0))
+    eq = spy.calls_of("search_read", "maintenance.equipment")
+    assert eq, spy.dump()
+    valor = eq[0].args[0][0][2]  # dominio [["serial_no", "=", <valor>]]
+    assert isinstance(valor, float), f"OBS-11: se esperaba float sin normalizar, fue {type(valor).__name__}"
+    assert float(valor) == 24000.0
+    assert not isinstance(valor, str), "OBS-11: la búsqueda NO normaliza el serial a string"
+
+
 # ---------- S/N NO encontrado ---------- #
 def test_mc_sn_no_encontrado_punto_inexistente(patch_externals, spy):
     spy.set_default("search_read", "maintenance.equipment", [])
