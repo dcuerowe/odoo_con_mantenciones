@@ -6,7 +6,7 @@
 
 ## 1. Visión General
 
-`processor.py` es el **núcleo de procesamiento** del pipeline de registro de mantenciones. Su función es transformar las respuestas de formularios Connecteam en registros operativos dentro de Odoo ERP, generando informes PDF y notificaciones a lo largo del proceso.
+`processor.py` es el **núcleo de pr	cesamiento** del pipeline de registro de mantenciones. Su función es transformar las respuestas de formularios Connecteam en registros operativos dentro de Odoo ERP, generando informes PDF y notificaciones a lo largo del proceso.
 
 ```mermaid
 flowchart LR
@@ -66,13 +66,13 @@ id_tipo_de_trabajo = ['MP', 'MC', 'I', 'CI', 'CF']  # ⚠ no incluye 'R'
 
 Ramas realmente implementadas en el loop principal (`for id in id_tipos_realizados`):
 
-| ID     | Nombre Completo                  | `maintenance_type` en Odoo                                   |
-| ------ | -------------------------------- | -------------------------------------------------------------- |
-| `MC` | Mantención Correctiva           | `corrective`                                                 |
-| `MP` | Mantención Preventiva           | `preventive`                                                 |
-| `I`  | Instalación                     | `False` (sin tipo)                                           |
-| `CF` | Configuración                   | `preventive`                                                 |
-| `R`  | Reemplazo/Extracción            | `preventive` para Calibración interna; `False` para Extracción/Instalación |
+| ID     | Nombre Completo        | `maintenance_type` en Odoo                                                      |
+| ------ | ---------------------- | --------------------------------------------------------------------------------- |
+| `MC` | Mantención Correctiva | `corrective`                                                                    |
+| `MP` | Mantención Preventiva | `preventive`                                                                    |
+| `I`  | Instalación           | `False` (sin tipo)                                                              |
+| `CF` | Configuración         | `preventive`                                                                    |
+| `R`  | Reemplazo/Extracción  | `preventive` para Calibración interna; `False` para Extracción/Instalación |
 
 > **Inconsistencia conocida:** `id_tipo_de_trabajo` no se actualizó al agregar R y el filtro `id_tipos_interes` (L160-164) excluye 'R'. Hoy ese filtro no se usa para iterar (el loop real es sobre `id_tipos_realizados`), por lo que R se procesa igual, pero la lista queda desfasada.
 
@@ -80,10 +80,10 @@ Ramas realmente implementadas en el loop principal (`for id in id_tipos_realizad
 
 ### 3.2 Subtipos por Módulo
 
-| Módulo | Lista de subtipos      | Significado de cada letra                          |
-| ------- | ---------------------- | -------------------------------------------------- |
-| MP      | `MP_type = ['T', 'I']` | Tablero, Instrumento (Dispositivo)                 |
-| I       | `I_type  = ['I', 'T']` | Instrumento (Dispositivo), Tablero                 |
+| Módulo | Lista de subtipos        | Significado de cada letra                                      |
+| ------- | ------------------------ | -------------------------------------------------------------- |
+| MP      | `MP_type = ['T', 'I']` | Tablero, Instrumento (Dispositivo)                             |
+| I       | `I_type  = ['I', 'T']` | Instrumento (Dispositivo), Tablero                             |
 | R       | `R_type  = ['E', 'I']` | Extracción (equipo que sale), Instalación (equipo que entra) |
 
 ### 3.3 Mapeo de Operadores
@@ -331,15 +331,15 @@ for t in R_type:
 
 ### 8.2 Campos Extraídos
 
-| Campo         | Origen                              | Clave |
-|---------------|-------------------------------------|-------|
-| `modelo_R`    | Específico `R ({t})`                | `R ({t}) \| Modelo` |
-| `serial_R`    | Específico `R ({t})`                | `R ({t}) \| N° de serie` |
-| `tipo_R`      | General                             | `R \| Tipo equipo/instrumento a reemplazar` |
-| `obs_R`       | General                             | `R \| Observación` |
-| `alcance_R`   | General                             | `R \| Motivo de reemplazo` |
-| `destino_R`   | Específico `R (E)` (solo E)         | `R (E) \| Destino` (`None` cuando `t == 'I'`) |
-| `trabajo_R`   | Asignado a `t`                      | — |
+| Campo         | Origen                         | Clave                                              |
+| ------------- | ------------------------------ | -------------------------------------------------- |
+| `modelo_R`  | Específico `R ({t})`        | `R ({t}) \| Modelo`                               |
+| `serial_R`  | Específico `R ({t})`        | `R ({t}) \| N° de serie`                         |
+| `tipo_R`    | General                        | `R \| Tipo equipo/instrumento a reemplazar`       |
+| `obs_R`     | General                        | `R \| Observación`                               |
+| `alcance_R` | General                        | `R \| Motivo de reemplazo`                        |
+| `destino_R` | Específico `R (E)` (solo E) | `R (E) \| Destino` (`None` cuando `t == 'I'`) |
+| `trabajo_R` | Asignado a `t`               | —                                                 |
 
 ### 8.3 Bifurcación por Motivo del Reemplazo
 
@@ -558,17 +558,17 @@ Cuando una solicitud se finaliza (`stage=5`), el pipeline busca y cierra la acti
 
 ## 12. Tabla Comparativa de Módulos
 
-| Característica                  | MC             | CF                 | R                                                  | I            | MP             |
-| -------------------------------- | -------------- | ------------------ | -------------------------------------------------- | ------------ | -------------- |
-| **Subtipo**                      | No             | No                 | Sí (`E`/`I`)                                       | Sí (`I`/`T`) | Sí (`I`/`T`)   |
-| **Genera PDF**                   | Sí             | Sí                 | Sí                                                 | Sí           | Sí             |
-| **Modelo bifásico**              | No             | No                 | Sí (Calibración vs Daño × E/I)                     | No           | No             |
-| **Selección por proximidad**     | No             | Sí                 | Sí (sub-flujo CI interno)                          | No (primera) | Sí             |
-| **Archiva solicitudes viejas**   | No             | Sí                 | Sí (en sub-flujo CI)                               | No           | Sí             |
-| **Escribe ubicación equipo**     | No             | No                 | Sí (593/594/id_punto)                              | Sí           | No             |
-| **`maintenance_type` Odoo**      | `corrective`   | `preventive`       | `preventive` (Calibración) / `False` (Ext/Inst)    | `False`      | `preventive`   |
-| **Campo alcance**                | No             | `Tipo de Ajuste`   | `Motivo de reemplazo`                              | Condicional  | No             |
-| **Valida stock.move.line**       | Sí             | Sí                 | Sí                                                 | Sí           | Sí             |
+| Característica                      | MC             | CF                 | R                                                    | I                 | MP                |
+| ------------------------------------ | -------------- | ------------------ | ---------------------------------------------------- | ----------------- | ----------------- |
+| **Subtipo**                    | No             | No                 | Sí (`E`/`I`)                                    | Sí (`I`/`T`) | Sí (`I`/`T`) |
+| **Genera PDF**                 | Sí            | Sí                | Sí                                                  | Sí               | Sí               |
+| **Modelo bifásico**           | No             | No                 | Sí (Calibración vs Daño × E/I)                   | No                | No                |
+| **Selección por proximidad**  | No             | Sí                | Sí (sub-flujo CI interno)                           | No (primera)      | Sí               |
+| **Archiva solicitudes viejas** | No             | Sí                | Sí (en sub-flujo CI)                                | No                | Sí               |
+| **Escribe ubicación equipo**  | No             | No                 | Sí (593/594/id_punto)                               | Sí               | No                |
+| **`maintenance_type` Odoo**  | `corrective` | `preventive`     | `preventive` (Calibración) / `False` (Ext/Inst) | `False`         | `preventive`    |
+| **Campo alcance**              | No             | `Tipo de Ajuste` | `Motivo de reemplazo`                              | Condicional       | No                |
+| **Valida stock.move.line**     | Sí            | Sí                | Sí                                                  | Sí               | Sí               |
 
 ---
 

@@ -2,8 +2,6 @@
 
 > **Qué es esto:** el runbook para el operario humano. Cuando el pipeline (`processor.py`) no puede resolver una operación de forma automática, deja un registro en el módulo **`x_inbox_integracion`** de Odoo con una
 > **etiqueta** (`x_studio_etiqueta`) y un **origen** (`x_studio_origen`). Cada etiqueta tiene un flujo de acción manual que el operario debe ejecutar.
->
-> Fuente: `flows/Gestion_intergración.drawio` + `data_processing.inbox()` + los puntos de `processor.py` donde se llama a `inbox()`. Casos de prueba asociados: [`qa/docs/03_casos_transversales.md`](../qa/docs/03_casos_transversales.md) §6.
 
 ---
 
@@ -42,7 +40,7 @@ flowchart TD
 | **Punto no existe en sistema** | `[(4,4)]` |   M   | El punto `[proyecto] punto` no está en `x_maintenance_location`                                                                 | [§3.3](#33-punto-no-existe-en-sistema)    |
 | **Cambio de ubicación**       | `[(4,3)]` |   N   | El equipo existe pero su `x_studio_location` ≠ el punto del formulario                                                            | [§4.1](#41-cambio-de-ubicación)          |
 | **Sin evento de instalación** | `[(4,6)]` |   N   | El equipo existe pero su `x_studio_location` es `False` (nunca instalado formalmente)                                            | [§4.2](#42-sin-evento-de-instalación-we) |
-| **MP sin programar**           | `[(4,1)]` |   N   | (Definida en código pero **actualmente no emitida** — la llamada `inbox()` está comentada en el módulo MP)              | [§4.3](#43-mp-sin-programar)              |
+| **MP sin programar**           | `[(4,1)]` |   N   | (Definida en código pero**actualmente no emitida** — la llamada `inbox()` está comentada en el módulo MP)                | [§4.3](#43-mp-sin-programar)              |
 
 > Las tuplas `[(4, N)]` son IDs de registros de selección en Odoo y **difieren entre
 > productivo y test** (ver comentarios `Productivo: N | Test: M` en `data_processing.inbox`).
@@ -269,8 +267,7 @@ flowchart TD
 - **Selección distinta a CF/MP:** I toma la **primera** solicitud activa, **no** la más
   cercana, y **no archiva**.
 - **Lo crítico (eje B):** si el operario resuelve una excepción de I (p.ej. equipo recién
-  creado), debe **escribir la ubicación del equipo** manualmente — el secretario nunca
-  llegó a ese paso.
+  creado), debe **escribir la ubicación del equipo** manualmente —
 
 ---
 

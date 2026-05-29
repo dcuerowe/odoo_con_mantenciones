@@ -9,6 +9,19 @@ from report_generator import informe_pdf_profesional
 from config import SHAREPOINT_UPLOAD_BASE_URL, SHAREPOINT_UPLOAD_INSTALL_BASE_URL
 
 
+def normalizar_serial(serial):
+    """Normaliza un N° de serie a string limpio para la búsqueda exacta en Odoo (OBS-11).
+
+    pandas puede inferir un serial puramente numérico como float (p.ej. 24000.0), pero
+    Odoo guarda serial_no como char ("24000"), así que ['serial_no','=',24000.0] no calza.
+    Quitamos el sufijo ".0" de los float enteros y los espacios sobrantes.
+    """
+    if serial is None:
+        return serial
+    if isinstance(serial, float) and serial.is_integer():
+        serial = int(serial)
+    return str(serial).strip()
+
 
 def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sharepoint_client=None):
 
@@ -331,7 +344,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         #Elmentos propios del equipo
                         modelo_MC = dic_trabajo_MC[f"{i}.2.{equipo} MC | Modelo"]
                         tipo_MC = dic_trabajo_MC[f"{i}.2.{equipo} MC | Activo a intervenir"]
-                        serial_MC = dic_trabajo_MC[f'{i}.2.{equipo} MC | N° de serie']
+                        serial_MC = normalizar_serial(dic_trabajo_MC[f'{i}.2.{equipo} MC | N° de serie'])
                         operativo_MC = dic_trabajo_MC[f"{i}.2.{equipo} MC | ¿Equipo operativo tras trabajos?"]
                         obs_MC = dic_trabajo_MC[f'{i}.2.{equipo} MC | Observación']
 
@@ -957,7 +970,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         #Elmentos propios del equipo
                         modelo_CF = dic_trabajo_CF[f"{i}.2.{equipo} CF | Modelo"]
                         tipo_CF = dic_trabajo_CF[f"{i}.2.{equipo} CF | Activo a intervenir"]
-                        serial_CF = dic_trabajo_CF[f'{i}.2.{equipo} CF | N° de serie']
+                        serial_CF = normalizar_serial(dic_trabajo_CF[f'{i}.2.{equipo} CF | N° de serie'])
                         operativo_CF = dic_trabajo_CF[f"{i}.2.{equipo} CF | ¿Equipo operativo tras trabajos?"]
                         obs_CF = dic_trabajo_CF[f'{i}.2.{equipo} CF | Observación']
                         alcance_CF = dic_trabajo_CF[f'{i}.2.{equipo} CF | Tipo de Ajuste']
@@ -1700,7 +1713,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                             #     continue
 
                             filtro_general = f"{i}.2.{equipo} R"        
-                            columnas_general = df_trabajo.filter(like=filtro_general).columns.to_list()
+                            # OBS-7: filtro_general como substring arrastra también las columnas
+                            # "R (E)"/"R (I)"; al concatenarlas con columnas_R_E se duplicaban etiquetas
+                            # y to_dict disparaba "DataFrame columns are not unique" omitiendo columnas.
+                            # Tomamos solo las columnas generales ("R | ...") matcheando el separador.
+                            columnas_general = df_trabajo.filter(like=f"{filtro_general} |").columns.to_list()
 
                             filtro_R_E = f"{i}.2.{equipo} R ({t})"        
                             columnas_R_E = df_trabajo.filter(like=filtro_R_E).columns.to_list()
@@ -1716,7 +1733,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                             # Elmentos propios del equipo
                             modelo_R = dic_trabajo_R[f"{filtro_R_E} | Modelo"]
                             tipo_R = dic_trabajo_R[f"{filtro_general} | Tipo equipo/instrumento a reemplazar"]
-                            serial_R = dic_trabajo_R[f'{filtro_R_E} | N° de serie']
+                            serial_R = normalizar_serial(dic_trabajo_R[f'{filtro_R_E} | N° de serie'])
                             obs_R = dic_trabajo_R[f'{filtro_general} | Observación']
                             alcance_R = dic_trabajo_R[f'{filtro_general} | Motivo de reemplazo']
                             destino_R = dic_trabajo_R[f'{filtro_R_E} | Destino'] if t == "E" else None
@@ -3021,7 +3038,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                           #  Elmentos propios del equipo
                             modelo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Modelo"]
                             tipo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Tipo de {I_translate[t]}"]
-                            serial_I = dic_trabajo_I[f'{i}.2.{equipo} I ({t}) | N° de serie']
+                            serial_I = normalizar_serial(dic_trabajo_I[f'{i}.2.{equipo} I ({t}) | N° de serie'])
                             operativo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | ¿Equipo operativo tras trabajos?"]
                             obs_I = dic_trabajo_I[f'{i}.2.{equipo} I ({t}) | Observación']
                             alcance_I = 'IH | Habilitación de equipo' if t == 'I' else dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Alcance de la intervención"]
@@ -3740,7 +3757,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                             # Elmentos propios del equipo
                             modelo_MP = dic_trabajo_MP[f"{i}.2.{equipo} MP ({t}) | Modelo"]
                             tipo_MP = dic_trabajo_MP[f"{i}.2.{equipo} MP ({t}) | {MP_translate[t]} a intervenir"]
-                            serial_MP = dic_trabajo_MP[f'{i}.2.{equipo} MP ({t}) | N° de serie']
+                            serial_MP = normalizar_serial(dic_trabajo_MP[f'{i}.2.{equipo} MP ({t}) | N° de serie'])
                             operativo_MP = dic_trabajo_MP[f"{i}.2.{equipo} MP ({t}) | ¿{MP_translate[t]} operativo tras trabajos?"]
                             obs_MP = dic_trabajo_MP[f'{i}.2.{equipo} MP ({t}) | Observación']
 

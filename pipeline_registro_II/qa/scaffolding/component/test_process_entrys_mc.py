@@ -81,26 +81,22 @@ def test_mc_consulta_equipo_por_serial(patch_externals, spy):
     assert eq and eq[0].args[0] == [["serial_no", "=", "SN-XYZ"]], spy.dump()
 
 
-def test_mc_serial_float_no_se_normaliza_obs11(patch_externals, spy):  # OBS-11 (testigo)
-    """Defecto conocido: un serial puramente numérico que pandas infiere como float
-    (p.ej. 24000.0) se usa TAL CUAL en la búsqueda exacta `[['serial_no','=',...]]`.
+def test_mc_serial_float_se_normaliza_obs11(patch_externals, spy):  # OBS-11 (corregido)
+    """Corrección OBS-11: un serial puramente numérico que pandas infiere como float
+    (p.ej. 24000.0) debe normalizarse a string limpio ANTES de la búsqueda exacta
+    `[['serial_no','=',...]]`, porque Odoo guarda serial_no como char ("24000").
 
-    El bloque "asegurar float->int" (processor.py L340-342) corre DESPUÉS de capturar
-    `serial_MC` y solo muta el dict, no la variable usada en `search_read`. Resultado:
-    se busca con float 24000.0 contra un campo char "24000" -> no calza -> el equipo
-    "desaparece" aunque exista, y todo el módulo cae al fallback de S/N no encontrado.
-
-    Este test es un TESTIGO del defecto (caracterización): afirma el comportamiento
-    actual. Al corregir OBS-11 (normalizar a string limpio antes del search) debe
-    actualizarse para exigir `"24000"`."""
+    `processor.normalizar_serial` quita el sufijo ".0" de los float enteros y los
+    espacios, de modo que la búsqueda calza contra el campo char. Antes del fix se
+    buscaba con el float 24000.0 -> no calzaba -> el equipo "desaparecía" y el módulo
+    caía al fallback de S/N no encontrado."""
     spy.set_default("search_read", "maintenance.equipment", [])
     _run(spy, _mc_dataframe(serial=24000.0))
     eq = spy.calls_of("search_read", "maintenance.equipment")
     assert eq, spy.dump()
     valor = eq[0].args[0][0][2]  # dominio [["serial_no", "=", <valor>]]
-    assert isinstance(valor, float), f"OBS-11: se esperaba float sin normalizar, fue {type(valor).__name__}"
-    assert float(valor) == 24000.0
-    assert not isinstance(valor, str), "OBS-11: la búsqueda NO normaliza el serial a string"
+    assert valor == "24000", f"OBS-11: el serial debe normalizarse a '24000', fue {valor!r}"
+    assert isinstance(valor, str), "OBS-11: la búsqueda debe usar el serial como string"
 
 
 # ---------- S/N NO encontrado ---------- #

@@ -222,16 +222,11 @@ Durante la corrida se crearon **42** registros reales en el test-Odoo (staging),
 
 - **L3 escribe en el test-Odoo (staging):** los E2E ejecutan `process_entrys` de punta a punta y crean registros reales (inbox, solicitudes) y mueven equipos QA. No se limpian; se acumulan al re-ejecutar (OTs 990xxx, equipos QA 1496-1500).
 - **Oráculo positivo:** cada prueba afirma un efecto observable (llamada/valor en Odoo o en el spy), no solo la ausencia de excepción.
-- Defectos encontrados y su estado: ver [`docs/09_matriz_trazabilidad.md`](docs/09_matriz_trazabilidad.md) §4 (incluye OBS-10, corregido).
+- Defectos encontrados y su estado: ver [`docs/09_matriz_trazabilidad.md`](docs/09_matriz_trazabilidad.md) §4
 
 ## Debilidades, cuellos de botella y aspectos de observación del Pipeline
 
-> Síntesis de QA sobre el SUT (no sobre los tests). Las pruebas están en verde, pero verde
-> significa "se comporta como hoy está escrito", no "está libre de riesgo". Esta sección
-> consolida lo que QA observó como frágil o crítico. IDs `OBS-*` y riesgos `R*` remiten a
-> [`docs/09_matriz_trazabilidad.md`](docs/09_matriz_trazabilidad.md) §3-§4 y
-> [`docs/01_estrategia_y_requisitos.md`](docs/01_estrategia_y_requisitos.md) §2.
-> Antes de "corregir" cualquiera, **confirmar con negocio**: algunas pueden ser intencionales.
+> Síntesis de QA sobre el SUT (no sobre los tests). Las pruebas están en verde, pero verde significa "se comporta como hoy está escrito", no "está libre de riesgo". Esta sección consolida lo que QA observó como frágil o crítico. IDs `OBS-*` y riesgos `R*` remiten a[`docs/09_matriz_trazabilidad.md`](docs/09_matriz_trazabilidad.md) §3-§4 y [`docs/01_estrategia_y_requisitos.md`](docs/01_estrategia_y_requisitos.md) §2. Antes de "corregir" cualquiera, **confirmar con negocio**: algunas pueden ser intencionales.
 
 ### 1. Punto único de falla — búsqueda exacta del serial (OBS-11) · Severidad **Alta**
 
@@ -243,7 +238,7 @@ Defecto concreto verificado por QA: el bloque "asegurar que el serial pase de fl
 
 ### 2. Errores silenciados (R1) · Severidad **Alta**
 
-`processor.py` envuelve cada equipo/módulo en `try/except + traceback.print_exc() + continue`. Una OT puede "procesarse" sin crear nada en Odoo y **sin alerta**: el fallo solo queda en el log del runner de GitHub Actions, que nadie vigila. No hay un canal de error de negocio (inbox/correo) para fallos inesperados. Por esto **todo el oráculo de QA es positivo** (afirma efectosobservables, nunca "no hubo excepción"); pero el QA no puede sustituir una alerta en producción.
+`processor.py` envuelve cada equipo/módulo en `try/except + traceback.print_exc() + continue`. Una OT puede "procesarse" sin crear nada en Odoo y **sin alerta**: el fallo solo queda en el log del runner de GitHub Actions. No hay un canal de error de negocio (inbox/correo) para fallos inesperados. Por esto **todo el oráculo de QA es positivo** (afirma efectos observables, nunca "no hubo excepción"); pero el QA no puede sustituir una alerta en producción.
 
 ### 3. Parsing de columnas frágil (R5 / OBS-1 / OBS-7) · Severidad **Alta/Media**
 
