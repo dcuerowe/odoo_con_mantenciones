@@ -1,0 +1,3 @@
+# Dependencias extra solo para QA. El resto (pandas, reportlab, requests, etc.)
+# viene de ../../../requirements.txt — instalar ESE primero.
+pytest>=7.4

@@ -135,7 +135,52 @@ def main():
             
             sublista_1 = ordered_responses_1[ordered_responses_1['#'].isin(ot)]
 
-            
+            if sublista_1.empty:
+                print("No se encontraron las OTs indicadas en las submissions disponibles.")
+                continue
+
+            # Segundo filtro: dentro de cada OT, elegir qué puntos procesar.
+            # Los puntos se identifican por el prefijo numérico de las columnas
+            # (mismo criterio que process_entrys: col[0]), p.ej. "1.1 Punto de monitoreo" -> punto "1".
+            filas_filtradas = []
+            for _, fila in sublista_1.iterrows():
+                fila_limpia = fila.dropna()
+                puntos = sorted({c[0] for c in fila_limpia.index if c and c[0].isdigit()})
+
+                if not puntos:
+                    filas_filtradas.append(fila)
+                    continue
+
+                ot_num = fila_limpia['#']
+                print(f"\nOT {ot_num} — puntos disponibles:")
+                for p in puntos:
+                    col_nombre = f'{p}.1 Punto de monitoreo'
+                    nombre = fila_limpia[col_nombre] if col_nombre in fila_limpia.index else '(sin nombre)'
+                    print(f'  ({p}) {nombre}')
+
+                seleccion = input(f'Puntos a procesar de la OT {ot_num} (separados por espacio) [Enter = todos]: ').split()
+
+                if seleccion:
+                    desconocidos = [p for p in seleccion if p not in puntos]
+                    if desconocidos:
+                        print(f"  Aviso: se ignoran puntos no presentes en la OT: {' '.join(desconocidos)}")
+                    puntos_keep = {p for p in seleccion if p in puntos}
+                    if not puntos_keep:
+                        print(f"  No quedaron puntos válidos para la OT {ot_num}; se omite.")
+                        continue
+                    # Conservamos columnas globales (sin prefijo numérico) y las de los puntos elegidos
+                    columnas_keep = [c for c in fila.index
+                                     if not (c and c[0].isdigit()) or c[0] in puntos_keep]
+                    fila = fila[columnas_keep]
+
+                filas_filtradas.append(fila)
+
+            if not filas_filtradas:
+                print("No quedaron puntos por procesar tras el filtro.")
+                continue
+
+            sublista_1 = pd.DataFrame(filas_filtradas)
+
             process_entrys(sublista_1, CONNECTEAM_API_KEY, resumen, exito, odoo, sp)
 
 
