@@ -97,6 +97,24 @@ def test_i_ubicacion_distinta_mueve_y_notifica(patch_externals, spy):
     assert ETIQUETA["Cambio de ubicación"] in _inbox(spy, "x_studio_etiqueta")
 
 
+def test_i_desde_bodega_cliente_no_notifica_cambio(patch_externals, spy):
+    """Si el equipo venía de 'Bodega cliente', la instalación al punto NO debe emitir
+    la notificación de 'Cambio de ubicación' (inbox ni chatter del equipo). El write
+    de la nueva ubicación SÍ se hace."""
+    spy.set_default("search_read", "maintenance.equipment", _equipo(loc_name="Bodega cliente"))
+    _punto_ok(spy)
+    _run(spy, _i_df(operativo="Sí"))
+    locs = _eq_loc_writes(spy)
+    assert locs and locs[0]["x_studio_location"] == PUNTO_ID, "la ubicación debe escribirse igual"
+    assert ETIQUETA["Cambio de ubicación"] not in _inbox(spy, "x_studio_etiqueta"), \
+        "no debe haber inbox de Cambio de ubicación cuando viene de Bodega cliente"
+    # tampoco el chatter sobre maintenance.equipment con el header de Cambio de ubicación
+    posts = spy.calls_of("message_post", "maintenance.equipment")
+    bodies = [c.args[1] for c in posts]
+    assert not any("Cambio de ubicación" in b for b in bodies), \
+        f"no debe haber message_post de Cambio de ubicación; bodies={bodies}"
+
+
 def test_i_ubicacion_coincide_no_mueve(patch_externals, spy):
     spy.set_default("search_read", "maintenance.equipment", _equipo())  # loc == punto
     _punto_ok(spy)

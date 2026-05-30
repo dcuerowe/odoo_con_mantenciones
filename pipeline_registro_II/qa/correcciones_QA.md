@@ -6,6 +6,65 @@ documenta el defecto, la causa, el cambio y la prueba que lo respalda.
 
 ---
 
+## Instalación: omitir notificación de cambio de ubicación cuando viene de "Bodega cliente" · 2026-05-30
+
+**Severidad:** Baja (reducción de ruido operacional) · **Archivos:** `processor.py` (módulo I) · **Estado:** Implementado
+
+### Contexto
+
+En el módulo de **Instalación**, cuando el equipo tenía una `x_studio_location` distinta
+al punto donde se está instalando, el pipeline notificaba "Cambio de ubicación" por dos
+vías:
+
+1. `message_post` en el chatter del equipo (`maintenance.equipment`).
+2. `inbox` con la etiqueta `Cambio de ubicación` (`x_inbox_integracion`).
+
+El caso "el equipo venía de Bodega cliente y se está instalando en un punto" es el
+**flujo esperado** de una instalación (el equipo estaba en bodega esperando ser
+puesto en terreno), no una anomalía. La notificación generaba ruido en la bandeja
+del revisor.
+
+### Cambio
+
+Si `location_I == "Bodega cliente"` (`display_name` de `x_maintenance_location` id `594`,
+verificado contra el Odoo test), se **omiten** el `message_post` y el `inbox` de
+"Cambio de ubicación". El resto del flujo se mantiene:
+
+- El `write` de la nueva ubicación en `maintenance.equipment` sigue ocurriendo.
+- `detalle_op` registra el movimiento en `resumen` para auditoría local.
+- La rama de instalación (creación/actualización de la `maintenance.request`) corre
+  normalmente después.
+
+Para cualquier otra ubicación previa distinta al punto, el comportamiento histórico
+queda intacto: chatter + inbox de "Cambio de ubicación".
+
+### Verificación
+
+- Nuevo test L2: `test_i_desde_bodega_cliente_no_notifica_cambio` valida que con
+  `loc_name="Bodega cliente"`:
+  - La ubicación del equipo SÍ se reescribe al `PUNTO_ID`.
+  - NO aparece la etiqueta `Cambio de ubicación` en el `x_inbox_integracion`.
+  - NO se publica un `message_post` con el header "Cambio de ubicación" en el chatter.
+- El test existente `test_i_ubicacion_distinta_mueve_y_notifica` sigue verde (cualquier
+  otra ubicación previa sí emite la notificación).
+
+```bash
+/Users/dacm/we/.venv/bin/python -m pytest qa/scaffolding/component qa/scaffolding/unit -q
+# 97 passed
+```
+
+### Notas
+
+- El check usa la cadena literal `"Bodega cliente"` (el `display_name`), no el id `594`.
+  Es consistente con `processor.py:2903`, que ya compara contra esa cadena para
+  `destino_R`. Una migración a otro Odoo que renombre esa ubicación rompería este
+  filtro (riesgo análogo a OBS-9: IDs/strings hardcodeados).
+- El cambio solo aplica al **módulo I**. El sub-flujo de instalación dentro del
+  módulo R no emite hoy un `inbox` de "Cambio de ubicación" (solo escribe la
+  ubicación silenciosamente), así que no necesita ajuste.
+
+---
+
 ## Búsqueda de equipo: fallback WE con tolerancia a ceros · 2026-05-29
 
 **Severidad:** Media · **Archivos:** `processor.py` (helper `_buscar_equipo_por_serial`) · **Estado:** Implementado
