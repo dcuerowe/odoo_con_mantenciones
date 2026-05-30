@@ -6,6 +6,151 @@ documenta el defecto, la causa, el cambio y la prueba que lo respalda.
 
 ---
 
+## Búsqueda de equipo: fallback WE con tolerancia a ceros · 2026-05-29
+
+**Severidad:** Media · **Archivos:** `processor.py` (helper `_buscar_equipo_por_serial`) · **Estado:** Implementado
+
+### Contexto
+
+Sonda contra el Odoo test con `serial_form = "WE0000000797"` reveló que el técnico
+había tipeado un serial WE con la **cantidad de ceros equivocada** entre `WE` y la
+cola numérica `797`. El equipo en Odoo está cargado como `WE000000000797` (9 ceros);
+la búsqueda exacta no calzaba y el equipo "desaparecía", aunque el número lógico
+(`WE797`) es el mismo.
+
+Como el form es alfanumérico, la nueva lógica de substring para serials puramente
+numéricos no aplica.
+
+### Cambio
+
+Agregamos un **fallback** dentro del camino alfanumérico, **solo** cuando el
+`serial_form` tiene la forma `WE + dígitos`. Si la búsqueda exacta no encuentra
+nada, normalizamos los ceros entre `WE` y la cola y reintentamos:
+
+1. Computamos `cola = serial[2:].lstrip('0') or '0'` (p. ej. `"WE0000000797"` → `"797"`).
+2. Buscamos en Odoo con dominio `[('serial_no','!=',False), ('serial_no','like', f'WE%{cola}')]`.
+3. Filtramos en Python: el serial Odoo debe ser `WE + dígitos` y su cola (idem
+   normalización) debe **igualar** la del form.
+4. Si hay **exactamente 1** match → ese equipo. Si hay 0 o >1 → no encontrado.
+
+### Lo que rescata y lo que NO
+
+| Caso (form) | Odoo | Antes | Ahora |
+| ----------- | ---- | ----- | ----- |
+| `WE0000000797` | `WE000000000797` (id 221) | 0 | **id 221** |
+| `WE0000001038` | `24000WE0001038` (id 917) | 0 | 0 (a propósito) |
+| `WE0001038`    | `24000WE0001038` (id 917) | 0 | 0 (a propósito) |
+
+El fallback **no** intenta rescatar formas con prefijos distintos al `WE` (p. ej. el
+prefijo `24000WE…`). Eso fue una decisión explícita: la opción más amplia (cola
+numérica vía árbol numérico) traía riesgo de falsos positivos por substring.
+Para esos casos el técnico debe tipear el serial completo o, si el form es
+puramente la cola numérica (`"1038"`), entra por el camino de la búsqueda numérica
+ya cubierto en la corrección anterior.
+
+### Verificación
+
+- 6 unitarios L1 nuevos en `qa/scaffolding/unit/test_buscar_equipo_por_serial.py`:
+  - `test_we_serial_con_ceros_distintos_se_resuelve` (caso documentado).
+  - `test_we_serial_prefijo_24000WE_no_calza` (NO debe rescatar prefijos distintos).
+  - `test_we_fallback_multiples_we_logicos_es_no_encontrado` (ambigüedad).
+  - `test_we_exacto_no_dispara_fallback` (si exact calza, no se ejecuta).
+  - `test_we_con_letras_despues_no_dispara_fallback`.
+  - `test_we_solo_no_dispara_fallback`.
+- Sondeo manual contra el Odoo test: `WE0000000797` resuelve a id 221.
+
+```bash
+/Users/dacm/we/.venv/bin/python -m pytest qa/scaffolding/component qa/scaffolding/unit -q
+# 96 passed
+```
+
+---
+
+## Búsqueda de equipo por patrón cuando el serial es puramente numérico · 2026-05-29
+
+**Severidad:** Alta (resuelve cuello de botella OBS-11 ampliado) · **Archivos:** `processor.py` (helper + 5 módulos) · **Estado:** Implementado
+
+### Contexto
+
+OBS-11 ya garantizó que el serial llegue como string al `search_read` (normalización
+float→string). Pero hay un caso real frecuente: el técnico tipea en el formulario un
+serial numérico "corto" (p. ej. `24000`), mientras que el equipo en Odoo está cargado
+con el formato extendido WE (`24000WE0000221`). La búsqueda exacta `serial_no = '24000'`
+no calza y el equipo "desaparece" para el pipeline.
+
+### Cambio de lógica
+
+Cuando el serial del formulario es **puramente numérico** (`str.isdigit()`), la
+búsqueda exacta se reemplaza por una búsqueda **por substring** dentro de un
+**universo restringido**: equipos cuyo `serial_no` es puramente numérico **o**
+contiene `"WE"` (mayúsculas).
+
+Sobre el conjunto de coincidencias se aplica este árbol de decisión:
+
+```
+matches    = equipos del universo cuyo serial_no CONTIENE serial_form
+numericas  = [m | m.serial_no.isdigit()]
+wes        = [m | "WE" in m.serial_no]
+exactas    = [m | m.serial_no == serial_form]
+
+len(matches) == 0                            → no encontrado (fallback stock.move.line)
+len(matches) == 1                            → ese equipo
+∃ una numérica EXACTA (==serial_form)        → esa (regla universal)
+>1 numéricas exactas                          → no encontrado (duplicado real en Odoo)
+solo numéricas (sin WE), sin exacta           → no encontrado
+solo WE (sin numéricas)                       → no encontrado
+mixto, len(serial_form) > 4, sin exacta       → no encontrado
+mixto, len(serial_form) ≤ 4, exactamente 1 WE → esa WE
+mixto, len(serial_form) ≤ 4, >1 WE            → no encontrado
+```
+
+Si el serial **no** es puramente numérico (alfanumérico, p. ej. `24000WE0000221`,
+`SN-XYZ`), se mantiene la búsqueda exacta histórica — sin cambios.
+
+### Implementación
+
+Nuevo helper `processor._buscar_equipo_por_serial(odoo_client, serial)` que
+encapsula el árbol y devuelve una lista de 0 o 1 dict (drop-in del `search_read`
+previo). Los 5 módulos (MC, CF, R, I, MP) reemplazaron su `search_read` inline por
+una llamada al helper.
+
+- **Server-side**: dominio `[('serial_no','!=',False), ('serial_no','like','%{serial}%')]`
+  para el camino numérico (evita el pull-all flaggeado en `RESULTADOS.md`).
+- **Python-side**: filtro de universo (.isdigit() / 'WE' in s) y el árbol.
+- **`limit=1`** se quitó de MC, CF y MP porque el conteo importa para decidir entre
+  las ramas.
+- **`stock.move.line` fallback**: queda con `lot_id.name = serial` exacto (no se
+  propaga la lógica de substring para evitar falsos positivos en "Creación en espera").
+
+### Verificación
+
+- 17 unitarios L1 directos del helper en
+  `qa/scaffolding/unit/test_buscar_equipo_por_serial.py` cubriendo cada rama del
+  árbol: ruta exacta alfanumérica, 0/1 match numérico, exacta universal (gana en
+  cualquier caso), duplicado real, solo numéricas/solo WE, mixto con `len > 4`,
+  mixto con `len ≤ 4` (1 WE o varias WE), y filtro de universo (serials fuera
+  como `we24000` o `ABC24000` se descartan).
+- `test_mc_serial_float_se_normaliza_obs11` actualizado al nuevo shape del dominio
+  (de `=` exacto a `like` con `%24000%`).
+- Tests existentes con serials alfanuméricos (`SN-XYZ`, `SN-CF`, `SN-E`, etc.) usan
+  la ruta exacta intacta — siguen en verde.
+
+```bash
+/Users/dacm/we/.venv/bin/python -m pytest qa/scaffolding/component qa/scaffolding/unit -q
+# 90 passed
+```
+
+### Notas
+
+- Una matching `m.serial_no` no puede estar simultáneamente en `numericas` y `wes`
+  (`.isdigit()` excluye letras). Las dos particiones del universo son disjuntas.
+- "WE" es **case-sensitive** (mayúsculas), como aparece en los datos reales del QA.
+- Para serials puramente numéricos con **ceros a la izquierda** que pandas convierte
+  a número (p. ej. `"00024"` → `24`), los ceros se pierden en la normalización
+  (OBS-11) y la búsqueda no los recupera. Caso no contemplado por ahora.
+
+---
+
 ## Archivado por proximidad no cierra la mail.activity · 2026-05-29
 
 **Severidad:** Media · **Archivos:** `processor.py` (CF, MP y sub-flujo CI en R) · **Estado:** Corregido
