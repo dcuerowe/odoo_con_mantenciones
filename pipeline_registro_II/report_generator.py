@@ -119,7 +119,9 @@ def crear_tabla_profesional(ot, tecnico, proyecto, fecha, cliente, tipo_equipo, 
     }
 
 
-    df_campos = pd.DataFrame(campos_plus if trabajo == 'I' or trabajo == 'CF' else campos, index=[0])
+    # La fila "Alcance:" se incluye solo cuando el módulo entrega un alcance real.
+    # Los módulos que no aplican (MC, MP, y R subtipo Intercambio) pasan alcance=False.
+    df_campos = pd.DataFrame(campos_plus if alcance else campos, index=[0])
     
     # Preparar datos para la tabla
     df_vertical = df_campos.T.reset_index()

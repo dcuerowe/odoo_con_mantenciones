@@ -1849,7 +1849,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             dic_trabajo_R[llave] = int(valor)
 
                             # Generación de informe
-                            pdf_stream_R = informe_pdf_profesional(i, ot, tecnico, proyecto, fecha, cliente, tipo_R, modelo_R, serial_R, t, alcance_R, punto, obs_R, obs_generales, lista_imagenes, equipo)
+                            # El alcance ("Motivo de reemplazo") solo va en el informe de Extracción (E),
+                            # no en el de Intercambio (I).
+                            pdf_stream_R = informe_pdf_profesional(i, ot, tecnico, proyecto, fecha, cliente, tipo_R, modelo_R, serial_R, t, alcance_R if t == "E" else False, punto, obs_R, obs_generales, lista_imagenes, equipo)
                             
                             nombre_archivo_R = f"informe_OT-{ot}_{i}_{id}_{equipo}.pdf"
 
@@ -3219,58 +3221,53 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     
 
                                     elif location_I != f'[{proyecto}] {punto}' :
-
+                                        
                                         new_location_I = {
                                             'x_studio_location': id_punto,
                                             'assign_date': f"{dic_trabajo_I['Fecha visita ']}",
                                         }
 
-
+                                        
                                         try:
 
                                             # Actualización de la ubicación del equipo
                                             update_location_I = odoo_client.write(
                                                 'maintenance.equipment',
-                                                [number_equipment_I],
+                                                [number_equipment_I], 
                                                 new_location_I
                                             )
 
-                                            # Si el equipo venía de "Bodega cliente" es el flujo esperado
-                                            # (el equipo estaba en bodega esperando ser instalado): se omiten
-                                            # el chatter y el inbox de "Cambio de ubicación" para no generar ruido.
-                                            if location_I != "Bodega cliente":
-                                                attachment_I = odoo_client.create(
-                                                    "ir.attachment",
-                                                    {
-                                                        "name": nombre_archivo_I,
-                                                        "type": "binary",
-                                                        "datas": informe_codificado_I,
-                                                        "res_model": 'maintenance.equipment',
-                                                        "res_id": number_equipment_I,
-                                                        "mimetype": "application/pdf",
-                                                    }
-                                                )
+                                            attachment_I = odoo_client.create(
+                                                "ir.attachment",
+                                                {
+                                                    "name": nombre_archivo_I,
+                                                    "type": "binary",
+                                                    "datas": informe_codificado_I,
+                                                    "res_model": 'maintenance.equipment',
+                                                    "res_id": number_equipment_I,
+                                                    "mimetype": "application/pdf",
+                                                }
+                                            )
 
 
-                                                new_location = odoo_client.message_post(
-                                                    'maintenance.equipment',
-                                                    number_equipment_I,
-                                                    f"<p><b>Cambio de ubicación:</b> {location_I} => [{proyecto}] {punto}</p><p><b>Ejecutor:</b> {tecnico}</p>",
-                                                    attachment_ids=[attachment_I]
-                                                )
-
-
-                                            detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id,
+                                            new_location = odoo_client.message_post(
+                                                'maintenance.equipment',
+                                                number_equipment_I, 
+                                                f"<p><b>Cambio de ubicación:</b> {location_I} => [{proyecto}] {punto}</p><p><b>Ejecutor:</b> {tecnico}</p>",
+                                                attachment_ids=[attachment_I]
+                                            )
+        
+                        
+                                            detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
                                                         f'El dispositivo ahora se encuentra en [{proyecto}] {punto}')
 
-                                            if location_I != "Bodega cliente":
-                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
-                                                        f'Equipo pasa de {location_I} a [{proyecto}] {punto}). Validar cambio {nombre_archivo_I}',
-                                                        'N',
-                                                        'Cambio de ubicación',
-                                                        'En proceso',
-                                                        nombre_archivo_I,
-                                                        informe_codificado_I)
+                                            inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
+                                                    f'Equipo pasa de {location_I} a [{proyecto}] {punto}). Validar cambio {nombre_archivo_I}',
+                                                    'N',
+                                                    'Cambio de ubicación',
+                                                    'En proceso',
+                                                    nombre_archivo_I,
+                                                    informe_codificado_I)
 
 
                                             
