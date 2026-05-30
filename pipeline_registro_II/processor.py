@@ -1849,7 +1849,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             dic_trabajo_R[llave] = int(valor)
 
                             # Generación de informe
-                            pdf_stream_R = informe_pdf_profesional(i, ot, tecnico, proyecto, fecha, cliente, tipo_R, modelo_R, serial_R, t, alcance_R, punto, obs_R, obs_generales, lista_imagenes, equipo)
+                            # El alcance ("Motivo de reemplazo") solo va en el informe de Extracción (E),
+                            # no en el de Intercambio (I).
+                            pdf_stream_R = informe_pdf_profesional(i, ot, tecnico, proyecto, fecha, cliente, tipo_R, modelo_R, serial_R, t, alcance_R if t == "E" else False, punto, obs_R, obs_generales, lista_imagenes, equipo)
                             
                             nombre_archivo_R = f"informe_OT-{ot}_{i}_{id}_{equipo}.pdf"
 

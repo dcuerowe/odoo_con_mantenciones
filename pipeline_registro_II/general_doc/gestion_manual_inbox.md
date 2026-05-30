@@ -13,9 +13,9 @@ del diagrama (las cajas "Gestión Manual" vs "Notificaciones"):
 ```mermaid
 flowchart TD
     A["Registro en x_inbox_integracion"] --> B{"x_studio_origen"}
-    B -->|"A · Automática"| C["Sin acción. El secretario resolvió todo.<br/>Solo trazabilidad."]
-    B -->|"M · Manual"| D["GESTIÓN MANUAL. El secretario NO pudo actuar.<br/>El operario hace lo que faltó (crear equipo / punto / vincular)."]
-    B -->|"N · Notificación"| E["VALIDACIÓN. El secretario YA actuó (creó/movió).<br/>El operario revisa y confirma que es correcto."]
+    B -->|"A · Automática"| C["Sin acción. Se resolvió todo.<br/>Solo trazabilidad."]
+    B -->|"M · Manual"| D["GESTIÓN MANUAL. NO se pudo actuar.<br/>El operario hace lo que faltó (crear equipo / punto / vincular)."]
+    B -->|"N · Notificación"| E["VALIDACIÓN. YA se actuó (creó/movió).<br/>El operario revisa y confirma que es correcto."]
 ```
 
 | Origen | Tupla Odoo   | Significado                            | Acción del operario                       |
