@@ -23,6 +23,34 @@ def normalizar_serial(serial):
     return str(serial).strip()
 
 
+def _archivar_y_cerrar_actividad(odoo_client, request_id, ref_nombre):
+    """Archiva una maintenance.request y cierra la mail.activity asociada.
+
+    Usado por la lógica de proximidad (CF, MP y el sub-flujo CI de R) sobre las
+    solicitudes anteriores a la elegida. QA detectó en el ambiente test que las
+    archivadas dejaban la actividad colgada; este helper hace ambos pasos.
+    """
+    try:
+        odoo_client.write('maintenance.request', [request_id], {'archive': True})
+    except Exception as e:
+        print(f"Error al archivar la solicitud {ref_nombre}: {e}")
+        return
+    try:
+        actividad = odoo_client.search_read(
+            'mail.activity',
+            [['res_model', '=', 'maintenance.request'], ['res_id', '=', request_id]],
+            limit=1
+        )
+        if actividad:
+            odoo_client.action_feedback(
+                'mail.activity',
+                [actividad[0]['id']],
+                "Archivada por proximidad desde API"
+            )
+    except Exception as e:
+        print(f"Error al cerrar la actividad de la solicitud archivada {ref_nombre}: {e}")
+
+
 def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sharepoint_client=None):
 
     for i, r in ordered_responses.iterrows():
@@ -1153,17 +1181,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 #Archivamos las solicitudes anteriores a la escogida
                                                 for x in interest_requests_CF.keys():
                                                     if interest_requests_CF[x][0] < interest_requests_CF[id_CF][0]:
-                                                        try:
-                                                            archive_CF = {
-                                                                'archive': True,
-                                                            }
-                                                            update_stage_CF = odoo_client.write(
-                                                                'maintenance.request',
-                                                                [x], 
-                                                                archive_CF
-                                                            )
-                                                        except Exception as e:
-                                                            print(f"Error al archivar la solicitud {interest_requests_CF[x][2]}: {e}")
+                                                        _archivar_y_cerrar_actividad(odoo_client, x, interest_requests_CF[x][2])
                                                         
                                             
                                             #Actualizamos el estado de la solicitud cuando el trabajo deja al equipo operativo
@@ -1173,6 +1191,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     update_CF = {
                                                         'stage_id': 5,
                                                         'x_studio_informe': informe_codificado_CF,
+                                                        'x_studio_tcnico': operators[tecnico],
                                                     }
 
                                                     update_stage_CF = odoo_client.write(
@@ -1245,6 +1264,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     #Atualizando su estado a en proceso
                                                     update_CF = {
                                                         'stage_id': 3,
+                                                        'x_studio_tcnico': operators[tecnico],
                                                     }
 
                                                     update_stage_CF = odoo_client.write(
@@ -1882,17 +1902,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             # Archivamos las solicitudes anteriores a la escogida
                                                             for x in interest_requests_CI.keys():
                                                                 if interest_requests_CI[x][0] < interest_requests_CI[id_CI][0]:
-                                                                    try:
-                                                                        archive_CI = {
-                                                                            'archive': True,
-                                                                        }
-                                                                        update_stage_CI = odoo_client.write(
-                                                                            'maintenance.request',
-                                                                            [x], 
-                                                                            archive_CI
-                                                                        )
-                                                                    except Exception as e:
-                                                                        print(f"Error al archivar la solicitud {interest_requests_CI[x][2]}: {e}")
+                                                                    _archivar_y_cerrar_actividad(odoo_client, x, interest_requests_CI[x][2])
 
                                                             try:
                                                                 # Atualizando su estado a en proceso
@@ -2543,17 +2553,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             # Archivamos las solicitudes anteriores a la escogida
                                                             for x in interest_requests_CI.keys():
                                                                 if interest_requests_CI[x][0] < interest_requests_CI[id_CI][0]:
-                                                                    try:
-                                                                        archive_CI = {
-                                                                            'archive': True,
-                                                                        }
-                                                                        update_stage_CI = odoo_client.write(
-                                                                            'maintenance.request',
-                                                                            [x],
-                                                                            archive_CI
-                                                                        )
-                                                                    except Exception as e:
-                                                                        print(f"Error al archivar la solicitud {interest_requests_CI[x][2]}: {e}")
+                                                                    _archivar_y_cerrar_actividad(odoo_client, x, interest_requests_CI[x][2])
 
                                                         try:
                                                             # Atualizando su estado a finalizado
@@ -3943,17 +3943,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     # Archivamos las solicitudes anteriores a la escogida
                                                     for x in interest_requests_MP.keys():
                                                         if interest_requests_MP[x][0] < interest_requests_MP[id_MP][0]:
-                                                            try:
-                                                                archive_MP = {
-                                                                    'archive': True,
-                                                                }
-                                                                update_stage_MP = odoo_client.write(
-                                                                    'maintenance.request',
-                                                                    [x], 
-                                                                    archive_MP
-                                                                )
-                                                            except Exception as e:
-                                                                print(f"Error al archivar la solicitud {interest_requests_MP[x][2]}: {e}")
+                                                            _archivar_y_cerrar_actividad(odoo_client, x, interest_requests_MP[x][2])
                                                             
                                                 
                                                 # Actualizamos el estado de la solicitud cuando el trabajo deja al equipo operativo
@@ -3963,6 +3953,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         update_MP = {
                                                             'stage_id': 5,
                                                             'x_studio_informe': informe_codificado_MP,
+                                                            'x_studio_tcnico': operators[tecnico],
                                                         }
 
                                                         update_stage_MP = odoo_client.write(
@@ -4035,6 +4026,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         # Atualizando su estado a en proceso
                                                         update_MP = {
                                                             'stage_id': 3,
+                                                            'x_studio_tcnico': operators[tecnico],
                                                         }
 
                                                         update_stage_MP = odoo_client.write(

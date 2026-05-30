@@ -6,6 +6,111 @@ documenta el defecto, la causa, el cambio y la prueba que lo respalda.
 
 ---
 
+## Archivado por proximidad no cierra la mail.activity · 2026-05-29
+
+**Severidad:** Media · **Archivos:** `processor.py` (CF, MP y sub-flujo CI en R) · **Estado:** Corregido
+
+### Síntoma
+
+Tras revisar los registros del ambiente test creados por QA, las solicitudes que la
+lógica de proximidad **archiva** (CF, MP y el sub-flujo CI dentro del módulo R) se
+quedaban con su `mail.activity` **abierta**. La solicitud aparecía archivada en Odoo
+pero la actividad asociada seguía colgando como pendiente.
+
+### Causa raíz
+
+El bucle de archivado de cada módulo solo ejecutaba
+`odoo_client.write('maintenance.request', [x], {'archive': True})`. La actividad
+asociada (`mail.activity`) no se buscaba ni se cerraba con `action_feedback`. El
+patrón ya existía para la solicitud **elegida** después del update (CF L1213-1227,
+MP L4003-4017, etc.), pero no se replicó para las archivadas.
+
+### Corrección
+
+Nuevo helper `processor._archivar_y_cerrar_actividad(odoo_client, request_id, ref_nombre)`
+que:
+
+1. Escribe `archive=True` sobre la solicitud.
+2. Busca su `mail.activity` por `res_model='maintenance.request', res_id=request_id`.
+3. Si existe, llama a `action_feedback` para cerrarla.
+
+Cada uno de los 4 bloques de archivado (CF, R-CI con `t='E'`, R-CI con `t='I'`, MP)
+se reemplazó por una sola línea que invoca al helper, lo que también elimina la
+duplicación del bucle inline en los cuatro módulos.
+
+### Verificación
+
+- Nuevos tests L2 que reflejan el escenario de proximidad y aseguran el cierre de
+  la actividad de la solicitud archivada:
+  - `test_cf_archivado_cierra_actividad`
+  - `test_mp_archivado_cierra_actividad`
+- Tests de proximidad existentes (`test_cf_proximidad_archiva_anterior`,
+  `test_mp_proximidad_archiva_anterior`) siguen verdes — el helper preserva el
+  `write({'archive': True})` que estos validan.
+
+```bash
+/Users/dacm/we/.venv/bin/python -m pytest qa/scaffolding/component qa/scaffolding/unit -q
+# 73 passed
+```
+
+---
+
+## Actualización por proximidad no escribe el técnico · 2026-05-29
+
+**Severidad:** Media · **Archivos:** `processor.py` (CF y MP) · **Estado:** Corregido
+
+### Síntoma
+
+Tras revisar los registros del ambiente test creados por QA, las solicitudes
+actualizadas por la rama de **proximidad** (CF y MP, tanto `operativo=Sí` como
+`operativo=No`) no quedaban con el **técnico que realizó el trabajo** asignado:
+el campo `x_studio_tcnico` no se actualizaba. La fecha de cierre, estado e informe
+se escribían correctamente, pero el técnico quedaba vacío o con el valor antiguo.
+
+### Causa raíz
+
+Los dicts de update en esa rama omitían `x_studio_tcnico`:
+
+```python
+# CF L1173-1176 (antes)         # CF L1246-1248 (antes)
+update_CF = {                    update_CF = {
+    'stage_id': 5,                   'stage_id': 3,
+    'x_studio_informe': ...,     }
+}
+# (mismo patrón en MP L3963-3966 y L4036-4038)
+```
+
+En cambio, el flujo de **creación** (cuando no había solicitudes previas, p. ej.
+CF L1398, MP L3562) sí lo escribía. La omisión solo afectaba a la rama de
+actualización por proximidad.
+
+> Nota: el sub-flujo CI dentro de R **no** se modifica: ahí el técnico es Metrocal
+> (`x_studio_tcnico = 5118`) por regla de negocio, y eso ya se escribía correctamente.
+
+### Corrección
+
+Se agregó `'x_studio_tcnico': operators[tecnico]` a los 4 dicts de update por
+proximidad en CF y MP (Sí/No en cada uno). `operators[tecnico]` es el `res.partner`
+mapeado del nombre del técnico resuelto desde Connecteam.
+
+### Verificación
+
+- Nuevos tests L2 que aseguran que la actualización por proximidad escribe el técnico:
+  - `test_cf_proximidad_actualiza_tecnico_operativo_si`
+  - `test_cf_proximidad_actualiza_tecnico_operativo_no`
+  - `test_mp_proximidad_actualiza_tecnico_operativo_si`
+  - `test_mp_proximidad_actualiza_tecnico_operativo_no`
+- Cada uno verifica que el `write` a la solicitud elegida incluye
+  `x_studio_tcnico == 145` (id de "Diego Marchant", técnico del fixture
+  `patch_externals`).
+
+```bash
+/Users/dacm/we/.venv/bin/python -m pytest qa/scaffolding/component qa/scaffolding/unit -q
+# 73 passed
+```
+
+---
+
 ## OBS-11 — Serial numérico no normalizado antes de la búsqueda exacta · 2026-05-29
 
 **Severidad:** Alta · **Archivos:** `processor.py` (módulos MC, CF, R, I, MP) · **Estado:** Corregido

@@ -150,3 +150,48 @@ def test_cf_proximidad_archiva_anterior(patch_externals, spy):
     assert any(ids == [201] and w.get("archive") is True for ids, w in writes), spy.dump()
     # finaliza la 202 (la más cercana)
     assert any(ids == [202] and w.get("stage_id") == 5 for ids, w in writes), spy.dump()
+
+
+# ---------- el archivado por proximidad cierra la mail.activity ---------- #
+def test_cf_archivado_cierra_actividad(patch_externals, spy):
+    """QA detectó que las archivadas por proximidad dejaban su mail.activity abierta."""
+    _equipo_ok(spy)
+    spy.set_default("search", "maintenance.request", [201, 202])
+    spy.queue("read", "maintenance.request",
+              [{"schedule_date": "2026-04-01", "stage_id": [2, "Nuevo"], "name": "vieja", "archive": False}])
+    spy.queue("read", "maintenance.request",
+              [{"schedule_date": "2026-05-25", "stage_id": [2, "Nuevo"], "name": "nueva", "archive": False}])
+    spy.set_default("search_read", "mail.activity", [{"id": 777}])
+    _run(spy, _cf_df(operativo="Sí"))
+    # archiva la 201
+    assert any(ids == [201] and w.get("archive") is True
+               for ids, w in spy.writes("maintenance.request")), spy.dump()
+    # y le da fin a la actividad asociada
+    feedbacks = spy.calls_of("action_feedback", "mail.activity")
+    assert any(c.args[0] == [777] for c in feedbacks), spy.dump()
+
+
+# ---------- la actualización por proximidad escribe el técnico ---------- #
+def test_cf_proximidad_actualiza_tecnico_operativo_si(patch_externals, spy):
+    _equipo_ok(spy)
+    spy.set_default("search", "maintenance.request", [201, 202])
+    spy.queue("read", "maintenance.request",
+              [{"schedule_date": "2026-04-01", "stage_id": [2, "Nuevo"], "name": "vieja", "archive": False}])
+    spy.queue("read", "maintenance.request",
+              [{"schedule_date": "2026-05-25", "stage_id": [2, "Nuevo"], "name": "nueva", "archive": False}])
+    _run(spy, _cf_df(operativo="Sí"))
+    # 145 = id de "Diego Marchant" en processor.operators (técnico del fixture patch_externals)
+    assert any(ids == [202] and w.get("x_studio_tcnico") == 145
+               for ids, w in spy.writes("maintenance.request")), spy.dump()
+
+
+def test_cf_proximidad_actualiza_tecnico_operativo_no(patch_externals, spy):
+    _equipo_ok(spy)
+    spy.set_default("search", "maintenance.request", [201, 202])
+    spy.queue("read", "maintenance.request",
+              [{"schedule_date": "2026-04-01", "stage_id": [2, "Nuevo"], "name": "vieja", "archive": False}])
+    spy.queue("read", "maintenance.request",
+              [{"schedule_date": "2026-05-25", "stage_id": [2, "Nuevo"], "name": "nueva", "archive": False}])
+    _run(spy, _cf_df(operativo="No"))
+    assert any(ids == [202] and w.get("x_studio_tcnico") == 145
+               for ids, w in spy.writes("maintenance.request")), spy.dump()
