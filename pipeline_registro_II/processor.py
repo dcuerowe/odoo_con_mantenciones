@@ -23,6 +23,125 @@ def normalizar_serial(serial):
     return str(serial).strip()
 
 
+def _buscar_equipo_por_serial(odoo_client, serial):
+    """Resuelve un maintenance.equipment a partir del serial del formulario.
+
+    Devuelve una lista con 0 o 1 dict (drop-in del search_read previo).
+
+    - Si `serial` no es puramente numérico → búsqueda exacta `serial_no = serial`.
+      Si no calza y el form es del tipo `WE+dígitos`, fallback que tolera mismatch
+      de ceros entre `WE` y la cola numérica (mismo "WE-número lógico"). Solo
+      devuelve el equipo si la cola identifica unívocamente uno.
+    - Si `serial` ES puramente numérico → búsqueda por substring sobre el universo
+      restringido a serials que son `.isdigit()` o contienen "WE" (mayúsculas), y
+      se aplica el árbol de decisión (ver general_doc/processor_documentation.md):
+
+        len(matches) == 0                            → no encontrado
+        len(matches) == 1                            → ese equipo
+        ∃ una numérica EXACTA (==serial)             → esa (regla universal)
+        >1 numéricas exactas                          → no encontrado (duplicado)
+        solo numéricas (sin WE) sin exacta            → no encontrado
+        solo WE (sin numéricas)                       → no encontrado
+        mixto, len(serial) > 4, sin exacta            → no encontrado
+        mixto, len(serial) ≤ 4, exactamente 1 WE      → esa WE
+        mixto, len(serial) ≤ 4, >1 WE                 → no encontrado
+    """
+    if not serial:
+        return []
+
+    if not serial.isdigit():
+        # Alfanumérico: búsqueda exacta de siempre.
+        equipos = odoo_client.search_read(
+            'maintenance.equipment',
+            [['serial_no', '=', serial]]
+        )
+        if equipos:
+            return equipos[:1]
+
+        # Fallback solo para formato WE+dígitos: tolera mismatch de ceros entre
+        # 'WE' y la cola numérica (mismo "WE-número lógico"). Útil cuando el
+        # técnico tipea WE0000000797 y Odoo tiene WE000000000797.
+        if serial.startswith('WE') and len(serial) > 2 and serial[2:].isdigit():
+            cola = serial[2:].lstrip('0') or '0'
+            candidatos = odoo_client.search_read(
+                'maintenance.equipment',
+                [('serial_no', '!=', False), ('serial_no', 'like', f'WE%{cola}')]
+            )
+            matches = [
+                c for c in candidatos
+                if c.get('serial_no')
+                and c['serial_no'].startswith('WE')
+                and len(c['serial_no']) > 2
+                and c['serial_no'][2:].isdigit()
+                and (c['serial_no'][2:].lstrip('0') or '0') == cola
+            ]
+            if len(matches) == 1:
+                return matches
+        return []
+
+    # Serial puramente numérico: substring server-side + universo en Python.
+    # `like` en Odoo es sensible a mayúsculas (lo que queremos para "WE"); el serial
+    # son dígitos puros, así que no hay escapes ni problemas con '%'/'_'.
+    candidatos = odoo_client.search_read(
+        'maintenance.equipment',
+        [('serial_no', '!=', False), ('serial_no', 'like', f'%{serial}%')]
+    )
+
+    matches = [c for c in candidatos
+               if c.get('serial_no') and (c['serial_no'].isdigit() or 'WE' in c['serial_no'])]
+
+    if not matches:
+        return []
+    if len(matches) == 1:
+        return matches
+
+    exactas = [c for c in matches if c['serial_no'] == serial]
+    if len(exactas) == 1:
+        return exactas
+    if len(exactas) > 1:
+        return []
+
+    numericas = [c for c in matches if c['serial_no'].isdigit()]
+    wes = [c for c in matches if 'WE' in c['serial_no']]
+
+    if not wes or not numericas:
+        # solo numéricas sin exacta, o solo WE
+        return []
+
+    # Mixto sin exacta
+    if len(serial) > 4:
+        return []
+    return wes if len(wes) == 1 else []
+
+
+def _archivar_y_cerrar_actividad(odoo_client, request_id, ref_nombre):
+    """Archiva una maintenance.request y cierra la mail.activity asociada.
+
+    Usado por la lógica de proximidad (CF, MP y el sub-flujo CI de R) sobre las
+    solicitudes anteriores a la elegida. QA detectó en el ambiente test que las
+    archivadas dejaban la actividad colgada; este helper hace ambos pasos.
+    """
+    try:
+        odoo_client.write('maintenance.request', [request_id], {'archive': True})
+    except Exception as e:
+        print(f"Error al archivar la solicitud {ref_nombre}: {e}")
+        return
+    try:
+        actividad = odoo_client.search_read(
+            'mail.activity',
+            [['res_model', '=', 'maintenance.request'], ['res_id', '=', request_id]],
+            limit=1
+        )
+        if actividad:
+            odoo_client.action_feedback(
+                'mail.activity',
+                [actividad[0]['id']],
+                "Archivada por proximidad desde API"
+            )
+    except Exception as e:
+        print(f"Error al cerrar la actividad de la solicitud archivada {ref_nombre}: {e}")
+
+
 def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sharepoint_client=None):
 
     for i, r in ordered_responses.iterrows():
@@ -371,11 +490,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         #------------------------------------------------------------------------
                         #Busqueda del ID del equipo en la base de datos maintenance.equipment
                         try:
-                            equipment_MC = odoo_client.search_read(
-                                'maintenance.equipment',
-                                [['serial_no', '=', serial_MC]],
-                                limit=1
-                            )
+                            equipment_MC = _buscar_equipo_por_serial(odoo_client, serial_MC)
 
                             if equipment_MC:
 
@@ -998,11 +1113,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                         
                         #Buscamos las request que existan para el equipo en cuestión
                         try:
-                            equipment_CF = odoo_client.search_read(
-                                'maintenance.equipment',
-                                [['serial_no', '=', serial_CF]],
-                                limit=1
-                            )
+                            equipment_CF = _buscar_equipo_por_serial(odoo_client, serial_CF)
                         
                             if equipment_CF:
                                 number_equipment_CF = equipment_CF[0]['id']
@@ -1153,17 +1264,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 #Archivamos las solicitudes anteriores a la escogida
                                                 for x in interest_requests_CF.keys():
                                                     if interest_requests_CF[x][0] < interest_requests_CF[id_CF][0]:
-                                                        try:
-                                                            archive_CF = {
-                                                                'archive': True,
-                                                            }
-                                                            update_stage_CF = odoo_client.write(
-                                                                'maintenance.request',
-                                                                [x], 
-                                                                archive_CF
-                                                            )
-                                                        except Exception as e:
-                                                            print(f"Error al archivar la solicitud {interest_requests_CF[x][2]}: {e}")
+                                                        _archivar_y_cerrar_actividad(odoo_client, x, interest_requests_CF[x][2])
                                                         
                                             
                                             #Actualizamos el estado de la solicitud cuando el trabajo deja al equipo operativo
@@ -1173,6 +1274,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     update_CF = {
                                                         'stage_id': 5,
                                                         'x_studio_informe': informe_codificado_CF,
+                                                        'x_studio_tcnico': operators[tecnico],
                                                     }
 
                                                     update_stage_CF = odoo_client.write(
@@ -1245,6 +1347,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     #Atualizando su estado a en proceso
                                                     update_CF = {
                                                         'stage_id': 3,
+                                                        'x_studio_tcnico': operators[tecnico],
                                                     }
 
                                                     update_stage_CF = odoo_client.write(
@@ -1761,10 +1864,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                             #Validación de que el punto indicado exista
                             id_punto = False
                             try:
-                                equipment_R = odoo_client.search_read(
-                                    'maintenance.equipment',
-                                    [['serial_no', '=', serial_R]]
-                                )
+                                equipment_R = _buscar_equipo_por_serial(odoo_client, serial_R)
 
                                 if equipment_R:
                                     
@@ -1882,17 +1982,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             # Archivamos las solicitudes anteriores a la escogida
                                                             for x in interest_requests_CI.keys():
                                                                 if interest_requests_CI[x][0] < interest_requests_CI[id_CI][0]:
-                                                                    try:
-                                                                        archive_CI = {
-                                                                            'archive': True,
-                                                                        }
-                                                                        update_stage_CI = odoo_client.write(
-                                                                            'maintenance.request',
-                                                                            [x], 
-                                                                            archive_CI
-                                                                        )
-                                                                    except Exception as e:
-                                                                        print(f"Error al archivar la solicitud {interest_requests_CI[x][2]}: {e}")
+                                                                    _archivar_y_cerrar_actividad(odoo_client, x, interest_requests_CI[x][2])
 
                                                             try:
                                                                 # Atualizando su estado a en proceso
@@ -2543,17 +2633,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             # Archivamos las solicitudes anteriores a la escogida
                                                             for x in interest_requests_CI.keys():
                                                                 if interest_requests_CI[x][0] < interest_requests_CI[id_CI][0]:
-                                                                    try:
-                                                                        archive_CI = {
-                                                                            'archive': True,
-                                                                        }
-                                                                        update_stage_CI = odoo_client.write(
-                                                                            'maintenance.request',
-                                                                            [x],
-                                                                            archive_CI
-                                                                        )
-                                                                    except Exception as e:
-                                                                        print(f"Error al archivar la solicitud {interest_requests_CI[x][2]}: {e}")
+                                                                    _archivar_y_cerrar_actividad(odoo_client, x, interest_requests_CI[x][2])
 
                                                         try:
                                                             # Atualizando su estado a finalizado
@@ -3066,10 +3146,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                             
                             try:
-                                equipment_I = odoo_client.search_read(
-                                    'maintenance.equipment',
-                                    [['serial_no', '=', serial_I]]
-                                )
+                                equipment_I = _buscar_equipo_por_serial(odoo_client, serial_I)
                                 
                                 if equipment_I:
                                     
@@ -3788,11 +3865,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                             
                             # Buscamos las request que existan para el equipo en cuestión
                             try:
-                                equipment_MP = odoo_client.search_read(
-                                    'maintenance.equipment',
-                                    [['serial_no', '=', serial_MP]],
-                                    limit=1
-                                )
+                                equipment_MP = _buscar_equipo_por_serial(odoo_client, serial_MP)
                             
                                 if equipment_MP:
                                     number_equipment_MP = equipment_MP[0]['id']
@@ -3943,17 +4016,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     # Archivamos las solicitudes anteriores a la escogida
                                                     for x in interest_requests_MP.keys():
                                                         if interest_requests_MP[x][0] < interest_requests_MP[id_MP][0]:
-                                                            try:
-                                                                archive_MP = {
-                                                                    'archive': True,
-                                                                }
-                                                                update_stage_MP = odoo_client.write(
-                                                                    'maintenance.request',
-                                                                    [x], 
-                                                                    archive_MP
-                                                                )
-                                                            except Exception as e:
-                                                                print(f"Error al archivar la solicitud {interest_requests_MP[x][2]}: {e}")
+                                                            _archivar_y_cerrar_actividad(odoo_client, x, interest_requests_MP[x][2])
                                                             
                                                 
                                                 # Actualizamos el estado de la solicitud cuando el trabajo deja al equipo operativo
@@ -3963,6 +4026,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         update_MP = {
                                                             'stage_id': 5,
                                                             'x_studio_informe': informe_codificado_MP,
+                                                            'x_studio_tcnico': operators[tecnico],
                                                         }
 
                                                         update_stage_MP = odoo_client.write(
@@ -4035,6 +4099,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         # Atualizando su estado a en proceso
                                                         update_MP = {
                                                             'stage_id': 3,
+                                                            'x_studio_tcnico': operators[tecnico],
                                                         }
 
                                                         update_stage_MP = odoo_client.write(
