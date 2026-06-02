@@ -1,4 +1,4 @@
-# Entornos virtuales
+	# Entornos virtuales
 .venv/
 venv/
 
@@ -20,3 +20,5 @@ new_ot
 pipeline_registro
 CLAUDE.md
 .claude
+
+informes_pdf
