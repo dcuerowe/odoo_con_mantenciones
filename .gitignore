@@ -15,6 +15,10 @@ __pycache__/
 # macOS
 .DS_Store
 
+
+# extenciones
+.ipynb
+
 #carpetas
 new_ot
 pipeline_registro
