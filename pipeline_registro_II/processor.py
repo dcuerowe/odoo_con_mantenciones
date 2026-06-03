@@ -182,11 +182,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
         R_type = ['E', 'I']
 
 
-        I_type = ['I', 'T'] 
+        I_type = ['I', 'T', 'C'] 
         I_translate = {
-            'I': 'dispositivo',
-            'T': 'tablero'
-        }
+                'I': 'dispositivo',
+                'T': 'tablero',
+                'C': 'Categoría'
+            }
         
         id_mantencion = {'MC': 'Mantención Correctiva',
                         'MP': 'Mantención Preventiva',
@@ -354,9 +355,23 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             
             conteo_instancias_I_T = len(I_T_prefijo)
 
+            I_C_prefijo = set()
+            for col in df_visita.columns:
+                if ' I (C) |' in col: 
+                    # Extraemos el prefijo como '1.2.1 MP' o '1.2.2 MP'
+                    prefix_end_index = col.find(' I (C) |') + 4 # Sumamos 4 para incluir ' MP'
+                    prefix = col[:prefix_end_index].strip()
+                    I_C_prefijo.add(prefix)
+            
+            conteo_instancias_I_C = len(I_C_prefijo)
+            
+            print(conteo_instancias_I_C)
+            
+
             conteo_I = {
                 'I': conteo_instancias_I_I,
-                'T': conteo_instancias_I_T
+                'T': conteo_instancias_I_T,
+                'C': conteo_instancias_I_C
             }
 
             #Conteo en el contexto de los instrumentos
@@ -3119,11 +3134,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                           #  Elmentos propios del equipo
                             modelo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Modelo"]
-                            tipo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Tipo de {I_translate[t]}"]
+                            tipo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Tipo de {I_translate[t]}"] if t != 'C' else dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | {I_translate[t]}"]
                             serial_I = normalizar_serial(dic_trabajo_I[f'{i}.2.{equipo} I ({t}) | N° de serie'])
-                            operativo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | ¿Equipo operativo tras trabajos?"]
+                            operativo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | ¿Equipo operativo tras trabajos?"] if t != 'C' else 'Sí'
                             obs_I = dic_trabajo_I[f'{i}.2.{equipo} I ({t}) | Observación']
-                            alcance_I = 'IH | Habilitación de equipo' if t == 'I' else dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Alcance de la intervención"]
+                            alcance_I = 'IH | Habilitación de equipo' if t != 'T' else dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Alcance de la intervención"]
 
                         
                 

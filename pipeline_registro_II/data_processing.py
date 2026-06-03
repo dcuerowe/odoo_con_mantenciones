@@ -22,10 +22,27 @@ def ordenar_respuestas(estructura, respuestas):
     map_questions(questions)
 
     # --- 2. Función Auxiliar para extraer valores (La misma lógica robusta) ---
+    def _tiene_dato(answer_obj):
+        # ¿La respuesta trae algún dato real, sin importar las marcas?
+        return bool(
+            answer_obj.get('value')
+            or answer_obj.get('selectedAnswers')
+            or answer_obj.get('selectedIndex') is not None
+            or answer_obj.get('timestamp')
+            or answer_obj.get('images')
+            or answer_obj.get('ratingValue') not in (None, '')
+        )
+
     def extraer_valor(answer_obj):
-        # Si no se respondió o está oculta, retornamos None
-        if answer_obj.get('wasSubmittedEmpty', False) or answer_obj.get('wasHidden', False):
+        # Oculta (p.ej. punto no visitado / lógica condicional) -> no aplica.
+        if answer_obj.get('wasHidden', False):
             return None
+        # Una pregunta agregada al formulario DESPUÉS del envío llega con
+        # wasSubmittedEmpty=True aunque la submission se haya editado luego y
+        # tenga un 'value' real. Solo la descartamos si está realmente vacía.
+        if answer_obj.get('wasSubmittedEmpty', False) and not _tiene_dato(answer_obj):
+            return None
+
 
         q_type = answer_obj.get('questionType', 'unknown')
 
