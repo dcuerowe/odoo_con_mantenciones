@@ -445,6 +445,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                     CF_prefijo.add(prefix)
                     
             conteo_instancias_CF = len(CF_prefijo)
+            print(conteo_instancias_CF)
 
 
             #Cantidad de CI realizadas
