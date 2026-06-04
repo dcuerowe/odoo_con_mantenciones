@@ -1,4 +1,4 @@
-# Entornos virtuales
+	# Entornos virtuales
 .venv/
 venv/
 
@@ -11,17 +11,15 @@ __pycache__/
 .env
 .env.*
 *.log
+*.ipynb
 
 # macOS
 .DS_Store
-
-
-# extenciones
-*.ipynb
 
 #carpetas
 new_ot
 pipeline_registro
 CLAUDE.md
 .claude
-informes_pdf/
+
+informes_pdf
