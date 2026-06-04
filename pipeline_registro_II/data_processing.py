@@ -34,8 +34,14 @@ def ordenar_respuestas(estructura, respuestas):
         )
 
     def extraer_valor(answer_obj):
-        # Oculta (p.ej. punto no visitado / lógica condicional) -> no aplica.
-        if answer_obj.get('wasHidden', False):
+        # 'wasHidden' marca preguntas ocultadas por la lógica condicional
+        # (p.ej. punto no visitado, rama de tipo de trabajo no elegida).
+        # PERO al editar una submission para cambiar la rama condicional
+        # (p.ej. corregir de I a CF y trasvasar las respuestas), Connecteam no
+        # reevalúa la visibilidad y devuelve las casillas ya rellenadas con
+        # wasHidden=True. Por eso solo descartamos cuando además NO hay dato
+        # real (mismo criterio que wasSubmittedEmpty más abajo).
+        if answer_obj.get('wasHidden', False) and not _tiene_dato(answer_obj):
             return None
         # Una pregunta agregada al formulario DESPUÉS del envío llega con
         # wasSubmittedEmpty=True aunque la submission se haya editado luego y
