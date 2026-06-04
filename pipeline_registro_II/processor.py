@@ -142,6 +142,27 @@ def _archivar_y_cerrar_actividad(odoo_client, request_id, ref_nombre):
         print(f"Error al cerrar la actividad de la solicitud archivada {ref_nombre}: {e}")
 
 
+def _fijar_tipo_trabajo(odoo_client, request_id, tipo_trabajo):
+    """Re-escribe x_studio_tipo_de_trabajo en una maintenance.request recién creada.
+
+    En productivo, al CREAR la request el campo "Tipo de trabajo" queda en su valor
+    por defecto ("Mantención Preventiva") aunque el create lo informe — un default/
+    automatización de Odoo lo sobrescribe en la creación. Un write posterior sí
+    persiste (los flujos de actualización ya lo confirman), así que volvemos a
+    fijarlo aquí para que la tarjeta muestre el tipo correcto.
+    """
+    if not request_id:
+        return
+    try:
+        odoo_client.write(
+            'maintenance.request',
+            [request_id],
+            {'x_studio_tipo_de_trabajo': tipo_trabajo},
+        )
+    except Exception as e:
+        print(f"Error al fijar el tipo de trabajo '{tipo_trabajo}' en la request {request_id}: {e}")
+
+
 def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sharepoint_client=None):
 
     for i, r in ordered_responses.iterrows():
@@ -652,6 +673,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_MC
                                                 )
+                                                _fijar_tipo_trabajo(odoo_client, created_request_MC, id_mantencion[id])
 
                                                 follow = odoo_client.message_subscribe(
                                                     'maintenance.request',
@@ -715,6 +737,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_MC
                                                 )
+                                                _fijar_tipo_trabajo(odoo_client, created_request_MC, id_mantencion[id])
 
                                                 follow = odoo_client.message_subscribe(
                                                     'maintenance.request',
@@ -1431,6 +1454,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_CF
                                                     )
+                                                    _fijar_tipo_trabajo(odoo_client, created_request_CF, id_mantencion[id])
 
                                                     follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
@@ -1493,6 +1517,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_CF
                                                     )
+                                                    _fijar_tipo_trabajo(odoo_client, created_request_CF, id_mantencion[id])
 
                                                     follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
@@ -1596,6 +1621,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_CF
                                                 )
+                                                _fijar_tipo_trabajo(odoo_client, created_request_CF, id_mantencion[id])
 
                                                 follow = odoo_client.message_subscribe(
                                                     'maintenance.request',
@@ -1658,6 +1684,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_CF
                                                 )
+                                                _fijar_tipo_trabajo(odoo_client, created_request_CF, id_mantencion[id])
 
                                                 follow = odoo_client.message_subscribe(
                                                     'maintenance.request',
@@ -2048,6 +2075,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                     'maintenance.request',
                                                                     fields_values_OT_E
                                                                 )
+                                                                _fijar_tipo_trabajo(odoo_client, created_request_E, 'Extracción')
 
                                                                 follow = odoo_client.message_subscribe(
                                                                         'maintenance.request',
@@ -2157,6 +2185,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                     'maintenance.request',
                                                                     fields_values_OT_CI
                                                                 )
+                                                                _fijar_tipo_trabajo(odoo_client, created_request_CI, 'Calibración')
 
                                                                 follow = odoo_client.message_subscribe(
                                                                         'maintenance.request',
@@ -2208,6 +2237,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                     'maintenance.request',
                                                                     fields_values_OT_E
                                                                 )
+                                                                _fijar_tipo_trabajo(odoo_client, created_request_E, 'Extracción')
 
                                                                 follow = odoo_client.message_subscribe(
                                                                         'maintenance.request',
@@ -2316,6 +2346,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                 'maintenance.request',
                                                                 fields_values_OT_CI
                                                             )
+                                                            _fijar_tipo_trabajo(odoo_client, created_request_CI, 'Calibración')
 
                                                             follow = odoo_client.message_subscribe(
                                                                     'maintenance.request',
@@ -2367,6 +2398,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                 'maintenance.request',
                                                                 fields_values_OT_E
                                                             )
+                                                            _fijar_tipo_trabajo(odoo_client, created_request_E, 'Extracción')
 
                                                             follow = odoo_client.message_subscribe(
                                                                     'maintenance.request',
@@ -2481,6 +2513,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_E
                                                     )
+                                                    _fijar_tipo_trabajo(odoo_client, created_request_E, 'Extracción')
 
                                                     follow = odoo_client.message_subscribe(
                                                             'maintenance.request',
@@ -2731,6 +2764,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_I
                                                 )
+                                                _fijar_tipo_trabajo(odoo_client, created_request_I, 'Instalación')
 
                                                 follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
@@ -2843,6 +2877,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_E
                                                 )
+                                                _fijar_tipo_trabajo(odoo_client, created_request_E, 'Extracción')
 
                                                 follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
@@ -2951,6 +2986,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                     'maintenance.request',
                                                     fields_values_OT_I
                                                 )
+                                                _fijar_tipo_trabajo(odoo_client, created_request_I, 'Instalación')
 
                                                 follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
@@ -3487,6 +3523,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             'maintenance.request',
                                                             fields_values_OT_I
                                                         )
+                                                        _fijar_tipo_trabajo(odoo_client, created_request_I, id_mantencion[id])
 
                                                         follow = odoo_client.message_subscribe(
                                                             'maintenance.request',
@@ -3571,6 +3608,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             'maintenance.request',
                                                             fields_values_OT_I
                                                         )
+                                                        _fijar_tipo_trabajo(odoo_client, created_request_II, id_mantencion[id])
 
                                                         follow = odoo_client.message_subscribe(
                                                             'maintenance.request',
@@ -3633,6 +3671,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_I
                                                     )
+                                                    _fijar_tipo_trabajo(odoo_client, created_request_I, id_mantencion[id])
 
                                                     follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
@@ -3718,6 +3757,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_I
                                                     )
+                                                    _fijar_tipo_trabajo(odoo_client, created_request_II, id_mantencion[id])
 
                                                     follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
@@ -4185,6 +4225,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             'maintenance.request',
                                                             fields_values_OT_MP
                                                         )
+                                                        _fijar_tipo_trabajo(odoo_client, created_request_MP, id_mantencion[id])
 
                                                         follow = odoo_client.message_subscribe(
                                                             'maintenance.request',
@@ -4247,6 +4288,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             'maintenance.request',
                                                             fields_values_OT_MP
                                                         )
+                                                        _fijar_tipo_trabajo(odoo_client, created_request_MP, id_mantencion[id])
 
                                                         follow = odoo_client.message_subscribe(
                                                             'maintenance.request',
@@ -4363,6 +4405,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_MP
                                                     )
+                                                    _fijar_tipo_trabajo(odoo_client, created_request_MP, id_mantencion[id])
 
                                                     follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
@@ -4425,6 +4468,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         'maintenance.request',
                                                         fields_values_OT_MP
                                                     )
+                                                    _fijar_tipo_trabajo(odoo_client, created_request_MP, id_mantencion[id])
 
                                                     follow = odoo_client.message_subscribe(
                                                         'maintenance.request',
