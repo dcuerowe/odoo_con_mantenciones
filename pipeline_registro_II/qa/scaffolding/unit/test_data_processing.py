@@ -79,18 +79,36 @@ def test_multiplechoice_join_coma():  # TC-TR-14
     assert df.loc[0, "Tipos"] == "MC, MP"
 
 
-def test_hidden_no_genera_columna():  # TC-TR-15
+def test_hidden_sin_dato_no_genera_columna():  # TC-TR-15
+    # wasHidden + SIN dato real (rama condicional no visitada) -> se descarta.
     schema = _schema([
         {"questionId": "q1", "title": "Visible", "questionType": "openEnded"},
         {"questionId": "q2", "title": "Oculta", "questionType": "openEnded"},
     ])
     sub = _submission([
         {"questionId": "q1", "questionType": "openEnded", "value": "x"},
-        {"questionId": "q2", "questionType": "openEnded", "value": "y", "wasHidden": True},
+        {"questionId": "q2", "questionType": "openEnded", "value": "", "wasHidden": True},
     ])
     df = data_processing.ordenar_respuestas(schema, sub)
     assert "Visible" in df.columns
     assert "Oculta" not in df.columns
+
+
+def test_hidden_con_dato_si_genera_columna():  # TC-TR-15 (contrato fix bf53451)
+    # Al editar una submission para cambiar la rama condicional, Connecteam no
+    # reevalúa la visibilidad y devuelve casillas ya rellenadas con wasHidden=True.
+    # Si hay dato real, la respuesta SE CONSERVA (no se pierde el trabajo del técnico).
+    schema = _schema([
+        {"questionId": "q1", "title": "Visible", "questionType": "openEnded"},
+        {"questionId": "q2", "title": "Oculta con dato", "questionType": "openEnded"},
+    ])
+    sub = _submission([
+        {"questionId": "q1", "questionType": "openEnded", "value": "x"},
+        {"questionId": "q2", "questionType": "openEnded", "value": "y", "wasHidden": True},
+    ])
+    df = data_processing.ordenar_respuestas(schema, sub)
+    assert "Oculta con dato" in df.columns
+    assert df.loc[0, "Oculta con dato"] == "y"
 
 
 def test_submission_vacia_da_dataframe_vacio():  # TC-TR-16
