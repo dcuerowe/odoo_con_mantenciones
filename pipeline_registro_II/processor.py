@@ -15,12 +15,20 @@ def normalizar_serial(serial):
     pandas puede inferir un serial puramente numérico como float (p.ej. 24000.0), pero
     Odoo guarda serial_no como char ("24000"), así que ['serial_no','=',24000.0] no calza.
     Quitamos el sufijo ".0" de los float enteros y los espacios sobrantes.
+
+    Además, en Odoo no existen S/N numéricos con ceros a la izquierda; si el
+    formulario trae uno (p.ej. "04245245"), eliminamos los ceros líderes para que
+    calce con el serial real ("4245245"). Solo se aplica a seriales puramente
+    numéricos: los alfanuméricos (p.ej. "WE000...") conservan su formato.
     """
     if serial is None:
         return serial
     if isinstance(serial, float) and serial.is_integer():
         serial = int(serial)
-    return str(serial).strip()
+    serial = str(serial).strip()
+    if serial.isdigit():
+        serial = serial.lstrip('0') or '0'
+    return serial
 
 
 def _buscar_equipo_por_serial(odoo_client, serial):
@@ -3273,56 +3281,62 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     
 
                                     elif location_I != f'[{proyecto}] {punto}' :
-                                        
+
                                         new_location_I = {
                                             'x_studio_location': id_punto,
                                             'assign_date': f"{dic_trabajo_I['Fecha visita ']}",
                                         }
 
-                                        
+
                                         try:
 
                                             # Actualización de la ubicación del equipo
                                             update_location_I = odoo_client.write(
                                                 'maintenance.equipment',
-                                                [number_equipment_I], 
+                                                [number_equipment_I],
                                                 new_location_I
                                             )
 
-                                            attachment_I = odoo_client.create(
-                                                "ir.attachment",
-                                                {
-                                                    "name": nombre_archivo_I,
-                                                    "type": "binary",
-                                                    "datas": informe_codificado_I,
-                                                    "res_model": 'maintenance.equipment',
-                                                    "res_id": number_equipment_I,
-                                                    "mimetype": "application/pdf",
-                                                }
-                                            )
-
-
-                                            new_location = odoo_client.message_post(
-                                                'maintenance.equipment',
-                                                number_equipment_I, 
-                                                f"<p><b>Cambio de ubicación:</b> {location_I} => [{proyecto}] {punto}</p><p><b>Ejecutor:</b> {tecnico}</p>",
-                                                attachment_ids=[attachment_I]
-                                            )
-        
-                        
-                                            detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
+                                            detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id,
                                                         f'El dispositivo ahora se encuentra en [{proyecto}] {punto}')
 
-                                            inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
-                                                    f'Equipo pasa de {location_I} a [{proyecto}] {punto}). Validar cambio {nombre_archivo_I}',
-                                                    'N',
-                                                    'Cambio de ubicación',
-                                                    'En proceso',
-                                                    nombre_archivo_I,
-                                                    informe_codificado_I)
+                                            # 'Bodega cliente' es el flujo esperado de una instalación (el equipo
+                                            # estaba en bodega esperando terreno): se mueve la ubicación pero NO se
+                                            # notifica 'Cambio de ubicación' (ni chatter ni inbox) para no generar
+                                            # ruido en la bandeja del revisor.
+                                            if location_I != "Bodega cliente":
+
+                                                attachment_I = odoo_client.create(
+                                                    "ir.attachment",
+                                                    {
+                                                        "name": nombre_archivo_I,
+                                                        "type": "binary",
+                                                        "datas": informe_codificado_I,
+                                                        "res_model": 'maintenance.equipment',
+                                                        "res_id": number_equipment_I,
+                                                        "mimetype": "application/pdf",
+                                                    }
+                                                )
 
 
-                                            
+                                                new_location = odoo_client.message_post(
+                                                    'maintenance.equipment',
+                                                    number_equipment_I,
+                                                    f"<p><b>Cambio de ubicación:</b> {location_I} => [{proyecto}] {punto}</p><p><b>Ejecutor:</b> {tecnico}</p>",
+                                                    attachment_ids=[attachment_I]
+                                                )
+
+
+                                                inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
+                                                        f'Equipo pasa de {location_I} a [{proyecto}] {punto}). Validar cambio {nombre_archivo_I}',
+                                                        'N',
+                                                        'Cambio de ubicación',
+                                                        'En proceso',
+                                                        nombre_archivo_I,
+                                                        informe_codificado_I)
+
+
+
                                         except Exception as e:
                                             print(f'Error al notificar la nueva ubicación del equipo en Odoo: {e}')
                                     

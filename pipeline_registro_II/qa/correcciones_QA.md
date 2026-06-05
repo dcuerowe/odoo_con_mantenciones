@@ -6,6 +6,108 @@ documenta el defecto, la causa, el cambio y la prueba que lo respalda.
 
 ---
 
+## Serial numérico con ceros a la izquierda se elimina en la normalización · 2026-06-05
+
+**Severidad:** Media · **Archivos:** `processor.py` (helper `normalizar_serial`) · **Estado:** Implementado
+
+### Contexto
+
+En Odoo **no existen** S/N numéricos que empiecen por `0`, pero el formulario de
+Connecteam puede traer el serial tipeado con ceros a la izquierda (p. ej.
+`"04245245"`). Esto dejaba el serial inconsistente con el `serial_no` real de Odoo
+(`"4245245"`):
+
+- Si pandas lo conserva como string `"04245245"`, la búsqueda numérica (substring
+  `like '%04245245%'`) **no calza** con `"4245245"` (el `0` no está en el dato real).
+- Si pandas lo infiere como número, el `0` se pierde antes de llegar a la normalización
+  y solo se "rescataba" por casualidad vía substring cuando había un único candidato.
+
+Es el caso que la corrección *"Búsqueda de equipo por patrón…"* (2026-05-29) dejó
+explícitamente fuera de alcance en sus Notas.
+
+### Cambio
+
+`normalizar_serial` ahora, **después** de limpiar el float y los espacios, elimina los
+ceros a la izquierda **solo** cuando el serial es puramente numérico (`str.isdigit()`):
+
+```python
+serial = str(serial).strip()
+if serial.isdigit():
+    serial = serial.lstrip('0') or '0'
+return serial
+```
+
+- `"04245245"` → `"4245245"`; `"0024000"` → `"24000"`.
+- El fallback `or '0'` evita un string vacío si el serial fuera todo ceros (`"000"` → `"0"`).
+- Los serials **alfanuméricos** no se tocan: `"WE0000221"` y `"0WE221"` se preservan
+  intactos (su lógica de ceros vive en el fallback WE de `_buscar_equipo_por_serial`).
+
+Al normalizar el cero líder en origen, la búsqueda contra Odoo se hace siempre con el
+serial real (`"4245245"`) y deja de depender del rescate frágil por substring (que
+fallaba cuando había varios candidatos numéricos sin match exacto).
+
+### Verificación
+
+- `qa/scaffolding/unit/test_normalizar_serial.py` ampliado con los casos de cero
+  líder: `"04245245"→"4245245"`, `"0024000"→"24000"`, `"  007  "→"7"`, `"000"→"0"`,
+  y los alfanuméricos preservados (`"WE0000221"`, `"0WE221"`).
+- Nuevo test L2 de flujo `qa/scaffolding/component/test_process_entrys_ot260_serial_cero.py`
+  (escenario **OT 260, punto ET-0F**):
+  - `test_ot260_serial_cero_se_normaliza_antes_de_buscar`: el dominio del `search_read`
+    usa `"4245245"` y el `"04245245"` original **nunca** llega a Odoo.
+  - `test_ot260_serial_cero_encuentra_equipo_y_crea_solicitud`: con el equipo real
+    cargado como `"4245245"`, se encuentra y se crea la `maintenance.request` (no cae
+    en "S/N no encontrado").
+
+```bash
+/Users/dacm/we/.venv/bin/python -m pytest \
+  qa/scaffolding/unit/test_normalizar_serial.py \
+  qa/scaffolding/component/test_process_entrys_ot260_serial_cero.py -q
+# 16 passed
+```
+
+### Notas
+
+- Supone que Odoo nunca almacena numéricos con cero líder (confirmado como regla de
+  negocio). Si alguna vez existiera un `serial_no = "04245245"` real, dejaría de
+  encontrarse — riesgo aceptado según la regla actual.
+
+---
+
+## Test TC-TR-15 desactualizado: wasHidden con dato real se conserva · 2026-06-05
+
+**Severidad:** Baja (suite de QA, sin impacto en producción) · **Archivos:** `qa/scaffolding/unit/test_data_processing.py` · **Estado:** Corregido
+
+### Contexto
+
+El commit `bf53451` ("conservar respuestas con wasHidden si tienen dato real") cambió
+`ordenar_respuestas`: una respuesta marcada `wasHidden=True` ya **no** se descarta si
+trae dato real (Connecteam no reevalúa la visibilidad al editar la rama condicional de
+una submission y devuelve casillas rellenadas con `wasHidden=True`). El descarte solo
+ocurre cuando además no hay dato (`not _tiene_dato(...)`, `data_processing.py:44`).
+
+El test `test_hidden_no_genera_columna` (TC-TR-15) quedó desactualizado: usaba un
+`wasHidden=True` **con** `value="y"` pero seguía exigiendo que la columna se omitiera,
+contradiciendo el nuevo contrato. Fallaba contra el código vigente.
+
+### Corrección
+
+Se separó TC-TR-15 en dos casos que reflejan el contrato real:
+
+- `test_hidden_sin_dato_no_genera_columna`: `wasHidden=True` + `value=""` → columna
+  omitida (comportamiento histórico para ramas no visitadas).
+- `test_hidden_con_dato_si_genera_columna`: `wasHidden=True` + `value="y"` → columna
+  conservada con su valor (contrato `bf53451`).
+
+Es una corrección **solo de pruebas**; `processor.py`/`data_processing.py` no cambian.
+
+```bash
+/Users/dacm/we/.venv/bin/python -m pytest qa/scaffolding/unit qa/scaffolding/component -q
+# 106 passed
+```
+
+---
+
 ## Instalación: omitir notificación de cambio de ubicación cuando viene de "Bodega cliente" · 2026-05-30
 
 **Severidad:** Baja (reducción de ruido operacional) · **Archivos:** `processor.py` (módulo I) · **Estado:** Implementado
@@ -62,6 +164,16 @@ queda intacto: chatter + inbox de "Cambio de ubicación".
 - El cambio solo aplica al **módulo I**. El sub-flujo de instalación dentro del
   módulo R no emite hoy un `inbox` de "Cambio de ubicación" (solo escribe la
   ubicación silenciosamente), así que no necesita ajuste.
+
+### Re-implementación · 2026-06-05
+
+Al correr la suite completa se detectó que esta corrección **no estaba presente** en
+`processor.py` (el bloque `elif location_I != '[proyecto] punto'` del módulo I no tenía
+la excepción de "Bodega cliente"; nunca se commiteó o se perdió en `Cambios base`). El
+test `test_i_desde_bodega_cliente_no_notifica_cambio` fallaba. Se re-implementó tal como
+se describe arriba: el `write` de ubicación y `detalle_op` corren siempre, y el
+`attachment` + `message_post` + `inbox` de "Cambio de ubicación" se omiten cuando
+`location_I == "Bodega cliente"`. Suite completa en verde (106 passed).
 
 ---
 
@@ -204,9 +316,10 @@ una llamada al helper.
 - Una matching `m.serial_no` no puede estar simultáneamente en `numericas` y `wes`
   (`.isdigit()` excluye letras). Las dos particiones del universo son disjuntas.
 - "WE" es **case-sensitive** (mayúsculas), como aparece en los datos reales del QA.
-- Para serials puramente numéricos con **ceros a la izquierda** que pandas convierte
-  a número (p. ej. `"00024"` → `24`), los ceros se pierden en la normalización
-  (OBS-11) y la búsqueda no los recupera. Caso no contemplado por ahora.
+- Para serials puramente numéricos con **ceros a la izquierda** (p. ej. `"00024"`),
+  ver la corrección *"Serial numérico con ceros a la izquierda…"* (2026-06-05):
+  `normalizar_serial` ahora los elimina en origen, dado que en Odoo no existen S/N
+  numéricos que empiecen por 0.
 
 ---
 

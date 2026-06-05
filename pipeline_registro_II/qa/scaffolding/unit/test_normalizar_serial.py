@@ -17,6 +17,13 @@ import processor
     ("24000WE0000221", "24000WE0000221"),  # alfanumérico se preserva
     ("  SN-123  ", "SN-123"),      # recorta espacios
     (24000.5, "24000.5"),          # float no entero conserva decimales
+    # En Odoo no existen S/N numéricos con ceros a la izquierda: se eliminan.
+    ("04245245", "4245245"),       # cero líder en numérico puro -> se quita
+    ("0024000", "24000"),          # varios ceros líderes -> se quitan todos
+    ("  007  ", "7"),              # recorta espacios y luego quita ceros
+    ("000", "0"),                  # todo ceros -> no queda vacío, se preserva "0"
+    ("WE0000221", "WE0000221"),    # alfanumérico con ceros NO se toca
+    ("0WE221", "0WE221"),          # cero líder pero alfanumérico -> se preserva
 ])
 def test_normalizar_serial(entrada, esperado):
     assert processor.normalizar_serial(entrada) == esperado
