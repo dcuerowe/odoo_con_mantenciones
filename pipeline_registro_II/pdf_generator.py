@@ -282,8 +282,9 @@ def output_path(fields):
 
 
 def _normalize_fecha(s):
-    """report_generator.crear_tabla_profesional exige '%Y-%m-%d %H:%M:%S' estricto.
-    Acepta también '%Y-%m-%d' y le anexa 00:00:00."""
+    """report_generator._formatear_fecha espera '%Y-%m-%d %H:%M:%S' (UTC) para
+    convertir a hora de Chile. Acepta también '%Y-%m-%d' y le anexa 00:00:00;
+    si no parsea, el informe usa el texto tal cual sin reventar."""
     from datetime import datetime
     s = (str(s) or "").strip()
     for fmt_in in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%d"):

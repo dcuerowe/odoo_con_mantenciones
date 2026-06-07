@@ -1,399 +1,572 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Generador de Informes de Trabajo  ·  WE TECHS
+------------------------------------------------------------------
+Construye el PDF con la identidad visual de WE TECHS a partir de los
+datos de una Orden de Trabajo (OT).
+
+El punto de entrada `informe_pdf_profesional(...)` conserva la firma que
+usan `processor.py` (5 llamadas) y `pdf_generator.py`, de modo que el
+resto del pipeline no necesita cambios. Internamente arma el diccionario
+`datos` + la lista `fotos` y delega en el layout de marca.
+
+Adaptaciones respecto al diseño base de referencia:
+  - El logo se descarga desde `LOGO_URL` (config) — no hay asset local.
+  - Si no están los .ttf de Lexend Deca en ./fonts cae a Helvetica.
+  - Las fotos llegan como URLs (Connecteam); se descargan a memoria.
+  - Devuelve un `io.BytesIO` (no escribe a disco) para adjuntarlo a Odoo.
+"""
+
 import io
+import os
 import requests
-import pandas as pd
-from reportlab.lib.pagesizes import letter, A4, legal
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch, cm
-from reportlab.lib import colors
-from reportlab.lib.colors import HexColor
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
-from reportlab.platypus.flowables import HRFlowable
-from reportlab.lib.utils import ImageReader
 from datetime import datetime
-from io import BytesIO
-from config import LOGO_URL
-from PIL import Image as PILImage
 from zoneinfo import ZoneInfo
 
-def crear_estilos_personalizados():
-    """
-    Crea y retorna una colección de estilos personalizados para usar en documentos PDF con ReportLab.
-    """
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.lib import colors
+from reportlab.lib.styles import ParagraphStyle, StyleSheet1
+from reportlab.lib.enums import TA_JUSTIFY
+from reportlab.platypus import (
+    BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, Table,
+    TableStyle, Image, Flowable, PageBreak,
+)
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.utils import ImageReader
+from PIL import Image as PILImage, ImageOps
 
-    styles = getSampleStyleSheet()
-    
-    # Estilo para el título principal
-    styles.add(ParagraphStyle(
-        name='TituloPrincipal',
-        parent=styles['Heading1'],
-        fontSize=18,
-        textColor=colors.black,
-        spaceAfter=20,
-        spaceBefore=10,
-        alignment=TA_CENTER,
-        fontName='Helvetica-Bold'
-    ))
-    
-    # Estilo para subtítulos
-    styles.add(ParagraphStyle(
-        name='Subtitulo',
-        parent=styles['Heading2'],
-        fontSize=14,
-        textColor=colors.black,
-        spaceAfter=12,
-        spaceBefore=16,
-        fontName='Helvetica-Bold'
-    ))
-    
-    # Estilo para información de fecha
-    styles.add(ParagraphStyle(
-        name='InfoFecha',
-        parent=styles['Normal'],
-        fontSize=10,
-        textColor=colors.grey,
-        alignment=TA_RIGHT,
-        spaceAfter=20,
-        fontName='Helvetica-Oblique'
-    ))
-    
-    # Estilo para texto de introducción
-    styles.add(ParagraphStyle(
-        name='Introduccion',
-        parent=styles['Normal'],
-        fontSize=11,
-        alignment=TA_JUSTIFY,
-        spaceAfter=16,
-        spaceBefore=8,
-        leftIndent=0,
-        rightIndent=0
-    ))
-    
-    # Estilo para el pie de página
-    styles.add(ParagraphStyle(
-        name='PiePagina',
-        parent=styles['Normal'],
-        fontSize=8,
-        textColor=colors.grey,
-        alignment=TA_CENTER
-    ))
-    
-    return styles
-
-def crear_tabla_profesional(ot, tecnico, proyecto, fecha, cliente, tipo_equipo, modelo, serial, trabajo, alcance, styles):
-    """
-    Crea una tabla profesional en formato ReportLab a partir de los datos de un DataFrame.
-    """
-
-    fecha_str = fecha
-    fecha_utc = datetime.strptime(fecha_str, "%Y-%m-%d %H:%M:%S")
-    fecha_utc = fecha_utc.replace(tzinfo=ZoneInfo("UTC"))
-
-    # 2. Convertir a la zona horaria de Chile
-    fecha_chile = fecha_utc.astimezone(ZoneInfo("America/Santiago"))
-    fecha_p = fecha_chile.strftime("%d/%m/%Y")
+from config import LOGO_URL
 
 
-
-    campos = {
-        'OT:': ot,
-        'Técnico:': tecnico,
-        'Proyecto:': proyecto,
-        'Fecha de realización:': fecha_p,
-        'Cliente:': cliente,
-        'Equipo/instrumento:': tipo_equipo,
-        'Modelo:': modelo,
-        'N° de serie:': serial
-    }
-
-    campos_plus = {
-        'OT:': ot,
-        'Técnico:': tecnico,
-        'Proyecto:': proyecto,
-        'Fecha de realización:': fecha_p,
-        'Cliente:': cliente,
-        'Equipo/instrumento:': tipo_equipo,
-        'Modelo:': modelo,
-        'N° de serie:': serial,
-        'Alcance:': alcance
-    }
+# ----------------------------------------------------------------------
+# TIPOGRAFÍA  ·  Lexend Deca
+# ----------------------------------------------------------------------
+_FONTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
 
 
-    # La fila "Alcance:" se incluye solo cuando el módulo entrega un alcance real.
-    # Los módulos que no aplican (MC, MP, y R subtipo Intercambio) pasan alcance=False.
-    df_campos = pd.DataFrame(campos_plus if alcance else campos, index=[0])
-    
-    # Preparar datos para la tabla
-    df_vertical = df_campos.T.reset_index()
-    df_vertical.columns = ['Campo', 'Respuesta']
-    
-    # Crear encabezados de tabla
-    headers = ['Campo', 'Respuesta']
-    data_list = [headers]
-    
-    # Agregar datos con formato mejorado
-    for _, row in df_vertical.iterrows():
-        campo = str(row['Campo'])
-        respuesta = str(row['Respuesta'])
-        data_list.append([campo, respuesta])
-    
-    # Convertir a Paragraphs para mejor control del formato
-    data_for_table = []
-    for i, row in enumerate(data_list):
-        if i == 0:  # Encabezados
-            formatted_row = [Paragraph(f"<b>{str(cell)}</b>", styles['Normal']) for cell in row]
-        else:  # Datos
-            # Campo en negrita, respuesta normal
-            campo_cell = Paragraph(f"<b>{str(row[0])}</b>", styles['Normal'])
-            respuesta_cell = Paragraph(str(row[1]), styles['Normal'])
-            formatted_row = [campo_cell, respuesta_cell]
-        data_for_table.append(formatted_row)
-    
-    # Crear tabla con anchos optimizados
-    table = Table(data_for_table, colWidths=[5*cm, 12*cm], repeatRows=1)
-    
-
-    COLOR_NARANJA_WETECHS = HexColor("#EA6500")
-    table_style = TableStyle([
-
-        # Encabezado
-        ('BACKGROUND', (0, 0), (-1, 0), COLOR_NARANJA_WETECHS),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 14),
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-        
-        # Filas de datos
-        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-        ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 1), (-1, -1), 10),
-        ('ALIGN', (0, 1), (0, -1), 'LEFT'),
-        ('ALIGN', (1, 1), (1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        
-        # Bordes y espaciado
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 12),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-        
-        # Alternar colores de fila para mejor legibilidad
-        #('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey])
-    ])
-    
-    table.setStyle(table_style)
-    return table
-
-def add_header_first_page(canvas, doc):
-    # --- 1. Cargar el logo desde la URL ---
-    # URL del logo de We-Techs
-    # LOGO_URL imported from config
-
+def _registrar_fuentes():
+    """Registra Lexend Deca (Regular/SemiBold/Bold). Si no están los .ttf,
+    cae a Helvetica para no romper la generación."""
     try:
-        response = requests.get(LOGO_URL)
-        response.raise_for_status() # Lanza un error si la descarga falla
-        logo_bytes = io.BytesIO(response.content)
-        # Define el tamaño del logo. Ajusta estos valores si es necesario.
-        img_reader = ImageReader(logo_bytes)
-        original_width, original_height = img_reader.getSize()
+        pdfmetrics.registerFont(TTFont("LexendDeca",
+                                       os.path.join(_FONTS, "LexendDeca-Regular.ttf")))
+        pdfmetrics.registerFont(TTFont("LexendDeca-SemiBold",
+                                       os.path.join(_FONTS, "LexendDeca-SemiBold.ttf")))
+        pdfmetrics.registerFont(TTFont("LexendDeca-Bold",
+                                       os.path.join(_FONTS, "LexendDeca-Bold.ttf")))
+        pdfmetrics.registerFontFamily(
+            "LexendDeca", normal="LexendDeca", bold="LexendDeca-Bold",
+            italic="LexendDeca", boldItalic="LexendDeca-Bold")
+        return "LexendDeca", "LexendDeca-SemiBold", "LexendDeca-Bold"
+    except Exception:
+        return "Helvetica", "Helvetica-Bold", "Helvetica-Bold"
 
-        # Define el ancho deseado en cm y calcula la altura proporcionalmente
-        logo_width_cm = 2.5 * cm
-        aspect_ratio = original_height / original_width
-        logo_height_cm = logo_width_cm * aspect_ratio
-    
+
+FUENTE, FUENTE_MED, FUENTE_BOLD = _registrar_fuentes()
+
+# ----------------------------------------------------------------------
+# PALETA DE MARCA  ·  WE TECHS
+# ----------------------------------------------------------------------
+NARANJA      = colors.HexColor("#F26522")   # primario
+NARANJA_MED  = colors.HexColor("#F47F47")
+NARANJA_CLARO= colors.HexColor("#F9B291")
+DURAZNO      = colors.HexColor("#FDE5DA")   # fondo suave
+TEAL         = colors.HexColor("#0097A7")   # acento secundario
+TINTA        = colors.HexColor("#2B2B2D")   # texto principal
+GRIS         = colors.HexColor("#5A5B5D")   # texto secundario
+GRIS_MED     = colors.HexColor("#939598")   # texto tenue / labels
+GRIS_LINEA   = colors.HexColor("#E4E5E6")   # líneas / bordes
+GRIS_FONDO   = colors.HexColor("#F6F7F8")   # relleno tarjetas
+BLANCO       = colors.white
+
+MARGEN       = 18 * mm
+ANCHO_PAGINA, ALTO_PAGINA = A4
+ANCHO_UTIL   = ANCHO_PAGINA - 2 * MARGEN
+INSET_FICHA  = 0                            # caja de detalle a ancho completo (al margen)
+ANCHO_FICHA  = ANCHO_UTIL - 2 * INSET_FICHA
+
+
+# ----------------------------------------------------------------------
+# LOGO  ·  descargado desde LOGO_URL (cacheado en memoria)
+# ----------------------------------------------------------------------
+_LOGO_CACHE = {"reader": None, "ratio": None, "intentado": False}
+
+
+def _logo_reader():
+    """Descarga el logo una sola vez y devuelve (ImageReader, alto/ancho).
+    Si falla, devuelve (None, None) y el marco se dibuja sin logo."""
+    if _LOGO_CACHE["intentado"]:
+        return _LOGO_CACHE["reader"], _LOGO_CACHE["ratio"]
+    _LOGO_CACHE["intentado"] = True
+    try:
+        resp = requests.get(LOGO_URL, timeout=10)
+        resp.raise_for_status()
+        data = io.BytesIO(resp.content)
+        reader = ImageReader(data)
+        w, h = reader.getSize()
+        _LOGO_CACHE["reader"] = reader
+        _LOGO_CACHE["ratio"] = (h / w) if w else 0.78
     except Exception as e:
         print(f"Error al cargar el logo desde la URL: {e}")
-        logo_bytes = None
-    
-    if logo_bytes:
-        # Rebobinar el stream de bytes
-        logo_bytes.seek(0)
-        
-        # *** CAMBIO CLAVE: USAR ImageReader ***
-        # Pasamos el stream de bytes a ImageReader, que es el formato
-        # que ReportLab espera para dibujar imágenes en memoria.
-        logo_image = ImageReader(logo_bytes)
-        
-        x_pos = legal[0] - doc.rightMargin - logo_width_cm
-        y_pos = legal[1] - doc.topMargin - logo_height_cm + 1.5 * cm
-        
-        # Ahora pasamos el objeto ImageReader a drawImage
-        canvas.drawImage(
-            logo_image,
-            x=x_pos,
-            y=y_pos,
-            width=logo_width_cm,
-            height=logo_height_cm,
-            mask='auto'
-        )
+        _LOGO_CACHE["reader"] = None
+        _LOGO_CACHE["ratio"] = None
+    return _LOGO_CACHE["reader"], _LOGO_CACHE["ratio"]
 
-def agregar_imagenes_desde_url(story, lista_urls):
-    """
-    Agrega imágenes a una historia de ReportLab a partir de una lista de URLs.
-    """
-    max_width = A4[0] - 4*cm 
 
-    max_height = A4[1] - 4 * cm # alto máximo dentro de la página
-    for url in lista_urls:
+# ----------------------------------------------------------------------
+# ESTILOS DE TEXTO
+# ----------------------------------------------------------------------
+def construir_estilos():
+    ss = StyleSheet1()
+    ss.add(ParagraphStyle("Titulo", fontName=FUENTE_MED, fontSize=20,
+                           leading=26, textColor=TINTA, spaceAfter=2))
+    ss.add(ParagraphStyle("Subtitulo", fontName=FUENTE, fontSize=13.5,
+                           leading=17, textColor=GRIS, spaceAfter=0))
+    ss.add(ParagraphStyle("Intro", fontName=FUENTE, fontSize=9.5,
+                           leading=14.5, textColor=GRIS))
+    ss.add(ParagraphStyle("Seccion", fontName=FUENTE_BOLD, fontSize=12.5,
+                           leading=15, textColor=TINTA, spaceBefore=2,
+                           spaceAfter=2))
+    ss.add(ParagraphStyle("Eyebrow", fontName=FUENTE_MED, fontSize=8.5,
+                           leading=11, textColor=NARANJA, spaceAfter=3))
+    ss.add(ParagraphStyle("Label", fontName=FUENTE_BOLD, fontSize=6.8,
+                           leading=9, textColor=GRIS_MED))
+    ss.add(ParagraphStyle("Valor", fontName=FUENTE, fontSize=9.2,
+                           leading=11.5, textColor=TINTA))
+    ss.add(ParagraphStyle("ValorEq", fontName=FUENTE_BOLD, fontSize=9.2,
+                           leading=11.5, textColor=TINTA))
+    ss.add(ParagraphStyle("ObsLabel", fontName=FUENTE_BOLD, fontSize=7,
+                           leading=10, textColor=NARANJA, spaceAfter=2))
+    ss.add(ParagraphStyle("Obs", fontName=FUENTE, fontSize=8.8,
+                           leading=12.8, textColor=GRIS, alignment=TA_JUSTIFY))
+    ss.add(ParagraphStyle("Cap", fontName=FUENTE_BOLD, fontSize=8.5,
+                           leading=11, textColor=TINTA))
+    ss.add(ParagraphStyle("CapSub", fontName=FUENTE, fontSize=7.8,
+                           leading=10.5, textColor=GRIS_MED))
+    ss.add(ParagraphStyle("Chip", fontName=FUENTE_BOLD, fontSize=9,
+                           leading=11, textColor=BLANCO))
+    return ss
+
+
+STYLES = construir_estilos()
+
+
+# ----------------------------------------------------------------------
+# FLOWABLES PERSONALIZADOS
+# ----------------------------------------------------------------------
+class TituloSeccion(Flowable):
+    """Encabezado de sección: punto naranja + título (motivo circular de marca)."""
+    def __init__(self, texto, ancho=ANCHO_UTIL):
+        super().__init__()
+        self.texto = texto
+        self.ancho = ancho
+        self.height = 17
+
+    def wrap(self, *a):
+        return self.ancho, self.height
+
+    def draw(self):
+        c = self.canv
+        c.setFillColor(NARANJA)
+        c.circle(4, 6, 4, fill=1, stroke=0)
+        c.setFillColor(BLANCO)
+        c.circle(4, 6, 1.6, fill=1, stroke=0)
+        c.setFillColor(TINTA)
+        c.setFont(FUENTE_MED, 12.5)
+        c.drawString(15, 2.5, self.texto)
+
+
+class Chip(Flowable):
+    """Etiqueta tipo 'chip' naranja para destacar un dato clave (p. ej. tipo de trabajo)."""
+    def __init__(self, etiqueta, valor):
+        super().__init__()
+        self.etiqueta = etiqueta
+        self.valor = valor
+        self.height = 22
+
+    def wrap(self, *a):
+        return ANCHO_UTIL, self.height
+
+    def draw(self):
+        c = self.canv
+        pad = 9
+        c.setFont(FUENTE_BOLD, 7.5)
+        w_lab = stringWidth(self.etiqueta.upper(), FUENTE_BOLD, 7.5)
+        c.setFont(FUENTE_BOLD, 10)
+        w_val = stringWidth(self.valor, FUENTE_BOLD, 10)
+        total = w_lab + w_val + pad * 3
+        c.setFillColor(NARANJA)
+        c.roundRect(0, 0, total, 20, 10, fill=1, stroke=0)
+        c.setFillColor(colors.Color(1, 1, 1, 0.85))
+        c.setFont(FUENTE_BOLD, 7.5)
+        c.drawString(pad, 6.5, self.etiqueta.upper())
+        c.setFillColor(BLANCO)
+        c.setFont(FUENTE_BOLD, 10)
+        c.drawString(pad + w_lab + pad, 6, self.valor)
+
+
+# ----------------------------------------------------------------------
+# CABECERA Y PIE (en cada página)
+# ----------------------------------------------------------------------
+def _dibujar_marco(canv, doc):
+    canv.saveState()
+
+    # ---- Cabecera ----
+    top = ALTO_PAGINA - MARGEN
+    # logo (descargado desde LOGO_URL)
+    reader, ratio = _logo_reader()
+    if reader is not None:
+        lw = 34 * mm
+        lh = lw * (ratio or 0.78)
+        canv.drawImage(reader, MARGEN, top - lh + 4, width=lw, height=lh,
+                       mask="auto", preserveAspectRatio=True)
+    # meta a la derecha (no bold: usa el peso medio)
+    canv.setFont(FUENTE_MED, 8.5)
+    canv.setFillColor(NARANJA)
+    canv.drawRightString(ANCHO_PAGINA - MARGEN, top - 4,
+                         "INFORME DE TRABAJOS")
+    canv.setFont(FUENTE, 7.5)
+    canv.setFillColor(GRIS_MED)
+    canv.drawRightString(ANCHO_PAGINA - MARGEN, top - 15,
+                         doc.meta.get("ref", ""))
+    # regla fina (sello de marca)
+    y_linea = top - 22 * mm
+    canv.setStrokeColor(TINTA)
+    canv.setLineWidth(1.1)
+    canv.line(MARGEN, y_linea, ANCHO_PAGINA - MARGEN, y_linea)
+    canv.setStrokeColor(NARANJA)
+    canv.setLineWidth(1.1)
+    canv.line(MARGEN, y_linea, MARGEN + 38 * mm, y_linea)
+
+    # ---- Pie ----
+    yb = MARGEN - 4
+    canv.setStrokeColor(GRIS_LINEA)
+    canv.setLineWidth(0.6)
+    canv.line(MARGEN, yb + 10, ANCHO_PAGINA - MARGEN, yb + 10)
+    canv.setFont(FUENTE, 7)
+    canv.setFillColor(GRIS_MED)
+    canv.drawString(MARGEN, yb, "Documento generado automáticamente · "
+                    + doc.meta.get("proyecto", ""))
+    canv.setFont(FUENTE, 7)
+    canv.setFillColor(GRIS)
+    canv.drawRightString(ANCHO_PAGINA - MARGEN, yb, f"Página {doc.page}")
+    canv.restoreState()
+
+
+# ----------------------------------------------------------------------
+# COMPONENTES DE CONTENIDO
+# ----------------------------------------------------------------------
+def _es_vacio(texto):
+    return (texto or "").strip().lower() in ("", "nan", "none", "n/a", "-")
+
+
+def ficha_servicio(datos):
+    """UNA sola estructura compacta: datos del servicio + observaciones."""
+
+    # --- Grilla de datos (compacta, 2 columnas) ---
+    campos = [
+        ("OT", datos.get("ot", "—"), False),
+        ("Fecha de realización", datos.get("fecha", "—"), False),
+        ("Técnico responsable", datos.get("tecnico", "—"), False),
+        ("Cliente", datos.get("cliente", "—"), False),
+        ("Proyecto", datos.get("proyecto", "—"), False),
+    ]
+    # El alcance solo se incluye cuando el módulo entrega uno real
+    # (MC, MP y R-Intercambio pasan alcance=False).
+    if not _es_vacio(str(datos.get("alcance") or "")) and datos.get("alcance") is not False:
+        campos.append(("Alcance", datos.get("alcance"), False))
+    campos += [
+        ("Equipo / instrumento", datos.get("equipo", "—"), False),
+        ("Modelo", datos.get("modelo", "—"), False),
+        ("N° de serie", datos.get("serie", "—"), False),
+    ]
+    # Relleno para que la grilla quede en filas pares
+    if len(campos) % 2:
+        campos.append(("", "", False))
+
+    def celda(label, valor, destacar):
+        if not label:
+            return Table([[Spacer(1, 1)]], colWidths=[ANCHO_FICHA / 2 - 18])
+        estilo_val = "ValorEq" if destacar else "Valor"
+        inner = Table(
+            [[Paragraph(label.upper(), STYLES["Label"])],
+             [Paragraph(str(valor), STYLES[estilo_val])]],
+            colWidths=[ANCHO_FICHA / 2 - 18])
+        inner.setStyle(TableStyle([
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (0, 0), 0),
+            ("TOPPADDING", (0, 1), (0, 1), 1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+        return inner
+
+    filas = []
+    for i in range(0, len(campos), 2):
+        filas.append([celda(*campos[i]), celda(*campos[i + 1])])
+    grilla = Table(filas, colWidths=[ANCHO_FICHA / 2, ANCHO_FICHA / 2])
+    grilla.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, 0), 0),
+        ("TOPPADDING", (0, 1), (-1, -1), 9),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+
+    # --- Bloque de observaciones ---
+    def obs(label, texto):
+        if _es_vacio(texto):
+            cuerpo = Paragraph(
+                '<i>Sin observaciones registradas.</i>',
+                ParagraphStyle("ObsVacia", parent=STYLES["Obs"],
+                               textColor=GRIS_MED))
+        else:
+            cuerpo = Paragraph(str(texto).strip(), STYLES["Obs"])
+        return [Paragraph(label.upper(), STYLES["ObsLabel"]), cuerpo]
+
+    obs_rows = obs("Observaciones al equipo", datos.get("obs_equipo"))
+    obs_rows += [Spacer(1, 8)]
+    obs_rows += obs("Observaciones generales", datos.get("obs_generales"))
+    obs_tabla = Table([[x] for x in obs_rows], colWidths=[ANCHO_FICHA - 36])
+    obs_tabla.setStyle(TableStyle([
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+
+    # --- Contenedor único ---
+    card = Table([[grilla], [obs_tabla]], colWidths=[ANCHO_FICHA])
+    card.hAlign = "CENTER"
+    card.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), GRIS_FONDO),
+        ("BOX", (0, 0), (-1, -1), 0.7, GRIS_LINEA),
+        ("LINEBELOW", (0, 0), (0, 0), 0.7, GRIS_LINEA),
+        ("LEFTPADDING", (0, 0), (-1, -1), 18),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 18),
+        ("TOPPADDING", (0, 0), (0, 0), 14),
+        ("BOTTOMPADDING", (0, 0), (0, 0), 14),
+        ("TOPPADDING", (0, 1), (0, 1), 13),
+        ("BOTTOMPADDING", (0, 1), (0, 1), 14),
+    ]))
+    return card
+
+
+def galeria_fotos(fotos):
+    """Lista de 1 columna con foto enmarcada a ancho completo + leyenda.
+
+    Cada `foto` es un dict con:
+      - "img"     : objeto file-like (BytesIO) con la imagen ya descargada
+      - "titulo"  : rótulo principal (opcional)
+      - "detalle" : texto secundario (opcional)
+    """
+    cards = []
+    col_w = ANCHO_UTIL                       # una sola columna a ancho completo
+    max_h = 150 * mm                          # alto máximo para fotos verticales
+
+    for f in fotos:
         try:
-            response = requests.get(url, timeout=10) # Agrega timeout por seguridad
-            response.raise_for_status()
-            
-            # Crear el objeto BytesIO
-            img_bytes = BytesIO(response.content)
-            
-            # --- VALIDACIÓN Y OBTENCIÓN DE TAMAÑO ---
-            # Usamos PIL directamente para verificar que la imagen es válida
-            # y obtener sus dimensiones sin depender solo de ReportLab
-            try:
-                with PILImage.open(img_bytes) as pil_img:
-                    pil_img.verify() # Verifica integridad del archivo
-                    
-                # Reabrimos porque verify() puede consumir el archivo
-                img_bytes.seek(0) # <--- IMPORTANTE: Reiniciar puntero
-                with PILImage.open(img_bytes) as pil_img:
-                    img_width, img_height = pil_img.size
-            except Exception as e:
-                print(f"Imagen corrupta o inválida en {url}: {e}")
-                continue # Saltar esta imagen si está rota
+            f["img"].seek(0)
+            with PILImage.open(f["img"]) as _pil:
+                iw, ih = _pil.size
+            # Escala al ancho de columna y limita el alto (sin deformar ni letterbox)
+            w = col_w
+            h = col_w * (ih / iw) if iw else max_h
+            if h > max_h:
+                h = max_h
+                w = max_h * (iw / ih) if ih else col_w
+            f["img"].seek(0)
+            img = Image(f["img"], width=w, height=h)
+            img.hAlign = "CENTER"
+        except Exception:
+            img = Spacer(col_w, col_w * 0.6)
+        leyenda = Table(
+            [[Paragraph(f.get("titulo", ""), STYLES["Cap"])],
+             [Paragraph(f.get("detalle", "").replace("\n", "<br/>"), STYLES["CapSub"])]],
+            colWidths=[col_w])
+        leyenda.setStyle(TableStyle([
+            ("LEFTPADDING", (0, 0), (-1, -1), 10),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+            ("TOPPADDING", (0, 0), (0, 0), 7),
+            ("TOPPADDING", (0, 1), (0, 1), 1),
+            ("BOTTOMPADDING", (0, 0), (0, 0), 1),
+            ("BOTTOMPADDING", (0, 1), (0, 1), 9),
+        ]))
+        card = Table([[img], [leyenda]], colWidths=[col_w])
+        card.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.7, GRIS_LINEA),
+            ("BACKGROUND", (0, 1), (0, 1), BLANCO),
+            # La foto se centra (horizontal y vertical) dentro de su celda.
+            ("ALIGN", (0, 0), (0, 0), "CENTER"),
+            ("VALIGN", (0, 0), (0, 0), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("LINEBELOW", (0, 0), (0, 0), 2.5, NARANJA),
+        ]))
+        cards.append(card)
 
-            # --- ESCALADO ---
-            scale = min(max_width / img_width, max_height / img_height, 1.0)
-            new_width = img_width * scale
-            new_height = img_height * scale
+    # Una tarjeta por fila (separadas para que el salto de página caiga
+    # entre fotos y no dentro de una).
+    filas = [[c] for c in cards]
+    grid = Table(filas, colWidths=[col_w])
+    grid.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, 0), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+    ]))
+    return grid
 
-            # --- PREPARACIÓN PARA REPORTLAB ---
-            # Reiniciar el puntero a 0 OBLIGATORIAMENTE antes de dárselo a ReportLab
-            img_bytes.seek(0) 
 
-            story.append(PageBreak())
-            # Pasamos el objeto BytesIO con el puntero en 0
-            story.append(Image(img_bytes, width=new_width, height=new_height))
-            
+# ----------------------------------------------------------------------
+# DESCARGA Y VALIDACIÓN DE IMÁGENES (URLs de Connecteam)
+# ----------------------------------------------------------------------
+def _descargar_fotos(urls, punto):
+    """Descarga y valida las imágenes de la lista de URLs. Devuelve una lista
+    de dicts {img, titulo, detalle} lista para `galeria_fotos`. Las imágenes
+    rotas o inaccesibles se omiten silenciosamente (no rompen el informe)."""
+    fotos = []
+    idx = 0
+    for url in urls or []:
+        try:
+            resp = requests.get(url, timeout=10)
+            resp.raise_for_status()
+            data = io.BytesIO(resp.content)
+            # Abrir, corregir la orientación EXIF (fotos de celular que vienen
+            # acostadas) y re-guardar ya rotada: ReportLab ignora el flag EXIF,
+            # así que hay que aplicar la rotación a los píxeles.
+            with PILImage.open(data) as pil_img:
+                pil_img = ImageOps.exif_transpose(pil_img)
+                if pil_img.mode not in ("RGB", "L"):
+                    pil_img = pil_img.convert("RGB")
+                norm = io.BytesIO()
+                pil_img.save(norm, format="JPEG", quality=88)
+            norm.seek(0)
+            idx += 1
+            fotos.append({
+                "img": norm,
+                "titulo": f"Registro fotográfico {idx}",
+                "detalle": punto or "",
+            })
         except Exception as e:
-            print(f"Error general al procesar imagen {url}: {e}")
+            print(f"Error al procesar imagen {url}: {e}")
+            continue
+    return fotos
 
-def informe_pdf_profesional(numero_visita, ot, tecnico, proyecto, fecha, cliente, tipo_equipo, modelo, serial, trabajo, alcance, punto, obs_especifica, obs_generales, imagenes, equipo):
-    """
-    Genera un informe PDF profesional detallando los trabajos realizados en una visita técnica.
-    """
-    id_tipo_mantención = {'MC': 'mantención correctiva',
-                    'MP': 'mantención preventiva',
-                    'I': 'instalación',
-                    'CF': 'configuración',
-                    'E': 'extracción'}
-    # Configuración del archivo
-    
-    buffer = io.BytesIO()
 
-    # Usar A4
-    doc = SimpleDocTemplate(
-        buffer, 
-        pagesize=legal,
-        rightMargin=2*cm,
-        leftMargin=2*cm,
-        topMargin=2.5*cm,
-        bottomMargin=2*cm
-    )
-    
-    # Obtener estilos personalizados
-    styles = crear_estilos_personalizados()
-    
-    # Lista de elementos del documento
-    story = []
-    
-    # ENCABEZADO DEL DOCUMENTO
-    # Título principal
-    title = Paragraph(
-        f"Informe de trabajos<br/>{punto}",
-        styles['TituloPrincipal']
-    )
-    story.append(title)
-    
-    # Información del nodo y número de visita
-    # Línea divisoria decorativa
-    line = HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.orange)
-    story.append(line)
-    story.append(Spacer(1, 12))
-    
-    # Fecha de generación
+# ----------------------------------------------------------------------
+# FORMATEO DE FECHA  (igual que el informe original)
+# ----------------------------------------------------------------------
+def _formatear_fecha(fecha):
+    """Convierte 'YYYY-MM-DD HH:MM:SS' (UTC) a 'dd/mm/YYYY' hora de Chile.
+    Si no puede parsear, devuelve el texto original."""
     try:
-        current_date = datetime.now().strftime("%d de %B de %Y")
-    except:
-        current_date = datetime.now().strftime("%d de %m de %Y")
-    
-    date_text = Paragraph(
-        f"Fecha de generación: {current_date}",
-        styles['InfoFecha']
+        dt = datetime.strptime(str(fecha), "%Y-%m-%d %H:%M:%S")
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+        return dt.astimezone(ZoneInfo("America/Santiago")).strftime("%d/%m/%Y")
+    except Exception:
+        return str(fecha)
+
+
+# ----------------------------------------------------------------------
+# PUNTO DE ENTRADA  ·  firma compatible con processor.py / pdf_generator.py
+# ----------------------------------------------------------------------
+def informe_pdf_profesional(numero_visita, ot, tecnico, proyecto, fecha, cliente,
+                            tipo_equipo, modelo, serial, trabajo, alcance, punto,
+                            obs_especifica, obs_generales, imagenes, equipo):
+    """
+    Genera el informe PDF con la identidad visual de WE TECHS y devuelve un
+    `io.BytesIO`. La firma se mantiene idéntica a la versión anterior para no
+    afectar a `processor.py` (5 llamadas) ni a `pdf_generator.py`.
+
+    - `trabajo`  : código de trabajo (MC/MP/I/CF/E) → se traduce a texto.
+    - `alcance`  : texto o False (los módulos que no aplican pasan False).
+    - `imagenes` : lista de URLs (Connecteam) o lista vacía.
+    """
+    id_tipo_mantencion = {
+        'MC': 'Mantención correctiva',
+        'MP': 'Mantención preventiva',
+        'I':  'Instalación',
+        'CF': 'Configuración',
+        'E':  'Extracción',
+    }
+    tipo_trabajo = id_tipo_mantencion.get(trabajo, str(trabajo))
+
+    datos = {
+        "ot": ot,
+        "nodo": punto,
+        "tecnico": tecnico,
+        "cliente": cliente,
+        "proyecto": proyecto,
+        "fecha": _formatear_fecha(fecha),
+        "equipo": tipo_equipo,
+        "modelo": modelo,
+        "serie": serial,
+        "tipo_trabajo": tipo_trabajo,
+        "alcance": alcance,
+        "obs_equipo": obs_especifica,
+        "obs_generales": obs_generales,
+    }
+
+    fotos = _descargar_fotos(imagenes, str(punto))
+
+    buffer = io.BytesIO()
+    doc = BaseDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=MARGEN, rightMargin=MARGEN,
+        topMargin=MARGEN + 26 * mm, bottomMargin=MARGEN + 6,
+        title=f"Informe OT-{ot} · {punto}",
+        author="WE TECHS",
     )
-    story.append(date_text)
-    #story.append(Spacer(1, 20))
-    
-    # SECCIÓN DE INTRODUCCIÓN
-    intro_subtitle = Paragraph("Detalle", styles['Subtitulo'])
-    story.append(intro_subtitle)
+    doc.meta = {
+        "ref": f"OT-{ot}  ·  {punto}",
+        "proyecto": str(proyecto or ""),
+    }
+    frame = Frame(MARGEN, MARGEN + 6, ANCHO_UTIL,
+                  ALTO_PAGINA - (MARGEN + 26 * mm) - (MARGEN + 6),
+                  id="cuerpo")
+    doc.addPageTemplates([
+        PageTemplate(id="base", frames=[frame], onPage=_dibujar_marco)
+    ])
 
+    el = []
+    # Eyebrow que enfatiza el tipo de objeto del informe
+    el.append(Paragraph("TRABAJOS SOBRE EQUIPOS E INSTRUMENTOS", STYLES["Eyebrow"]))
+    el.append(Paragraph("Informe de Trabajos", STYLES["Titulo"]))
+    sub = str(punto or "")
+    if tipo_equipo:
+        sub = f"{sub} · {tipo_equipo}" if sub else str(tipo_equipo)
+    el.append(Paragraph(sub, STYLES["Subtitulo"]))
+    el.append(Spacer(1, 6))
+    # Destacado superior = TIPO DE TRABAJO
+    el.append(Chip("Tipo de trabajo", tipo_trabajo))
+    el.append(Spacer(1, 18))
 
-    intro_text = Paragraph(
-        f"Este documento presenta el detalle de las tareas de {id_tipo_mantención[trabajo]} "
-        f"realizadas sobre el equipo/instrumento señalado en tabla. ",
-        styles['Introduccion']
+    # Estructura única: datos del servicio + observaciones
+    el.append(TituloSeccion("Detalle del servicio y observaciones"))
+    el.append(Spacer(1, 8))
+    el.append(ficha_servicio(datos))
+    el.append(Spacer(1, 16))
 
-    )
+    # Registro fotográfico (en página propia)
+    if fotos:
+        el.append(PageBreak())
+        el.append(TituloSeccion("Registro fotográfico"))
+        el.append(Spacer(1, 4))
+        el.append(Paragraph(
+            "Evidencia de terreno del trabajo realizado.",
+            STYLES["Intro"]))
+        el.append(Spacer(1, 10))
+        el.append(galeria_fotos(fotos))
 
-    story.append(intro_text)
-    story.append(Spacer(1, 20))
-    
-    # Tabla principal con datos
-    report_table = crear_tabla_profesional(ot, tecnico, proyecto, fecha, cliente, tipo_equipo, modelo, serial, trabajo, alcance, styles)
-    story.append(report_table)
-    story.append(Spacer(1, 30))
-    
-    observaciones_a_agregar = []
-
-    observaciones_a_agregar.append({
-            'type': "Observaciones al equipo",
-            'text': str(obs_especifica)
-        })
-    
-    observaciones_a_agregar.append({
-        'type': "Observaciones generales",
-        'text': str(obs_generales)
-    })
-
-
-    # 3. Agregar todas las observaciones encontradas al informe
-    if observaciones_a_agregar:
-        for obs in observaciones_a_agregar:
-            obs_subtitle = Paragraph(obs['type'], styles['Subtitulo'])
-            story.append(obs_subtitle)
-            obs_paragraph = Paragraph(f"• {obs['text']}", styles['Introduccion'])
-            story.append(obs_paragraph)
-            story.append(Spacer(1, 20))
-
-    story.append(Spacer(1, 30))
-    line2 = HRFlowable(width="100%", thickness=0.5, lineCap='round', color=colors.lightgrey)
-    story.append(line2)
-    story.append(Spacer(1, 12))
-    
-    
-    footer_text = Paragraph(
-        f"Documento generado automáticamente • OT-{ot} • "
-        f"{proyecto}",
-        styles['PiePagina']
-    )
-    story.append(footer_text)
-
-
-    # Agregar imágenes desde URLs
-    if imagenes:
-        agregar_imagenes_desde_url(story, imagenes)
-
-    doc.build(story, onFirstPage=add_header_first_page)
-
+    doc.build(el)
     buffer.seek(0)
-    
     return buffer
