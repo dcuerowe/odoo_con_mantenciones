@@ -319,7 +319,11 @@ def ficha_servicio(datos):
     ]))
 
     # --- Bloque de observaciones ---
-    def obs(label, texto):
+    # Cada observación es una celda con [etiqueta, cuerpo]. Al ir en filas
+    # separadas del card, ReportLab puede partir la tabla entre filas y saltar
+    # de página cuando el texto es largo (evita el LayoutError de "fila única
+    # más alta que la página").
+    def obs_cell(label, texto):
         if _es_vacio(texto):
             cuerpo = Paragraph(
                 '<i>Sin observaciones registradas.</i>',
@@ -327,21 +331,14 @@ def ficha_servicio(datos):
                                textColor=GRIS_MED))
         else:
             cuerpo = Paragraph(str(texto).strip(), STYLES["Obs"])
-        return [Paragraph(label.upper(), STYLES["ObsLabel"]), cuerpo]
+        return [Paragraph(label.upper(), STYLES["ObsLabel"]), Spacer(1, 2), cuerpo]
 
-    obs_rows = obs("Observaciones al equipo", datos.get("obs_equipo"))
-    obs_rows += [Spacer(1, 8)]
-    obs_rows += obs("Observaciones generales", datos.get("obs_generales"))
-    obs_tabla = Table([[x] for x in obs_rows], colWidths=[ANCHO_FICHA - 36])
-    obs_tabla.setStyle(TableStyle([
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
-
-    # --- Contenedor único ---
-    card = Table([[grilla], [obs_tabla]], colWidths=[ANCHO_FICHA])
+    # --- Contenedor único (grilla + observaciones, splitteable por filas) ---
+    card = Table(
+        [[grilla],
+         [obs_cell("Observaciones al equipo", datos.get("obs_equipo"))],
+         [obs_cell("Observaciones generales", datos.get("obs_generales"))]],
+        colWidths=[ANCHO_FICHA])
     card.hAlign = "CENTER"
     card.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, -1), GRIS_FONDO),
@@ -349,10 +346,15 @@ def ficha_servicio(datos):
         ("LINEBELOW", (0, 0), (0, 0), 0.7, GRIS_LINEA),
         ("LEFTPADDING", (0, 0), (-1, -1), 18),
         ("RIGHTPADDING", (0, 0), (-1, -1), 18),
+        # grilla de datos
         ("TOPPADDING", (0, 0), (0, 0), 14),
         ("BOTTOMPADDING", (0, 0), (0, 0), 14),
+        # observaciones al equipo
         ("TOPPADDING", (0, 1), (0, 1), 13),
-        ("BOTTOMPADDING", (0, 1), (0, 1), 14),
+        ("BOTTOMPADDING", (0, 1), (0, 1), 10),
+        # observaciones generales
+        ("TOPPADDING", (0, 2), (0, 2), 0),
+        ("BOTTOMPADDING", (0, 2), (0, 2), 14),
     ]))
     return card
 
