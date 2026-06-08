@@ -176,6 +176,9 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         'Tablero': [(4,2)], #Productivo: 2 | Test: 2
         'Otro': [(4,3)], #Productivo: 3 | Test: 4
         'Otro dispositivo crítico': [(4,3)], #Productivo: 3 | Test: 4
+        'Energía (Baterías, Paneles)': [(4,3)], #Productivo: 3 | Test: 4
+        'Periféricos (Pantallas/Otros)': [(4,3)], #Productivo: 3 | Test: 4
+        'Conexión (Cableado)': [(4,3)], #Productivo: 3 | Test: 4
         'Caudalímetro': [(4,7)], #Productivo: 7 | Test: 5
         'Caudalímetro Ultrasónico': [(4,4)], #Productivo: 4 | Test: 6
         'Sensor de Nivel': [(4,6)], #Productivo: 6 | Test: 8

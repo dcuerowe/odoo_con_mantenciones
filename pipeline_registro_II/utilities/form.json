@@ -1,10 +1,10 @@
 {
-    "requestId": "95c5f3a6-db0e-44e3-8d29-911b6a68813e",
+    "requestId": "cc633ff0-f215-4884-a771-55480381f277",
     "data": {
         "formId": 15540738,
         "formName": "Orden de Trabajo We-Techs",
         "createdAt": 1767884191,
-        "lastUpdatedAt": 1779217971,
+        "lastUpdatedAt": 1780693211,
         "questions": [
             {
                 "questionId": "0062937e-dabd-ebf0-ddd0-7132953f74b7",
@@ -2928,6 +2928,42 @@
                     {
                         "multipleChoiceOptionId": "dafb3daf-3d0a-4580-99ac-df338e12a774",
                         "text": "[Gasco FuturoCoop] FuturoCoop"
+                    },
+                    {
+                        "multipleChoiceOptionId": "b7dc053b-ccfc-492e-641f-d6c7c8b13046",
+                        "text": "[Gestión Hídrica El Soldado] Lora Piscina 3800"
+                    },
+                    {
+                        "multipleChoiceOptionId": "622282a8-1577-8fa3-94a3-dc1a7e273155",
+                        "text": "[Gestión Hídrica El Soldado] Lora Dren T4"
+                    },
+                    {
+                        "multipleChoiceOptionId": "8ca50564-6985-4db8-aaa7-6ae22a1be261",
+                        "text": "[Enex PSR Camilo Ferrón] PSR Camilo Ferrón"
+                    },
+                    {
+                        "multipleChoiceOptionId": "a2d304ec-0755-4598-bb46-2690058c2528",
+                        "text": "[Enex PSR CCU] PSR CCU"
+                    },
+                    {
+                        "multipleChoiceOptionId": "e98b87ee-2a8b-4a5d-8648-6654a7969a49",
+                        "text": "[Enex PSR Cemin] PSR Cemin"
+                    },
+                    {
+                        "multipleChoiceOptionId": "ad69bcbb-717f-4228-b83b-883c124d2ffe",
+                        "text": "[Enex PSR Goodyear] PSR Goodyear"
+                    },
+                    {
+                        "multipleChoiceOptionId": "0ba6e2fd-8069-4bd7-b58e-4ea188b2ef68",
+                        "text": "[Enex PSR Mylan] PSR Mylan"
+                    },
+                    {
+                        "multipleChoiceOptionId": "18b3a521-adab-4a77-b2b3-11b08f9de73c",
+                        "text": "[Enex PSR Sika] PSR Sika"
+                    },
+                    {
+                        "multipleChoiceOptionId": "0dd18b36-15b6-4b75-ae14-16b751b46dec",
+                        "text": "[Estadio Español] Camino El Inca"
                     }
                 ],
                 "isMultipleSelect": false,
@@ -3004,6 +3040,30 @@
                 "questionType": "description"
             },
             {
+                "questionId": "323faca7-26e8-9010-2d86-3379406475d1",
+                "title": "1.2 MP | Alcance",
+                "description": "",
+                "locationRequired": false,
+                "submissionRequired": true,
+                "questionType": "multipleChoice",
+                "allAnswers": [
+                    {
+                        "multipleChoiceOptionId": "02bf5cfb-d96f-937c-a8f4-7b8b31984982",
+                        "text": "Instrumentación"
+                    },
+                    {
+                        "multipleChoiceOptionId": "ef423872-d601-afa9-59c7-cd621fb34710",
+                        "text": "Tablero(s)"
+                    },
+                    {
+                        "multipleChoiceOptionId": "37a16023-3775-1c70-0158-dd5a1dcb6c5f",
+                        "text": "Instrumentación + Tablero(s)"
+                    }
+                ],
+                "isMultipleSelect": false,
+                "displaySortedAnswers": false
+            },
+            {
                 "questionId": "a36fc849-e310-f35a-de17-dcbc1a6e6859",
                 "title": "1. MP | Detalle Instrumentación #1",
                 "description": "",
@@ -3012,7 +3072,7 @@
                 "questions": [
                     {
                         "questionId": "94c57742-fcb7-375a-9929-4a623cac6398",
-                        "title": "<p><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -3115,7 +3175,7 @@
                 "questions": [
                     {
                         "questionId": "006d2a18-efc5-3727-292d-92926d7570d6",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -3218,7 +3278,7 @@
                 "questions": [
                     {
                         "questionId": "1ba4b28d-ad85-ca2c-7932-be91dc00701b",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -3321,7 +3381,7 @@
                 "questions": [
                     {
                         "questionId": "da5c1d87-6000-f448-cd79-f7e362a314ff",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -3412,7 +3472,7 @@
                 "questions": [
                     {
                         "questionId": "f4c3047c-2414-a121-83d4-616aa5f3e753",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -3507,7 +3567,7 @@
                 "questions": [
                     {
                         "questionId": "b0b99dfa-d94b-2bb7-b478-ac92ac04bfda",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -3602,7 +3662,7 @@
                 "questions": [
                     {
                         "questionId": "b26f1316-e2bd-6984-8331-4a0037fc4d24",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -5749,10 +5809,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -5767,6 +5823,14 @@
                     {
                         "questionId": "4ef7d1c0-353f-ce70-442e-c47c5d2ea04c",
                         "title": "1.2.1 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "6e90010f-de87-0acb-97a0-7cc26c43a55c",
+                        "title": "1.2.1 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -5820,10 +5884,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -5838,6 +5898,14 @@
                     {
                         "questionId": "0b4d13a9-7ce8-5132-63ad-ec986b2dc741",
                         "title": "1.2.2 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "a3cd487b-9005-75ae-dbb6-8058488c187c",
+                        "title": "1.2.2 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -5891,10 +5959,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -5909,6 +5973,14 @@
                     {
                         "questionId": "202512dd-6368-8cd2-3a72-7033a51d1aea",
                         "title": "1.2.3 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "5759ded5-8fbe-8843-f471-3d24cbedaf87",
+                        "title": "1.2.3 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -5960,6 +6032,10 @@
                             {
                                 "multipleChoiceOptionId": "387977b4-f92d-bfd4-da5f-3b964a488d52",
                                 "text": "Cierre Perimetral"
+                            },
+                            {
+                                "multipleChoiceOptionId": "1055567f-f9bb-6fab-81b1-e56d96433f4b",
+                                "text": "Infraestructura de montaje (Cillindros/Soportes)"
                             }
                         ],
                         "isMultipleSelect": false,
@@ -6031,6 +6107,10 @@
                             {
                                 "multipleChoiceOptionId": "387977b4-f92d-bfd4-da5f-3b964a488d52",
                                 "text": "Cierre Perimetral"
+                            },
+                            {
+                                "multipleChoiceOptionId": "c858ab10-cb8f-247a-196a-b59aa832a8d7",
+                                "text": "Infraestructura de montaje (Cillindros/Soportes)"
                             }
                         ],
                         "isMultipleSelect": false,
@@ -7510,6 +7590,42 @@
                     {
                         "multipleChoiceOptionId": "7195fc28-a59c-4618-8a7f-900ea4e35388",
                         "text": "[Gasco FuturoCoop] FuturoCoop"
+                    },
+                    {
+                        "multipleChoiceOptionId": "b7dc053b-ccfc-492e-641f-d6c7c8b13046",
+                        "text": "[Gestión Hídrica El Soldado] Lora Piscina 3800"
+                    },
+                    {
+                        "multipleChoiceOptionId": "622282a8-1577-8fa3-94a3-dc1a7e273155",
+                        "text": "[Gestión Hídrica El Soldado] Lora Dren T4"
+                    },
+                    {
+                        "multipleChoiceOptionId": "1e514e4b-eedc-4fd0-9643-9da0b83b4796",
+                        "text": "[Enex PSR Camilo Ferrón] PSR Camilo Ferrón"
+                    },
+                    {
+                        "multipleChoiceOptionId": "575c1940-adf2-41a0-b754-5fea49cfdaa6",
+                        "text": "[Enex PSR CCU] PSR CCU"
+                    },
+                    {
+                        "multipleChoiceOptionId": "b0f0afc1-57e6-4a70-acb6-aeb44ecbe4a6",
+                        "text": "[Enex PSR Cemin] PSR Cemin"
+                    },
+                    {
+                        "multipleChoiceOptionId": "37d949b8-8d06-4f80-a63f-a216f0b8f491",
+                        "text": "[Enex PSR Goodyear] PSR Goodyear"
+                    },
+                    {
+                        "multipleChoiceOptionId": "8383b94a-905f-44ce-8799-705d8550b0f1",
+                        "text": "[Enex PSR Mylan] PSR Mylan"
+                    },
+                    {
+                        "multipleChoiceOptionId": "8b899181-6172-4012-bf72-f52403f375a5",
+                        "text": "[Enex PSR Sika] PSR Sika"
+                    },
+                    {
+                        "multipleChoiceOptionId": "4464521b-43c1-48c1-8b39-fc0be5aea494",
+                        "text": "[Estadio Español] Camino El Inca"
                     }
                 ],
                 "isMultipleSelect": false,
@@ -7586,6 +7702,30 @@
                 "questionType": "description"
             },
             {
+                "questionId": "6f3c428c-2c31-4140-d987-8bc8b6267838",
+                "title": "2.2 MP | Alcance",
+                "description": "",
+                "locationRequired": false,
+                "submissionRequired": true,
+                "questionType": "multipleChoice",
+                "allAnswers": [
+                    {
+                        "multipleChoiceOptionId": "f7fe5c68-0ae2-eaae-2abd-00dc13d0c45d",
+                        "text": "Instrumentación"
+                    },
+                    {
+                        "multipleChoiceOptionId": "ae30279c-538c-5e55-58cb-d3b10c818f29",
+                        "text": "Tablero(s)"
+                    },
+                    {
+                        "multipleChoiceOptionId": "fc36ec26-db6b-1c4b-78c6-68f03eeaa7ab",
+                        "text": "Instrumentación + Tablero(s)"
+                    }
+                ],
+                "isMultipleSelect": false,
+                "displaySortedAnswers": false
+            },
+            {
                 "questionId": "338bc060-95ff-91b9-1dd8-3bb6cb445911",
                 "title": "2. MP | Detalle Instrumentación #1",
                 "description": "",
@@ -7594,7 +7734,7 @@
                 "questions": [
                     {
                         "questionId": "eb7cf808-aa6b-a5a9-f64e-f2eb98d2a16f",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -7697,7 +7837,7 @@
                 "questions": [
                     {
                         "questionId": "0f921d1c-78dd-7414-92c9-d75cae8e5d9e",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -7800,7 +7940,7 @@
                 "questions": [
                     {
                         "questionId": "7e60e577-35ef-ae97-60ae-19270d508e64",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -7903,7 +8043,7 @@
                 "questions": [
                     {
                         "questionId": "8350f66a-8af3-7bd0-2e73-fdfcbea7fb08",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -7994,7 +8134,7 @@
                 "questions": [
                     {
                         "questionId": "cb275dd6-e907-2bad-441b-f3d89a854322",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -8089,7 +8229,7 @@
                 "questions": [
                     {
                         "questionId": "9579a819-2e17-1d8f-dc5c-67d5f2a8d1e1",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -8184,7 +8324,7 @@
                 "questions": [
                     {
                         "questionId": "1f8c1b4a-9e39-85ba-4963-69cf44411c07",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -10331,10 +10471,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -10349,6 +10485,14 @@
                     {
                         "questionId": "ac680caa-4935-ede7-f7a3-133d5b794b31",
                         "title": "2.2.1 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "7bfcf40c-dd6b-4a39-2021-9ed51d4ccd7d",
+                        "title": "2.2.1 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -10402,10 +10546,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -10420,6 +10560,14 @@
                     {
                         "questionId": "9fa4d4fd-ed33-4409-bccc-915ce960ea31",
                         "title": "2.2.2 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "1ecae916-df74-7c38-1874-dd7c59cda963",
+                        "title": "2.2.2 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -10473,10 +10621,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -10491,6 +10635,14 @@
                     {
                         "questionId": "304f6b87-cb9f-ae79-c7a9-32446757de92",
                         "title": "2.2.3 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "7ddb8103-ee06-a4de-1acb-089f62ff114d",
+                        "title": "2.2.3 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -10542,6 +10694,10 @@
                             {
                                 "multipleChoiceOptionId": "387977b4-f92d-bfd4-da5f-3b964a488d52",
                                 "text": "Cierre Perimetral"
+                            },
+                            {
+                                "multipleChoiceOptionId": "b684dd76-aea8-4fb2-073a-6b7777bfe806",
+                                "text": "Infraestructura de montaje (Cillindros/Soportes)"
                             }
                         ],
                         "isMultipleSelect": false,
@@ -10613,6 +10769,10 @@
                             {
                                 "multipleChoiceOptionId": "387977b4-f92d-bfd4-da5f-3b964a488d52",
                                 "text": "Cierre Perimetral"
+                            },
+                            {
+                                "multipleChoiceOptionId": "a0c97b91-752e-b8e4-42e1-b04a25e096b5",
+                                "text": "Infraestructura de montaje (Cillindros/Soportes)"
                             }
                         ],
                         "isMultipleSelect": false,
@@ -12096,6 +12256,42 @@
                     {
                         "multipleChoiceOptionId": "05e81809-f699-4e3a-aa1d-0c659e36d0ca",
                         "text": "[Gasco FuturoCoop] FuturoCoop"
+                    },
+                    {
+                        "multipleChoiceOptionId": "b7dc053b-ccfc-492e-641f-d6c7c8b13046",
+                        "text": "[Gestión Hídrica El Soldado] Lora Piscina 3800"
+                    },
+                    {
+                        "multipleChoiceOptionId": "622282a8-1577-8fa3-94a3-dc1a7e273155",
+                        "text": "[Gestión Hídrica El Soldado] Lora Dren T4"
+                    },
+                    {
+                        "multipleChoiceOptionId": "68415074-0754-42c8-9360-37cffda407fb",
+                        "text": "[Enex PSR Camilo Ferrón] PSR Camilo Ferrón"
+                    },
+                    {
+                        "multipleChoiceOptionId": "01eec65d-99cc-468b-ae4f-5abfa1181358",
+                        "text": "[Enex PSR CCU] PSR CCU"
+                    },
+                    {
+                        "multipleChoiceOptionId": "1768ea09-19ab-4eeb-8ba0-4a444ca7c747",
+                        "text": "[Enex PSR Cemin] PSR Cemin"
+                    },
+                    {
+                        "multipleChoiceOptionId": "309f832a-b3aa-42aa-8ece-c4c620d4f602",
+                        "text": "[Enex PSR Goodyear] PSR Goodyear"
+                    },
+                    {
+                        "multipleChoiceOptionId": "6f430486-1995-4786-b8c4-4dda8663bfec",
+                        "text": "[Enex PSR Mylan] PSR Mylan"
+                    },
+                    {
+                        "multipleChoiceOptionId": "3fa4a6a5-b4d8-4fdc-8536-5d6cab7c81d0",
+                        "text": "[Enex PSR Sika] PSR Sika"
+                    },
+                    {
+                        "multipleChoiceOptionId": "3fa0de49-0014-42ff-96ef-eb2dd4a5bc27",
+                        "text": "[Estadio Español] Camino El Inca"
                     }
                 ],
                 "isMultipleSelect": false,
@@ -12172,6 +12368,30 @@
                 "questionType": "description"
             },
             {
+                "questionId": "27f52833-93b3-3b86-d761-ae0eb3bfb593",
+                "title": "3.2 MP | Alcance",
+                "description": "",
+                "locationRequired": false,
+                "submissionRequired": true,
+                "questionType": "multipleChoice",
+                "allAnswers": [
+                    {
+                        "multipleChoiceOptionId": "0e4dfef8-ce67-7784-dd56-542979abe7b6",
+                        "text": "Instrumentación"
+                    },
+                    {
+                        "multipleChoiceOptionId": "cc783fe4-f93c-cb2f-a3c7-b2b8443fb6dc",
+                        "text": "Tablero(s)"
+                    },
+                    {
+                        "multipleChoiceOptionId": "1445b57b-b150-e028-f5d4-fb14c99b9c34",
+                        "text": "Instrumentación + Tablero(s)"
+                    }
+                ],
+                "isMultipleSelect": false,
+                "displaySortedAnswers": false
+            },
+            {
                 "questionId": "c72b145c-926f-5e1c-1545-fa3480d31c64",
                 "title": "3. MP | Detalle Instrumentación #1",
                 "description": "",
@@ -12180,7 +12400,7 @@
                 "questions": [
                     {
                         "questionId": "60ddd80e-b8a6-cf68-a45e-3d6152bd3046",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -12283,7 +12503,7 @@
                 "questions": [
                     {
                         "questionId": "83230feb-b6ea-768b-0dba-638c5337bdaa",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -12489,7 +12709,7 @@
                 "questions": [
                     {
                         "questionId": "bda7a87c-8d6e-ba5d-2b08-c3bc11e7a5f9",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -12580,7 +12800,7 @@
                 "questions": [
                     {
                         "questionId": "9592f12a-0176-93c1-eec5-820e07acda21",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -12675,7 +12895,7 @@
                 "questions": [
                     {
                         "questionId": "aff63fd3-e7f2-b82a-1114-7bc824ae302a",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -12770,7 +12990,7 @@
                 "questions": [
                     {
                         "questionId": "9feff0e1-970f-648c-eb48-5c57a568ea75",
-                        "title": "<p><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></p> (Copiar) (Copiar) (Copiar) (Copiar) (Copiar) (Copiar) (Copiar) (Copiar)",
+                        "title": "<p><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -14917,10 +15137,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -14935,6 +15151,14 @@
                     {
                         "questionId": "47bc56b9-969f-aea3-6a5b-60617fd874ae",
                         "title": "3.2.1 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "c5e331e0-34b9-09c5-8a56-765b3527e804",
+                        "title": "3.2.1 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -14988,10 +15212,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -15006,6 +15226,14 @@
                     {
                         "questionId": "4266b8e1-e4f9-1c92-afad-aa5753c65281",
                         "title": "3.2.2 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "6801a281-1be0-7ddc-1536-8ee2b9394817",
+                        "title": "3.2.2 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -15059,10 +15287,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -15077,6 +15301,14 @@
                     {
                         "questionId": "275b6ee1-d57e-37b4-06d0-e8e967765435",
                         "title": "3.2.3 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "d68db8fe-86aa-9e6f-edb9-b5be9dbffdc5",
+                        "title": "3.2.3 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -15128,6 +15360,10 @@
                             {
                                 "multipleChoiceOptionId": "387977b4-f92d-bfd4-da5f-3b964a488d52",
                                 "text": "Cierre Perimetral"
+                            },
+                            {
+                                "multipleChoiceOptionId": "f3297580-31cb-f9ec-8158-fdb33d39d3b0",
+                                "text": "Infraestructura de montaje (Cillindros/Soportes)"
                             }
                         ],
                         "isMultipleSelect": false,
@@ -15199,6 +15435,10 @@
                             {
                                 "multipleChoiceOptionId": "387977b4-f92d-bfd4-da5f-3b964a488d52",
                                 "text": "Cierre Perimetral"
+                            },
+                            {
+                                "multipleChoiceOptionId": "0fc8b3b2-e0ac-80dc-3554-65aed564bfe7",
+                                "text": "Infraestructura de montaje (Cillindros/Soportes)"
                             }
                         ],
                         "isMultipleSelect": false,
@@ -16682,6 +16922,42 @@
                     {
                         "multipleChoiceOptionId": "3164daa9-c5f9-4c53-8a46-cb28a68a625e",
                         "text": "[Gasco FuturoCoop] FuturoCoop"
+                    },
+                    {
+                        "multipleChoiceOptionId": "b7dc053b-ccfc-492e-641f-d6c7c8b13046",
+                        "text": "[Gestión Hídrica El Soldado] Lora Piscina 3800"
+                    },
+                    {
+                        "multipleChoiceOptionId": "622282a8-1577-8fa3-94a3-dc1a7e273155",
+                        "text": "[Gestión Hídrica El Soldado] Lora Dren T4"
+                    },
+                    {
+                        "multipleChoiceOptionId": "aef19748-55ec-473d-b639-6a19cac2dd7e",
+                        "text": "[Enex PSR Camilo Ferrón] PSR Camilo Ferrón"
+                    },
+                    {
+                        "multipleChoiceOptionId": "96f2a7a3-aa70-4177-9fdf-8f6669cd698d",
+                        "text": "[Enex PSR CCU] PSR CCU"
+                    },
+                    {
+                        "multipleChoiceOptionId": "9ece520c-cdf3-4caa-b4e6-1bfb5c031b1b",
+                        "text": "[Enex PSR Cemin] PSR Cemin"
+                    },
+                    {
+                        "multipleChoiceOptionId": "668b13ea-d2dd-4797-9966-f5fa380b67f8",
+                        "text": "[Enex PSR Goodyear] PSR Goodyear"
+                    },
+                    {
+                        "multipleChoiceOptionId": "022182ef-915b-44ab-b261-6b39aa8c021f",
+                        "text": "[Enex PSR Mylan] PSR Mylan"
+                    },
+                    {
+                        "multipleChoiceOptionId": "892c8412-1a3d-493f-b504-0b05ffd8eb1e",
+                        "text": "[Enex PSR Sika] PSR Sika"
+                    },
+                    {
+                        "multipleChoiceOptionId": "61035843-9203-42f1-b7c7-4ae3163fbfea",
+                        "text": "[Estadio Español] Camino El Inca"
                     }
                 ],
                 "isMultipleSelect": false,
@@ -16758,6 +17034,30 @@
                 "questionType": "description"
             },
             {
+                "questionId": "be6f47b3-2f8b-2143-9216-72ef6eeeb06b",
+                "title": "4.2 MP | Alcance",
+                "description": "",
+                "locationRequired": false,
+                "submissionRequired": true,
+                "questionType": "multipleChoice",
+                "allAnswers": [
+                    {
+                        "multipleChoiceOptionId": "49aa0706-8f19-aea4-5b87-c7f4e58b941c",
+                        "text": "Instrumentación"
+                    },
+                    {
+                        "multipleChoiceOptionId": "237f43cc-df42-e57d-53f1-0acedd34455a",
+                        "text": "Tablero(s)"
+                    },
+                    {
+                        "multipleChoiceOptionId": "76ffbef1-7b8d-6d73-f138-f57386af9dfb",
+                        "text": "Instrumentación + Tablero(s)"
+                    }
+                ],
+                "isMultipleSelect": false,
+                "displaySortedAnswers": false
+            },
+            {
                 "questionId": "29f65a66-5a8a-dac2-0eac-cb508ce1f619",
                 "title": "4. MP | Detalle Instrumentación #1",
                 "description": "",
@@ -16766,7 +17066,7 @@
                 "questions": [
                     {
                         "questionId": "90797edd-9053-dc95-f466-25184714cbbc",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -16869,7 +17169,7 @@
                 "questions": [
                     {
                         "questionId": "e9cecfb0-0f73-c208-54d0-2c3db52a553f",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -16972,7 +17272,7 @@
                 "questions": [
                     {
                         "questionId": "8049cf83-4156-0ed6-860b-463af07e2b00",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -17075,7 +17375,7 @@
                 "questions": [
                     {
                         "questionId": "e9838a1e-aa06-523c-bf5f-755ed8c7f240",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>instrumentos</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -17166,7 +17466,7 @@
                 "questions": [
                     {
                         "questionId": "643b732a-47a7-d2a8-0cc6-51109faab875",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -17261,7 +17561,7 @@
                 "questions": [
                     {
                         "questionId": "300352e0-a3eb-6c4a-7050-e483afa7f7a3",
-                        "title": "<p style=\"text-align: left;\"><em>I<span style=\"font-size: 10pt;\">ndique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</span></em></p>",
+                        "title": "<p style=\"text-align: left;\"><em>I<span style=\"font-size: 10pt;\">ndique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</span></em></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -17356,7 +17656,7 @@
                 "questions": [
                     {
                         "questionId": "1367243c-4d28-34f3-93a3-43d24e655e7e",
-                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de manteni&oacute;n preventiva.</em></span></p>",
+                        "title": "<p style=\"text-align: left;\"><span style=\"font-size: 10pt;\"><em>Indique los <span style=\"text-decoration: underline;\"><strong>tableros</strong></span> a los que se les realizan las actividades de mantenci&oacute;n preventiva.</em></span></p>",
                         "description": "",
                         "questionType": "description"
                     },
@@ -19503,10 +19803,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -19521,6 +19817,14 @@
                     {
                         "questionId": "b7da53b3-ecc2-9f39-79c7-735e07210dd9",
                         "title": "4.2.1 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "a2b44cf7-0792-467d-3922-ee9f4d9f1fba",
+                        "title": "4.2.1 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -19574,10 +19878,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -19592,6 +19892,14 @@
                     {
                         "questionId": "b3596bf3-1b47-5a02-5d16-6e66288e1bac",
                         "title": "4.2.2 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "673978b9-2bc0-8eb8-4216-c582ef814ef7",
+                        "title": "4.2.2 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -19645,10 +19953,6 @@
                                 "text": "Energía (Baterías, Paneles)"
                             },
                             {
-                                "multipleChoiceOptionId": "f1e438ef-279d-f0cb-86a4-8c02df0b48f5",
-                                "text": "Infraestructura de montaje (Cilindros/Soportes)"
-                            },
-                            {
                                 "multipleChoiceOptionId": "d2a801dc-5ac3-1b7c-6a7c-1703c0f3aac2",
                                 "text": "Periféricos (Pantallas/Otros)"
                             },
@@ -19663,6 +19967,14 @@
                     {
                         "questionId": "2bfc85ad-cd1b-9c5b-dd04-f754f165cc44",
                         "title": "4.2.3 I (C) | Modelo",
+                        "description": "",
+                        "locationRequired": false,
+                        "submissionRequired": true,
+                        "questionType": "openEnded"
+                    },
+                    {
+                        "questionId": "39c4de24-b34d-9a6d-d45d-3823cb6c8a10",
+                        "title": "4.2.3 I (C) | N° de serie",
                         "description": "",
                         "locationRequired": false,
                         "submissionRequired": true,
@@ -19714,6 +20026,14 @@
                             {
                                 "multipleChoiceOptionId": "387977b4-f92d-bfd4-da5f-3b964a488d52",
                                 "text": "Cierre Perimetral"
+                            },
+                            {
+                                "multipleChoiceOptionId": "e809ba32-2cb3-8697-15cd-8877201551d9",
+                                "text": "Infraestructura de montaje (Cillindros/Soportes)"
+                            },
+                            {
+                                "multipleChoiceOptionId": "8192a58f-b2ca-0c7f-580f-4e0cbef67ff9",
+                                "text": ""
                             }
                         ],
                         "isMultipleSelect": false,
@@ -19785,6 +20105,10 @@
                             {
                                 "multipleChoiceOptionId": "387977b4-f92d-bfd4-da5f-3b964a488d52",
                                 "text": "Cierre Perimetral"
+                            },
+                            {
+                                "multipleChoiceOptionId": "182442d1-7016-38a0-22da-c8c345c25a1f",
+                                "text": "Infraestructura de montaje (Cillindros/Soportes)"
                             }
                         ],
                         "isMultipleSelect": false,
