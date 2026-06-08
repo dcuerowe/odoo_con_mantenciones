@@ -194,7 +194,7 @@ flowchart TD
     J --> K
     K --> L[Validar existencia del punto en Odoo]
     L --> M{"¿Punto existe?"}
-    M -->|No| N[inbox: Punto no existe en sistema]
+    M -->|No| N[inbox: Punto no existe en sistema + adjuntar PDF]
     M -->|Sí| O[Proceder con solicitudes]
 ```
 
@@ -208,7 +208,7 @@ Se consulta `x_studio_location` del equipo. Hay **tres escenarios**:
 
 ### 5.2 Validación del Punto de Monitoreo
 
-Se busca en `x_maintenance_location` un registro cuyo `x_name` coincida con `[{proyecto}] {punto}`. Si no existe, se registra anomalía y se envía `inbox` con prioridad `'M'` (Manual).
+Se busca en `x_maintenance_location` un registro cuyo `x_name` coincida con `[{proyecto}] {punto}`. Si no existe, se registra anomalía y se envía `inbox` con prioridad `'M'` (Manual). En esta rama también se **adjunta el informe PDF** del trabajo (`informe_name` + `informe_data`) al registro `x_inbox_integracion`, igual que en las demás derivaciones. Aplica a todos los módulos (MC, CF, R, I, MP).
 
 ### 5.3 Fallback por S/N No Encontrado
 
