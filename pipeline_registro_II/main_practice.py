@@ -9,18 +9,18 @@ from config import (
     SHAREPOINT_USER, SHAREPOINT_PASSWORD, SHAREPOINT_SITE, SHAREPOINT_NAME_SITE, SHAREPOINT_DOC_LIBRARY,
     CONNECTEAM_API_KEY
 )
-from sharepoint_client import Sharepoint
+#from sharepoint_client import Sharepoint
 from odoo_client import OdooClient
 from connecteam_api import all_submission, filter_submissions, form_structure
 from data_processing import ordenar_respuestas, check_new_sub
 from processor import process_entrys
-from excel_manager import send_data
+#from excel_manager import send_data
 
 def job():
     print('\n-> Detección automática de OTs en Connecteam')
     
     # Initialize Clients
-    sp = Sharepoint()
+   # sp = Sharepoint()
     odoo = OdooClient(ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD)
     try:
         odoo.authenticate()
@@ -67,8 +67,7 @@ def job():
 
             try:
                 # Envía los datos filtrados a SharePoint, actualizando los archivos correspondientes
-                send_data(df_manual_i, 'Instalaciones', 'resumen_instalación', sp)
-                send_data(df_manual_m, 'Mantenciones', 'resumen_mantenciones', sp)
+              #  send_data(df_manual_m, 'Mantenciones', 'resumen_mantenciones', sp)
 
                 # Muestra por consola los resúmenes de operaciones manuales y exitosas
                 print("\nResumen de operaciones para tratamiento manual:")
@@ -88,7 +87,7 @@ def job():
 
 def main():
     # Initialize Clients
-    sp = Sharepoint()
+    #sp = Sharepoint()
     odoo = OdooClient(ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD)
     try:
         odoo.authenticate()
@@ -181,7 +180,7 @@ def main():
 
             sublista_1 = pd.DataFrame(filas_filtradas)
 
-            process_entrys(sublista_1, CONNECTEAM_API_KEY, resumen, exito, odoo, sp)
+            process_entrys(sublista_1, CONNECTEAM_API_KEY, resumen, exito, odoo)
 
 
             df_resumen = pd.DataFrame(resumen)

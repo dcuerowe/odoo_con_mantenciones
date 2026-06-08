@@ -568,7 +568,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
                                             'M',
                                             'Punto no existe en sistema',
-                                            'Nuevo')
+                                            'Nuevo',
+                                            nombre_archivo_MC,
+                                            informe_codificado_MC)
 
                                     continue
                                 
@@ -1073,7 +1075,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
                                             'M',
                                             'Punto no existe en sistema',
-                                            'Nuevo')
+                                            'Nuevo',
+                                            nombre_archivo_MC,
+                                            informe_codificado_MC)
                                     continue
                                 
                                 else:
@@ -1193,7 +1197,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
                                             'M',
                                             'Punto no existe en sistema',
-                                            'Nuevo')
+                                            'Nuevo',
+                                            nombre_archivo_CF,
+                                            informe_codificado_CF)
                                     continue
                                 
 
@@ -1805,7 +1811,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
                                             'M',
                                             'Punto no existe en sistema',
-                                            'Nuevo')
+                                            'Nuevo',
+                                            nombre_archivo_CF,
+                                            informe_codificado_CF)
                                     continue
                                 else:
                                     id_punto = punto_odoo[0]['id']
@@ -3244,7 +3252,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
                                                 'M',
                                                 'Punto no existe en sistema',
-                                                'Nuevo')
+                                                'Nuevo',
+                                                nombre_archivo_I,
+                                                informe_codificado_I)
                                         
                                         continue
 
@@ -3842,7 +3852,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
                                                 'M',
                                                 'Punto no existe en sistema',
-                                                'Nuevo')
+                                                'Nuevo',
+                                                nombre_archivo_I,
+                                                informe_codificado_I)
                                         continue
                                     
                                     else:
@@ -3970,7 +3982,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
                                                 'M',
                                                 'Punto no existe en sistema',
-                                                'Nuevo')
+                                                'Nuevo',
+                                                nombre_archivo_MP,
+                                                informe_codificado_MP)
                                         continue
                                     
 
@@ -4609,7 +4623,9 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
                                                 'M',
                                                 'Punto no existe en sistema',
-                                                'Nuevo')
+                                                'Nuevo',
+                                                nombre_archivo_MP,
+                                                informe_codificado_MP)
                                         
                                         continue
 
