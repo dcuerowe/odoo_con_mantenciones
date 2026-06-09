@@ -2720,7 +2720,17 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                 'maintenance.request',
                                                                 [id_CI], 
                                                                 update_CI
-                                                            )   
+                                                            )
+
+                                                            close_date_CI = {
+                                                                'close_date': fecha,
+                                                            }
+
+                                                            update_close_date_CI = odoo_client.write(
+                                                                'maintenance.request',
+                                                                [id_CI], 
+                                                                close_date_CI
+                                                            )
 
                                                             #Actualizamos la actividad que se genera por defecto
 
