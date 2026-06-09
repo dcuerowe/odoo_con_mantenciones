@@ -2725,10 +2725,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                             #Actualizamos la actividad que se genera por defecto
 
                                                             try:
-                                                                # Buscamos el ID de la actividad existente para la OT_number
+                                                                # Buscamos la actividad de la calibración EXISTENTE que estamos
+                                                                # finalizando (id_CI). En esta rama "I" no se crea una request de
+                                                                # calibración nueva, así que NO existe created_request_CI.
                                                                 actividad_id_CI = odoo_client.search_read(
                                                                     'mail.activity',
-                                                                    [['res_model', '=', 'maintenance.request'], ['res_id', '=', created_request_CI]],
+                                                                    [['res_model', '=', 'maintenance.request'], ['res_id', '=', id_CI]],
                                                                     limit=1
                                                                 )
 
@@ -2742,12 +2744,12 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                     )
 
                                                                 except Exception as e:
+                                                                    # No abortamos: cerrar la actividad es secundario, la
+                                                                    # creación de la Instalación debe continuar igual.
                                                                     print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
-                                                                    continue  
 
                                                             except Exception as e:
-                                                                print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
-                                                                continue   
+                                                                print(f"Error al buscar la actividad de manteniminto asociada: {e}")
 
                                                             # 172: Rodrigo
                                                             # 5205: Felipe Riquelme
@@ -2843,11 +2845,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         )
 
                                                     except Exception as e:
+                                                        # No abortamos: cerrar la actividad es secundario, la
+                                                        # actualización de ubicación del equipo debe continuar igual.
                                                         print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
-                                                        continue        
                                                 except Exception as e:
-                                                    print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
-                                                    continue   
+                                                    print(f"Error al buscar la actividad de manteniminto asociada: {e}")
 
                                             except Exception as e:
                                                 print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")
@@ -3065,11 +3067,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                         )
 
                                                     except Exception as e:
+                                                        # No abortamos: cerrar la actividad es secundario, la
+                                                        # actualización de ubicación del equipo debe continuar igual.
                                                         print(f"Error al actualizar la actividad de mantenimiento asociada: {e}")
-                                                        continue        
                                                 except Exception as e:
-                                                    print(f"Error al buscar la actividad de manteniminto asociada: {e}") 
-                                                    continue   
+                                                    print(f"Error al buscar la actividad de manteniminto asociada: {e}")
 
                                             except Exception as e:
                                                 print(f"Error al crear request MP para la OT-{dic_trabajo_R['#']} en Odoo: {type(e)}")

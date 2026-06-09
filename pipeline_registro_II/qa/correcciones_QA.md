@@ -6,6 +6,64 @@ documenta el defecto, la causa, el cambio y la prueba que lo respalda.
 
 ---
 
+## UnboundLocalError `created_request_CI` en el sub-flujo de Instalación del módulo R · 2026-06-09
+
+**Severidad:** Alta (aborta el flujo) · **Archivos:** `processor.py` (módulo R, ramas "I") · **Estado:** Corregido
+
+### Síntoma
+
+Al ejecutar `main.py` con la **OT 270** (Reemplazo: se instala una sonda que tenía una
+tarea de **Calibración activa**, id 1822) el pipeline falló con:
+
+```
+Error al buscar la actividad de manteniminto asociada:
+cannot access local variable 'created_request_CI' where it is not associated with a value
+```
+
+Tres consecuencias simultáneas: (1) la calibración 1822 se finalizó (stage → 5), pero
+(2) su `mail.activity` **no se cerró** y (3) la request de **Instalación** (punto PM-26)
+**no se creó**.
+
+### Causa raíz
+
+El módulo R itera `for t in R_type` (E = saliente, I = entrante). La rama **"I"**
+(`else` del `if t == "E"`) toma una request de Calibración **ya existente** (`id_CI`,
+elegida por proximidad) y la finaliza. El bloque que cierra la actividad era un
+copy‑paste de la rama "E" y buscaba la actividad con
+`['res_id', '=', created_request_CI]`, pero `created_request_CI` **solo se asigna en la
+rama "E"** (donde sí se crea una calibración nueva). En la rama "I" la variable nunca
+existe → `UnboundLocalError`. El `except` imprimía el mensaje y hacía `continue`, lo que
+abortaba la iteración del equipo **antes** de crear la Instalación.
+
+### Corrección
+
+1. En la rama "I", la actividad se busca por la calibración existente que se está
+   finalizando: `created_request_CI` → **`id_CI`**.
+2. **Desacople**: se quitaron los `continue` de los `except` que manejan el cierre de la
+   actividad (tanto el de la calibración `id_CI` como el de la Instalación recién creada
+   `created_request_I`, presente en las dos sub‑ramas "I" de R: calibración y daño).
+   Cerrar la actividad es secundario; su fallo ya no impide crear la Instalación ni
+   actualizar la ubicación del equipo. Se conservan los `continue` estructurales (fallo
+   al finalizar la calibración / al crear la Instalación).
+
+### Verificación
+
+- Dos tests L2 nuevos en `qa/scaffolding/component/test_process_entrys_r.py` que cubren
+  el caso —no cubierto antes— de una **calibración activa preexistente** en la fase I:
+  - `test_r_calibracion_instalacion_cierra_actividad_y_crea`: la actividad se busca por
+    `res_id == id_CI` (1822), la calibración se finaliza (stage 5) y la Instalación se
+    crea. Verificado que **falla** contra el código con el bug reintroducido (reproduce
+    el mensaje exacto del log).
+  - `test_r_instalacion_se_crea_aunque_falte_actividad`: con la actividad ausente, la
+    Instalación **igual se crea** (valida el desacople).
+
+```bash
+/Users/dacm/we/.venv/bin/python -m pytest qa/scaffolding/unit qa/scaffolding/component -q
+# 108 passed
+```
+
+---
+
 ## Serial numérico con ceros a la izquierda se elimina en la normalización · 2026-06-05
 
 **Severidad:** Media · **Archivos:** `processor.py` (helper `normalizar_serial`) · **Estado:** Implementado
