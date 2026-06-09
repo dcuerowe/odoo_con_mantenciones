@@ -394,7 +394,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             
             conteo_instancias_I_C = len(I_C_prefijo)
             
-            print(conteo_instancias_I_C)
             
 
             conteo_I = {
