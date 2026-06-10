@@ -10,12 +10,10 @@ from config import (
     SHAREPOINT_USER, SHAREPOINT_PASSWORD, SHAREPOINT_SITE, SHAREPOINT_NAME_SITE, SHAREPOINT_DOC_LIBRARY,
     CONNECTEAM_API_KEY
 )
-from sharepoint_client import Sharepoint
 from odoo_client import OdooClient
 from connecteam_api import all_submission, filter_submissions, form_structure
 from data_processing import ordenar_respuestas, check_new_sub
 from processor import process_entrys
-from excel_manager import send_data
 
 
 def job():
