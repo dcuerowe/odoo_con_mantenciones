@@ -37,7 +37,7 @@ Paso 8   · Server Actions con código Python (SA-01 … SA-09)       [Technical
 Paso 9   · Automated Actions que disparan las SA (AA-01 … AA-06)  [Studio/Technical]
 Paso 10  · Grupos de seguridad y reglas de registro              [Technical]
 Paso 11  · Testing manual + checklist de aceptación              [Manual]
-Paso 12  · Integración con formulario Connecteam (script puente)  [Externo]
+Paso 12  · Integración con pipeline_registro_II (ya existente)    [Doc]
 ```
 
 ---
@@ -242,7 +242,7 @@ Dependencies: `scheduled_date,original_scheduled_date`
 | `replaced_by_id` | m2o → `maintenance.equipment` | — | equipo que ocupó el lugar (opcional). |
 | `linked_request_id` | m2o → `maintenance.request` | — | orden de calibración/reparación asociada. |
 | `linked_plan_id` | m2o → `x_maintenance_plan` | — | plan de origen (referencia débil, no FK fuerte). |
-| `state` | selection | ✓ | `in_transit` · `completed` · `cancelled`. default `completed` para movimientos que se resuelven en el acto (reassignment), `in_transit` para SA-07. |
+| `state` | selection | ✓ | `in_transit` · `completed` · `cancelled`. Default `completed` (SA-09 cierra el movement en el acto). El estado `in_transit` queda disponible para escenarios futuros (p. ej. equipos enviados a calibración con tracking de retorno). |
 | `duration_days` | int (computed) | — | `(date_in or today) - date_out`. Dependencies: `date_in,date_out`. |
 | `notes` | text | — | libre. |
 | `company_id` | m2o → `res.company` | ✓ | heredado de `equipment_id.company_id` (default compute). |
@@ -367,9 +367,7 @@ for record in self:
 
 **UX:** agregá en la cabecera del Form view de equipment:
 - Badge "⚙ Gestionado por plan PMP-XXX" si `x_managed_by_plan = True`.
-- Badge rojo "🚚 En servicio externo (reemplazo: <nombre>)" si `x_in_external_service = True`.
-- Botón "Enviar a servicio externo" (SA-07) visible solo si `x_in_external_service = False`.
-- Botón "Recibir de servicio externo" (SA-08) visible solo si `x_in_external_service = True`.
+- Badge rojo "🚚 En servicio externo (reemplazo: <nombre>)" si `x_in_external_service = True`. Este estado se infiere automáticamente del último `x_equipment_movement` con `state='in_transit'` — no requiere acción manual desde Odoo; el pipeline existente (`processor.py`) ya gestiona los flujos de calibración/reemplazo desde Connecteam (ver Paso 12).
 
 Adicionalmente, agregá en el form de equipment un **tab "Historial de movimientos"** con el campo `movement_ids` como lista embebida (columnas: `date_out`, `from_location_id`, `to_location_id`, `reason`, `state`, `duration_days`). Esto da timeline inmediata por equipo.
 
@@ -476,7 +474,7 @@ for record in self:
 
 ## 8. Paso 8 — Server Actions
 
-**Camino:** *Settings → Technical → Server Actions → New*. Para cada SA: **Model = x_maintenance_plan** salvo cuando se indique otro modelo (SA-05, SA-07, SA-08, SA-09 son sobre `maintenance.equipment`; SA-MOV-00 sobre `x_equipment_movement`); **Type = Execute Python Code**.
+**Camino:** *Settings → Technical → Server Actions → New*. Para cada SA: **Model = x_maintenance_plan** salvo cuando se indique otro modelo (SA-05 y SA-09 son sobre `maintenance.equipment`; SA-MOV-00 sobre `x_equipment_movement`); **Type = Execute Python Code**.
 
 > 📚 Ref: [Server Actions reference — Odoo 17](https://www.odoo.com/documentation/17.0/developer/reference/backend/actions.html)
 >
@@ -778,382 +776,58 @@ for mov in records:
 
 ---
 
-### SA-07 — Enviar equipo a servicio externo (sin reemplazo)
-
-**Modelo:** `maintenance.equipment`. **Trigger:** botón "Enviar a servicio externo" en el form del equipo. Wizard previo opcional para reason / notas / expected_return.
-
-> ✅ **Decisión confirmada:** el reemplazo NO se elige en Odoo. El técnico lo reporta vía **formulario externo (Connecteam)** desde terreno. SA-10 lo recibe asíncronamente. Por eso SA-07 solo abre el movement `in_transit` sin `replaced_by_id`.
-
-```python
-# Asume que el wizard / context popula:
-#   ctx_reason (selection: calibration|repair|decommission)
-#   ctx_expected_return (date, opcional)
-#   ctx_notes (text, opcional)
-#   ctx_create_calibration_request (bool, default True para calibration)
-for eq in records:
-    if eq.x_in_external_service:
-        raise UserError(_("El equipo %s ya está en servicio externo.") % eq.name)
-    if not eq.x_studio_location:
-        raise UserError(_("El equipo no está asignado a ningún punto."))
-
-    origin = eq.x_studio_location
-    reason = env.context.get('ctx_reason') or 'calibration'
-
-    # 1) Crear movement in_transit (replaced_by_id quedará NULL hasta que SA-10 lo complete)
-    mov = env['x_equipment_movement'].create({
-        'equipment_id': eq.id,
-        'from_location_id': origin.id,
-        'to_location_id': False,
-        'reason': reason,
-        'date_out': datetime.date.today(),
-        'expected_return_date': env.context.get('ctx_expected_return'),
-        'replaced_by_id': False,              # ← lo completa SA-10 cuando llegue el form
-        'state': 'in_transit',
-        'notes': env.context.get('ctx_notes') or '',
-    })
-
-    # 2) Sacar el equipo del punto físicamente
-    eq.with_context(skip_auto_movement=True).x_studio_location = False
-
-    # 3) Orden corrective si la razón lo amerita
-    if env.context.get('ctx_create_calibration_request', reason == 'calibration'):
-        req = env['maintenance.request'].create({
-            'name': f"Calibración / Reparación - {eq.name}",
-            'equipment_id': eq.id,
-            'maintenance_type': 'corrective',
-            'request_date': datetime.date.today(),
-            'description': env.context.get('ctx_notes') or '',
-        })
-        mov.linked_request_id = req.id
-
-    # 4) Archivar hija del equipo en plan(es) vivo(s) del punto de origen
-    planes_vivos = env['x_maintenance_plan'].search([
-        ('location_id', '=', origin.id),
-        ('state', 'in', ('draft', 'scheduled', 'in_progress')),
-    ])
-    for plan in planes_vivos:
-        hija = plan.request_ids.filtered(lambda r: r.equipment_id == eq and not r.stage_id.done)
-        hija.write({'archive': True})
-        mov.linked_plan_id = plan.id    # último plan vivo gana (suele haber solo uno)
-        plan.message_post(body=_(
-            "Equipo %s enviado a servicio externo (%s). "
-            "A la espera del reporte de reemplazo desde Connecteam."
-        ) % (eq.name, reason))
-
-    eq.message_post(body=_(
-        "Enviado a servicio externo: %s. Movement #%s."
-    ) % (reason, mov.name))
-```
-
----
-
-### SA-08 — Recibir equipo de servicio externo
-
-**Modelo:** `maintenance.equipment`. **Trigger:** botón "Recibir de servicio externo" (visible si `x_in_external_service = True`). Wizard previo:
-- `destination_location_id` (m2o → x_maintenance_location, opcional — NULL = stock; default = `from_location_id` del movement abierto)
-- `replacement_policy` (selection: `return_to_stock` · `stay_at_origin` · `transfer_to`)
-- `replacement_new_location_id` (m2o, requerido si policy=`transfer_to`)
-- `calibration_cert_attachment` (binary, opcional)
-- `notes` (text)
-
-```python
-for eq in records:
-    open_mov = eq.movement_ids.filtered(lambda m: m.state == 'in_transit')
-    if not open_mov:
-        raise UserError(_("El equipo no tiene movimientos abiertos."))
-    mov = open_mov.sorted('date_out', reverse=True)[0]
-
-    dest = env.context.get('ctx_destination_location_id')
-    dest_loc = env['x_maintenance_location'].browse(dest) if dest else env['x_maintenance_location']
-    policy = env.context.get('ctx_replacement_policy') or 'return_to_stock'
-
-    # 1) Cerrar el movement in_transit
-    mov.write({
-        'date_in': datetime.date.today(),
-        'to_location_id': dest_loc.id if dest_loc else False,
-        'state': 'completed',
-    })
-
-    # 2) Si el destino es distinto del origen → crear un 2º movement (reassignment)
-    if dest_loc and mov.from_location_id and dest_loc.id != mov.from_location_id.id:
-        env['x_equipment_movement'].create({
-            'equipment_id': eq.id,
-            'from_location_id': False,           # vuelve de servicio externo
-            'to_location_id': dest_loc.id,
-            'reason': 'reassignment',
-            'date_out': datetime.date.today(),
-            'date_in': datetime.date.today(),
-            'state': 'completed',
-            'notes': _("Vuelve a punto distinto del origen (%s ≠ %s)") % (
-                dest_loc.x_name, mov.from_location_id.x_name
-            ),
-        })
-        if mov.linked_plan_id:
-            mov.linked_plan_id.message_post(body=_(
-                "El equipo %s no vuelve al punto. Reasignado a %s. Motivo: %s"
-            ) % (eq.name, dest_loc.x_name, env.context.get('ctx_notes') or '—'))
-
-    # 3) Posicionar el equipo que vuelve
-    eq.x_studio_location = dest_loc.id if dest_loc else False
-
-    # 4) Manejar el reemplazo según política
-    repl = mov.replaced_by_id
-    if repl:
-        if policy == 'return_to_stock':
-            env['x_equipment_movement'].create({
-                'equipment_id': repl.id,
-                'from_location_id': repl.x_studio_location.id if repl.x_studio_location else False,
-                'to_location_id': False,
-                'reason': 'reassignment',
-                'date_out': datetime.date.today(),
-                'date_in': datetime.date.today(),
-                'state': 'completed',
-                'notes': _("Vuelve a stock; %s regresó.") % eq.name,
-            })
-            repl.x_studio_location = False
-        elif policy == 'stay_at_origin':
-            # Se queda donde está, marca explícita en el chatter
-            repl.message_post(body=_(
-                "Permanece como residente permanente; %s no volvió a este punto."
-            ) % eq.name)
-        elif policy == 'transfer_to':
-            new_loc_id = env.context.get('ctx_replacement_new_location_id')
-            if not new_loc_id:
-                raise UserError(_("Policy 'transfer_to' requiere ctx_replacement_new_location_id."))
-            env['x_equipment_movement'].create({
-                'equipment_id': repl.id,
-                'from_location_id': repl.x_studio_location.id if repl.x_studio_location else False,
-                'to_location_id': new_loc_id,
-                'reason': 'reassignment',
-                'date_out': datetime.date.today(),
-                'date_in': datetime.date.today(),
-                'state': 'completed',
-            })
-            repl.x_studio_location = new_loc_id
-
-    # 5) Cerrar la orden corrective si existe
-    if mov.linked_request_id and mov.linked_request_id.stage_id and not mov.linked_request_id.stage_id.done:
-        done_stage = env['maintenance.stage'].search([('done', '=', True)], limit=1)
-        if done_stage:
-            mov.linked_request_id.stage_id = done_stage.id
-            mov.linked_request_id.close_date = datetime.date.today()
-
-    eq.message_post(body=_(
-        "Recibido de servicio externo. Destino: %s. Movement: %s. Política reemplazo: %s."
-    ) % (dest_loc.x_name if dest_loc else 'Stock', mov.name, policy))
-```
-
-> 💡 Para los wizards de SA-07 y SA-08: lo más simple en Studio es crear un **TransientModel** vía Studio (no soportado nativamente; alternativa: pasar parámetros vía `context` desde un menú/botón que abra un form prerellenado). Si tu instancia es enterprise, considerá un módulo custom de 50 líneas para los dos wizards transitorios.
-
----
-
-### SA-09 — Auto-crear movement al cambiar `x_studio_location` manualmente
+### SA-09 — Auto-crear `x_equipment_movement` al cambiar `x_studio_location`
 
 **Modelo:** `maintenance.equipment`. **Trigger:** AA-06 (On save update, watched: `x_studio_location`).
 
-Cierra el agujero de cambios silenciosos: si alguien edita la ubicación de un equipo desde el form sin pasar por SA-07/08, se registra el movimiento igual.
+**Pieza clave de la integración con `pipeline_registro_II`**: cubre tanto los cambios que escribe el procesador existente (módulos R/I al mover equipos a 593/594/punto del trabajo) como cambios manuales desde Studio. Sin esta SA, los movimientos físicos del procesador no quedarían registrados en la bitácora `x_equipment_movement`. Ver Paso 12 para el detalle del mapeo `processor.py → reason`.
+
+Infiere el `reason` del movement según el destino para que la consulta histórica tenga semántica útil:
 
 ```python
+# Mapping de destino → reason. Los IDs 593/594 son hardcoded en processor.py.
+LAB_LOC_ID = 593       # Laboratorio | Metrocal
+STOCK_LOC_ID = 594     # Bodega cliente
+
 for eq in records:
-    # Si el cambio fue iniciado por SA-07 o SA-08, ya se creó el movement.
-    # Detectamos con un flag de contexto para evitar duplicar.
+    # Evitar dobles disparos cuando un SA propio escriba con skip_auto_movement
     if env.context.get('skip_auto_movement'):
         continue
 
-    # Saca el último movement de este equipo
+    # Último movement → from_location
     last = eq.movement_ids.sorted('date_out', reverse=True)[:1]
     last_to = last.to_location_id if last else False
 
-    # Si la ubicación actual coincide con el to del último movement, no hubo cambio efectivo
+    # Si la ubicación no cambió realmente, no hacer nada
     if last_to and last_to == eq.x_studio_location:
         continue
+
+    # Inferir reason según el destino
+    new_loc = eq.x_studio_location
+    if not new_loc:
+        reason = 'decommission'              # salió del sistema (raro; sin destino)
+    elif new_loc.id == LAB_LOC_ID:
+        reason = 'calibration'               # destino laboratorio Metrocal
+    elif new_loc.id == STOCK_LOC_ID:
+        reason = 'repair'                    # destino bodega (servicio/daño)
+    elif last_to:
+        reason = 'reassignment'              # cambio entre puntos
+    else:
+        reason = 'installation'              # primera asignación
 
     env['x_equipment_movement'].create({
         'equipment_id': eq.id,
         'from_location_id': last_to.id if last_to else False,
-        'to_location_id': eq.x_studio_location.id if eq.x_studio_location else False,
-        'reason': 'reassignment',
+        'to_location_id': new_loc.id if new_loc else False,
+        'reason': reason,
         'date_out': datetime.date.today(),
         'date_in': datetime.date.today(),
         'state': 'completed',
-        'notes': _("Cambio manual de ubicación detectado (auto-movement)."),
+        'notes': _("Movement auto-generado por AA-06 (cambio de x_studio_location)."),
     })
 ```
 
-> ⚠ Cuando llames SA-07/SA-08 desde el código, usá `eq.with_context(skip_auto_movement=True).write({'x_studio_location': …})` para no disparar SA-09 dos veces sobre el mismo cambio.
-
----
-
-### SA-10 — Registrar reemplazo (endpoint vía API externa)
-
-**Modelo:** `maintenance.equipment`. **Trigger:** invocada por XML-RPC desde el script puente `sync_equipment_movements.py` (ver Paso 12). NO se dispara desde la UI.
-
-Recibe el payload del formulario Connecteam y completa el ciclo iniciado por SA-07.
-
-```python
-# Context esperado del caller (xmlrpc execute_kw con kwargs):
-#   ctx_original_serial : str — serial del equipo retirado
-#   ctx_replacement_serial : str — serial del equipo reemplazo
-#   ctx_swap_date : str (YYYY-MM-DD)
-#   ctx_technician : str (nombre del técnico, free text)
-#   ctx_form_entry_id : str — id del entry en Connecteam (idempotencia)
-#   ctx_notes : str (opcional)
-
-original_serial = env.context.get('ctx_original_serial')
-replacement_serial = env.context.get('ctx_replacement_serial')
-swap_date_str = env.context.get('ctx_swap_date')
-entry_id = env.context.get('ctx_form_entry_id')
-
-if not (original_serial and replacement_serial and swap_date_str and entry_id):
-    raise UserError(_("SA-10: payload incompleto (faltan campos requeridos)."))
-
-# Idempotencia: si ya procesamos este entry, no hacer nada
-already = env['x_equipment_movement'].search([
-    ('notes', 'ilike', f"connecteam_entry:{entry_id}")
-], limit=1)
-if already:
-    return    # silencioso, ya procesado
-
-# Resolver equipos por serial
-Eq = env['maintenance.equipment']
-original = Eq.search([('serial_no', '=', original_serial)], limit=1)
-replacement = Eq.search([('serial_no', '=', replacement_serial)], limit=1)
-if not original:
-    raise UserError(_("Equipo original con serial %s no encontrado.") % original_serial)
-if not replacement:
-    raise UserError(_("Equipo reemplazo con serial %s no encontrado.") % replacement_serial)
-
-# Movement in_transit abierto del original
-open_mov = original.movement_ids.filtered(
-    lambda m: m.state == 'in_transit'
-).sorted('date_out', reverse=True)[:1]
-if not open_mov:
-    raise UserError(_(
-        "Equipo %s no tiene movement in_transit. ¿Se ejecutó SA-07?"
-    ) % original.name)
-
-swap_date = datetime.datetime.strptime(swap_date_str, '%Y-%m-%d').date()
-origin_location = open_mov.from_location_id
-
-# 1) Completar el movement original con el reemplazo
-open_mov.write({
-    'replaced_by_id': replacement.id,
-    'notes': (open_mov.notes or '') + f"\nconnecteam_entry:{entry_id}\nTécnico: {env.context.get('ctx_technician') or '?'}",
-})
-
-# 2) Crear el movement del reemplazo (entrada al punto)
-repl_from = replacement.x_studio_location
-env['x_equipment_movement'].create({
-    'equipment_id': replacement.id,
-    'from_location_id': repl_from.id if repl_from else False,
-    'to_location_id': origin_location.id,
-    'reason': 'reassignment' if repl_from else 'installation',
-    'date_out': swap_date,
-    'date_in': swap_date,
-    'state': 'completed',
-    'notes': f"Reemplaza a {original.name} (servicio externo).\nconnecteam_entry:{entry_id}",
-    'linked_plan_id': open_mov.linked_plan_id.id if open_mov.linked_plan_id else False,
-})
-
-# 3) Mover el reemplazo al punto físicamente
-replacement.with_context(skip_auto_movement=True).x_studio_location = origin_location.id
-
-# 4) Crear hija para el reemplazo en el plan vivo (si existe y está en scheduled/in_progress)
-plan = open_mov.linked_plan_id
-if plan and plan.state in ('scheduled', 'in_progress'):
-    existente = plan.request_ids.filtered(lambda r: r.equipment_id == replacement)
-    if not existente:
-        env['maintenance.request'].create({
-            'name': f"{plan.name} - {replacement.name}",
-            'equipment_id': replacement.id,
-            'plan_id': plan.id,
-            'schedule_date': plan.scheduled_date,
-            'maintenance_type': 'preventive',
-            'description': _("Hija autogenerada tras reemplazo via Connecteam."),
-        })
-    plan.message_post(body=_(
-        "Reemplazo confirmado por Connecteam: %s ← %s. Hija creada."
-    ) % (replacement.name, original.name))
-
-original.message_post(body=_(
-    "Reemplazo asignado vía API: %s ocupa su lugar en %s."
-) % (replacement.name, origin_location.x_name or '?'))
-```
-
-> 💡 La idempotencia se basa en el patrón `connecteam_entry:<id>` en el campo `notes`. Es simple y funciona. Si querés algo más robusto, agregá un campo dedicado `x_external_entry_id` (char, indexed, unique) en `x_equipment_movement`.
-
----
-
-### SA-11 — Recibir equipo de servicio externo (endpoint vía API externa)
-
-**Modelo:** `maintenance.equipment`. **Trigger:** XML-RPC desde el script puente cuando se recibe el form "Recepción de equipo calibrado".
-
-Gemela de SA-08 pero invocable headless. Reusa internamente la lógica de SA-08 pasando los parámetros vía context.
-
-```python
-# Context esperado:
-#   ctx_returning_serial : str
-#   ctx_destination_location_external_id : str (XML-ID o nombre del punto destino; "stock" = NULL)
-#   ctx_replacement_policy : str (return_to_stock | stay_at_origin | transfer_to)
-#   ctx_replacement_new_location_external_id : str (si policy = transfer_to)
-#   ctx_calibration_cert_b64 : str (opcional, base64 del PDF)
-#   ctx_form_entry_id : str (idempotencia)
-#   ctx_notes : str
-
-entry_id = env.context.get('ctx_form_entry_id')
-already = env['x_equipment_movement'].search([
-    ('notes', 'ilike', f"connecteam_entry:{entry_id}")
-], limit=1)
-if already:
-    return
-
-serial = env.context.get('ctx_returning_serial')
-eq = env['maintenance.equipment'].search([('serial_no', '=', serial)], limit=1)
-if not eq:
-    raise UserError(_("Equipo con serial %s no encontrado.") % serial)
-
-# Resolver destino: external_id o nombre
-dest_str = env.context.get('ctx_destination_location_external_id') or 'stock'
-if dest_str.lower() == 'stock':
-    dest = env['x_maintenance_location']
-else:
-    dest = env['x_maintenance_location'].search([('x_name', '=', dest_str)], limit=1)
-    if not dest:
-        raise UserError(_("Punto destino %s no encontrado.") % dest_str)
-
-# Construir el context para SA-08 y delegar
-ctx = dict(env.context, **{
-    'ctx_destination_location_id': dest.id if dest else False,
-    'ctx_replacement_policy': env.context.get('ctx_replacement_policy') or 'return_to_stock',
-    'ctx_replacement_new_location_id': False,    # resolver si transfer_to
-    'ctx_notes': (env.context.get('ctx_notes') or '') + f"\nconnecteam_entry:{entry_id}",
-})
-
-if ctx['ctx_replacement_policy'] == 'transfer_to':
-    repl_dest_str = env.context.get('ctx_replacement_new_location_external_id')
-    repl_dest = env['x_maintenance_location'].search([('x_name', '=', repl_dest_str)], limit=1)
-    if not repl_dest:
-        raise UserError(_("Destino reemplazo %s no encontrado.") % repl_dest_str)
-    ctx['ctx_replacement_new_location_id'] = repl_dest.id
-
-# Adjuntar certificado si vino en el payload
-cert_b64 = env.context.get('ctx_calibration_cert_b64')
-if cert_b64:
-    open_mov = eq.movement_ids.filtered(lambda m: m.state == 'in_transit')[:1]
-    if open_mov and open_mov.linked_request_id:
-        env['ir.attachment'].create({
-            'name': f"calibracion_{eq.serial_no}_{datetime.date.today()}.pdf",
-            'datas': cert_b64,
-            'res_model': 'maintenance.request',
-            'res_id': open_mov.linked_request_id.id,
-        })
-
-# Ejecuta SA-08
-sa08 = env.ref('__custom__.sa_08_receive_external')
-sa08.with_context(active_ids=eq.ids, active_model='maintenance.equipment', **ctx).run()
-```
-
-> 📌 Reemplazá `__custom__.sa_08_receive_external` por el XMLID real de SA-08 que asignás al guardarla (*Settings → Technical → Server Actions → SA-08 → Action → External ID*).
+> ⚠ Si en el futuro agregás una SA propia que también escriba `x_studio_location`, usá `eq.with_context(skip_auto_movement=True).write({'x_studio_location': …})` para no disparar SA-09 dos veces sobre el mismo cambio.
 
 ---
 
@@ -1173,7 +847,6 @@ sa08.with_context(active_ids=eq.ids, active_model='maintenance.equipment', **ctx
 | AA-05 (opcional) | `x_maintenance_plan` | Based on date field | Trigger field: `scheduled_date`. Delay: 0 days. | Execute → SA-XX (notificación al técnico el día del trabajo) |
 | AA-06 | `maintenance.equipment` | On save (update) | Watched: `x_studio_location`. Before update domain: `[]`. | Execute → SA-09 (auto-movement) |
 | AA-MOV-00 | `x_equipment_movement` | On save (creation) | — | Execute → SA-MOV-00 (autogen name, company) |
-| AA-MOV-ALERT (opcional) | `x_equipment_movement` | Based on date field | Trigger: `expected_return_date`. Delay: 0 days. Apply on: `[('state','=','in_transit'),('date_in','=',False)]`. | Send Email → al user_id del plan: "Equipo aún en tránsito vencido el retorno esperado". |
 
 > 💡 La diferencia entre **Before update domain** y **Apply on**:
 > - *Before update domain*: condición evaluada con los valores **previos** al save.
@@ -1255,97 +928,65 @@ Probar en este orden, con un punto que tenga 3 equipos:
 - [ ] **T-19** Mismo flujo pero con reemplazo S1-temp (que estaba en stock). → 2 movements creados (uno in_transit para S1, uno completed para S1-temp), S1-temp ahora en Norte, plan vivo tiene una hija nueva para S1-temp.
 - [ ] **T-20** "Recibir de servicio externo" sobre S1 con destino = Norte (mismo origen), policy = `return_to_stock`. → movement S1 se cierra con `date_in=today` y `to_location_id=Norte`, S1-temp vuelve a stock con un movement reassignment, S1.x_studio_location = Norte.
 - [ ] **T-21** "Recibir" con destino = punto Sur (distinto del origen). → además del cierre del movement original, se crea un 2º movement reason=`reassignment` para S1 (from=NULL, to=Sur). El plan del punto Norte recibe message_post "S1 no vuelve al punto".
-- [ ] **T-22** Cambiar manualmente `x_studio_location` de un equipo desde el form (sin pasar por SA-07). → AA-06 dispara SA-09 y crea un movement reason=`reassignment` automáticamente.
+- [ ] **T-22** Cambiar manualmente `x_studio_location` de un equipo desde el form. → AA-06 dispara SA-09 y crea un movement automáticamente con reason inferido (calibration / repair / installation / reassignment según destino).
 - [ ] **T-23** Intentar borrar un movement (incluso como admin). → restringido por ACL (auditoría protegida).
 - [ ] **T-24** Consulta "todas las sondas que pasaron por Norte en los últimos 90 días" desde la list view filtrada. → resultados consistentes con los movements creados.
 - [ ] **T-25** Equipo en servicio externo + plan del punto pasa a `scheduled` → la SA-01 NO genera hija para ese equipo (filtrado por `x_in_external_service=False` en SA-01 — actualizar el dominio).
 
+**Tests de integración con el pipeline existente (Paso 12):**
+
+- [ ] **T-26** Correr `pipeline_registro_II/main.py` con un form R de calibración (alcance `Ciclo de calibración`, destino `Laboratorio | Metrocal`). Verificar que se creó `x_equipment_movement` con `reason='calibration'`, `to_location_id=593`. La SA del processor ya escribió la `maintenance.request` de Extracción/Calibración; el movement queda con `linked_request_id=NULL` (limitación documentada).
+- [ ] **T-27** Form R de daño con destino `Bodega cliente` → movement con `reason='repair'`, `to_location_id=594`.
+- [ ] **T-28** Form I (Instalación) con equipo nuevo a un punto → movement con `reason='installation'`, `to_location_id=punto`. Si el equipo ya estaba en otro punto, `reason='reassignment'`.
+- [ ] **T-29** Re-ejecutar `main.py` con el mismo form: idempotencia del processor (`form_entries.db`) impide duplicar la request; AA-06 no se redispara porque `x_studio_location` no cambió.
+
 ---
 
-## 12. Paso 12 — Integración con formulario externo (Connecteam)
+## 12. Paso 12 — Integración con el pipeline existente (NO crear script puente)
 
-> ✅ **Decisión confirmada:** los reemplazos NO se eligen en Odoo. El técnico en terreno completa un formulario Connecteam con el serial del equipo retirado y del reemplazo. Un script puente polea la API y llama a SA-10 / SA-11.
+> ✅ **Decisión confirmada:** Connecteam → Odoo **ya está implementado en producción** en `pipeline_registro_II/`. No se construye un script puente nuevo. La trazabilidad de movimientos se cierra desde Odoo con AA-06 + SA-09 (definidos en Pasos 8 y 9).
 
-### 12.1 Formularios Connecteam a crear
+### 12.1 Por qué no hay script puente
 
-| Form ID | Nombre | Campos críticos | Llama a |
-|---|---|---|---|
-| (asignar) | "Reemplazo de equipo en terreno" | `original_serial`, `replacement_serial`, `swap_date`, `technician_name`, `notes`, `photo` | SA-10 |
-| (asignar) | "Recepción de equipo calibrado" | `returning_serial`, `destination_point` (selección con todos los `x_maintenance_location.x_name`), `replacement_policy`, `calibration_cert` (PDF), `notes` | SA-11 |
+El módulo R (Reemplazo/Extracción) de `pipeline_registro_II/processor.py` (líneas 1631–2913, documentado en `general_doc/processor_documentation.md` §8) ya cubre el ciclo completo:
 
-> Los `FORM_ID` van en variables de entorno: `CONNECTEAM_FORM_REPLACEMENT_ID` y `CONNECTEAM_FORM_RETURN_ID`.
+- Polea Connecteam vía `main.py` por cron GitHub Actions (`0 11 * * 1-6` UTC).
+- Resuelve equipos por serial (`maintenance.equipment`), valida puntos (`x_maintenance_location.x_name`).
+- Bifurca por `alcance_R`: `Ciclo de calibración` (con sub-flujo Metrocal `team=2`, `tcnico=5118`) vs `Otro motivo` (daño / cambio).
+- Itera subtipos E (sale) e I (entra), creando solicitudes `Extracción` / `Calibración` / `Instalación` (literales en `x_studio_tipo_de_trabajo`).
+- **Mueve `x_studio_location`** del equipo a `593` (Laboratorio | Metrocal), `594` (Bodega cliente), o al punto del trabajo.
+- Idempotencia robusta en `form_entries.db` (SQLite tabla `processed_entries`, commiteada por CI).
+- Excepciones ruteadas a `x_inbox_integracion` con etiquetas y followers — patrón establecido (ver `general_doc/gestion_manual_inbox.md`).
 
-### 12.2 Script puente — `sync_equipment_movements.py`
+### 12.2 Cómo se cierra la trazabilidad con la nueva entidad
 
-**Ubicación:** `odoo_con_mantenciones/maintenance_plan/sync_equipment_movements.py` (creado en este commit).
+**AA-06 (Paso 9)** escucha cambios en `maintenance.equipment.x_studio_location`. **SA-09 (Paso 8)** crea automáticamente el registro `x_equipment_movement` con el `reason` inferido según el destino:
 
-**Cómo funciona:**
+| Origen del cambio en `x_studio_location` | Destino | `reason` inferido por SA-09 |
+|---|---|---|
+| `processor.py` módulo R · t=E · alcance=Calibración · destino Lab | `id 593` | `calibration` |
+| `processor.py` módulo R · t=E · alcance=Otro · destino Bodega | `id 594` | `repair` |
+| `processor.py` módulo R · t=I (equipo que entra) | punto del trabajo | `reassignment` (si tenía ubicación previa) o `installation` (primera vez) |
+| `processor.py` módulo I · primera asignación | punto | `installation` |
+| `processor.py` módulo I · cambio de punto | punto | `reassignment` |
+| Edición manual en Odoo (Studio o admin) | cualquiera | inferido por las mismas reglas |
 
-1. Carga credenciales Odoo + Connecteam desde `.env` (reutiliza `OdooClient` de `pipeline_registro_II/`).
-2. Polea Connecteam por entries nuevos (timestamp del último run guardado en `last_run.txt`).
-3. Para cada entry:
-   - Determina si es "Reemplazo" o "Recepción" según `form_id`.
-   - Construye el `kwargs` con `ctx_*` y llama `execute_kw('maintenance.equipment', 'action_<sa>', [eq.id], kwargs)`. Como SA-10 y SA-11 son Server Actions con código Python, se invocan vía `ir.actions.server.run()` con el contexto cargado.
-   - Maneja excepciones: si falla, loggea y el entry queda sin procesar para reintento en el próximo cron tick (la idempotencia de SA-10/SA-11 lo soporta).
-4. Actualiza `last_run.txt`.
+> **Resultado**: cero código nuevo en `pipeline_registro_II`. El pipeline sigue funcionando exactamente igual; lo único nuevo es que Odoo lleva ahora la bitácora `x_equipment_movement` en paralelo.
 
-**Cron / ejecución:**
+### 12.3 Limitación conocida y plan de mejora
 
-- Para test: `python sync_equipment_movements.py --once`
-- Producción: cron del SO o systemd timer cada 5–10 min: `*/5 * * * * /path/to/.venv/bin/python /path/to/maintenance_plan/sync_equipment_movements.py --once`
+`x_equipment_movement.linked_request_id` queda **NULL** en los movements generados por AA-06 desde el processor. Esto es porque AA-06 dispara *después* del `write()` y no tiene contexto de qué `maintenance.request` se acababa de crear en esa misma transacción.
 
-### 12.3 Idempotencia y reintentos
+Si en una iteración futura se necesita el linkeo (p. ej. para reportes que cruzan calibraciones con sus ubicaciones), opciones:
 
-- Cada entry de Connecteam tiene un `id` único. SA-10/SA-11 buscan ese ID embebido en `notes` con el patrón `connecteam_entry:<id>` antes de procesar; si ya existe, salen silenciosamente.
-- Si una llamada falla por error transitorio (Odoo caído, timeout XML-RPC), el entry queda sin marcar y se reintenta en el próximo tick.
-- Si falla por error semántico (serial inexistente), el script loggea, envía email al admin (config opcional) y el entry queda en `pending_review.json` para inspección manual.
+1. **Lado pipeline**: agregar en `pipeline_registro_II/` un módulo `equipment_movement_linker.py` que corra después de `main.py` y matchee movements sin link con requests por equipo + fecha cercana.
+2. **Lado Odoo**: agregar a SA-09 una búsqueda heurística de la última request creada para ese equipo en los últimos N segundos.
 
-### 12.4 Diagrama del flujo
+Ambas son opcionales — la consulta "qué equipos pasaron por X punto" funciona sin el link.
 
-```
-   ┌──────────────┐  marca botón     ┌─────────────────┐
-   │ Técnico Odoo │ ──"Enviar"──────►│   SA-07         │
-   └──────────────┘                  │   crea movement │
-                                     │   in_transit    │
-                                     │   sin reemplazo │
-                                     └─────────────────┘
-                                              │
-                                              │  (asíncrono, en terreno)
-                                              ▼
-   ┌──────────────────────┐
-   │ Técnico en terreno   │ ──── completa form Connecteam ──┐
-   │ (app móvil)          │   (serial original + reemplazo) │
-   └──────────────────────┘                                 │
-                                                            ▼
-                              ┌─────────────────────────────────────────────┐
-                              │ Cron / systemd timer (cada 5–10 min)        │
-                              │ sync_equipment_movements.py                 │
-                              │   1) GET /api/forms/{form_id}/entries       │
-                              │   2) filtra > last_run                      │
-                              │   3) para cada entry → XML-RPC ir.actions   │
-                              │      .server.run() con context              │
-                              └─────────────────────────────────────────────┘
-                                              │
-                                              ▼
-                              ┌──────────────────────┐
-                              │ SA-10 en Odoo:       │
-                              │  - completa replaced │
-                              │  - crea movement del │
-                              │    reemplazo         │
-                              │  - mueve reemplazo   │
-                              │    al punto          │
-                              │  - crea hija en plan │
-                              │  - chatter           │
-                              └──────────────────────┘
-```
+### 12.4 Forms Connecteam
 
-### 12.5 Tests específicos de la integración
-
-- [ ] **T-26** Disparar SA-07 sobre S1; verificar que se crea movement `in_transit` con `replaced_by_id=False`.
-- [ ] **T-27** Simular entry de Connecteam con `original=S1.serial`, `replacement=S2.serial`; correr el script `--once`; verificar que SA-10 completa el movement de S1, crea movement de S2, mueve S2 al punto, y crea hija para S2 en el plan vivo.
-- [ ] **T-28** Reproceesar el mismo entry: verificar idempotencia (no se duplica nada, chatter sin nuevas líneas).
-- [ ] **T-29** Entry con serial inexistente: verificar que falla limpio, entry va a `pending_review.json`, no se modifica estado en Odoo.
-- [ ] **T-30** Caída de Odoo durante el procesamiento: verificar que el entry se reintenta en el siguiente tick y completa sin duplicar.
+**No se crean forms nuevos**. El form actual ya tiene las preguntas necesarias para R (serial extracción + serial instalación + motivo + destino). Si al implementar se detectan campos faltantes para enriquecer `x_equipment_movement.notes` o `expected_return_date`, se agregan al form existente.
 
 ---
 
