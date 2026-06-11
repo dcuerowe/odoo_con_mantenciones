@@ -19,7 +19,7 @@
 | 6 | Módulo `base_automation` (se instala con Studio). | Settings → Technical → Automation → Automated Actions debe ser accesible. |
 | 7 | Acceso al menú **Settings → Technical → Server Actions** y **Settings → Technical → Database Structure → Models**. | Activá "Modo Desarrollador" (`?debug=1` en la URL o vía Settings). |
 
-> ⚠ **Modo desarrollador obligatorio** durante toda la implementación. URL: agregá `?debug=1` o activá en *Settings → Developer Tools → Activate the developer mode*.
+> **Modo desarrollador obligatorio** durante toda la implementación. URL: agregá `?debug=1` o activá en *Settings → Developer Tools → Activate the developer mode*.
 
 ---
 
@@ -50,10 +50,10 @@ Paso 12  · Integración con pipeline_registro_II (ya existente)    [Doc]
 |---|---|
 | Model Name | `Plan de Mantención Preventiva` |
 | Technical Name (auto) | `x_maintenance_plan` |
-| **Features a marcar** | ✅ Chatter · ✅ Archiving · ✅ User assignment · ✅ Date & Calendar · ✅ Custom Sorting · ✅ Company |
+| **Features a marcar** | Chatter · Archiving · User assignment · Date & Calendar · Custom Sorting · Company |
 | Features a NO marcar | **Pipeline stages** · Tags · Picture · Lines · Notes · Monetary · Contact details |
 
-> ⚠ **Pipeline stages NO se marca.** Ese feature crea `stage_id` + `kanban_state` Studio: una segunda máquina de estados en paralelo al campo `state` (Paso 2) que gobierna todas las automatizaciones. Se desincronizan inevitablemente (arrastrar una card en kanban movería `stage_id` sin tocar `state` → ninguna AA dispara). Un solo ciclo de vida: `state`. El kanban se agrupa por `state`.
+> **Pipeline stages NO se marca.** Ese feature crea `stage_id` + `kanban_state` Studio: una segunda máquina de estados en paralelo al campo `state` (Paso 2) que gobierna todas las automatizaciones. Se desincronizan inevitablemente (arrastrar una card en kanban movería `stage_id` sin tocar `state` → ninguna AA dispara). Un solo ciclo de vida: `state`. El kanban se agrupa por `state`.
 
 Los features marcados habilitan automáticamente:
 - `x_active` (Archive) — usado para soft-delete.
@@ -64,7 +64,7 @@ Los features marcados habilitan automáticamente:
 - `company_id` — multi-empresa.
 - chatter (`message_ids`, `message_follower_ids`, `activity_ids`) — auditoría obligatoria.
 
-> 📚 Ref: [Models, modules and apps — Odoo 16 Studio](https://www.odoo.com/documentation/16.0/applications/studio/models_modules_apps.html)
+> Ref: [Models, modules and apps — Odoo 16 Studio](https://www.odoo.com/documentation/16.0/applications/studio/models_modules_apps.html)
 
 **Al guardar**, Studio crea el módulo `studio_customization` que agrupa todo lo que sigue. Exportable al final desde *Studio → Customizations → Export*.
 
@@ -80,18 +80,18 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 
 | Campo | Tipo | Required | Default | Notas |
 |---|---|---|---|---|
-| `name` | char | **✗** | `'New'` | nativo (`x_name`). **NO marcar Required**: la cascada (SA-02) crea la ocurrencia n+1 con name vacío y SA-00 lo completa *después* del insert — con required a nivel de campo el `create()` revienta antes de que la AA corra. La obligatoriedad efectiva la da SA-00, que siempre lo rellena. Pattern: `PMP-{YYYY}-{seq:04d}`. |
-| `location_id` | many2one → `x_maintenance_location` | ✓ | — | `ondelete='restrict'` para no borrar un punto con planes vivos. |
-| `company_id` | many2one → `res.company` | ✓ | `=user.company_id` | nativo (feature Company). |
+| `name` | char | **No** | `'New'` | nativo (`x_name`). **NO marcar Required**: la cascada (SA-02) crea la ocurrencia n+1 con name vacío y SA-00 lo completa *después* del insert — con required a nivel de campo el `create()` revienta antes de que la AA corra. La obligatoriedad efectiva la da SA-00, que siempre lo rellena. Pattern: `PMP-{YYYY}-{seq:04d}`. |
+| `location_id` | many2one → `x_maintenance_location` | Sí | — | `ondelete='restrict'` para no borrar un punto con planes vivos. |
+| `company_id` | many2one → `res.company` | Sí | `=user.company_id` | nativo (feature Company). |
 
 ### 3.2 Programación
 
 | Campo | Tipo | Required | Notas |
 |---|---|---|---|
-| `scheduled_date` | date | ✓ | — |
+| `scheduled_date` | date | Sí | — |
 | `original_scheduled_date` | date | — | escrito en `create()` vía SA-00. Solo lectura desde UI. |
 | `close_date` | date | — | seteado por SA-02 al cerrar. |
-| `state` | selection | ✓ | Valores: `draft` · `scheduled` · `in_progress` · `done` · `partially_done` · `cancelled`. *Default:* `draft`. |
+| `state` | selection | Sí | Valores: `draft` · `scheduled` · `in_progress` · `done` · `partially_done` · `cancelled`. *Default:* `draft`. |
 
 > En Studio el tipo *Selection* se configura desde el panel derecho → **Values** (formato `key:Label`).
 
@@ -99,8 +99,8 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 
 | Campo | Tipo | Required | Notas |
 |---|---|---|---|
-| `frequency_value` | integer | ✓ | default 1, validar > 0 (constrain en Paso 6). |
-| `frequency_unit` | selection | ✓ | `day` · `week` · `month` · `year`. default `month`. |
+| `frequency_value` | integer | Sí | default 1, validar > 0 (constrain en Paso 6). |
+| `frequency_unit` | selection | Sí | `day` · `week` · `month` · `year`. default `month`. |
 | `slack_days` | integer | — | tolerancia ± en días. default 3. |
 | `auto_replan` | boolean | — | default `True`. |
 
@@ -108,7 +108,7 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 
 | Campo | Tipo | Notas |
 |---|---|---|
-| `series_id` | char | uuid generado en SA-00. Indexed = ✓ (panel Field → "Indexed"). |
+| `series_id` | char | uuid generado en SA-00. Indexed = Sí (panel Field → "Indexed"). |
 | `previous_plan_id` | many2one → `x_maintenance_plan` | `ondelete='set null'`. |
 | `next_plan_id` | many2one → `x_maintenance_plan` | `ondelete='set null'`. |
 | `seq_in_series` | integer | computado por SA-00; 1 para el primero de la serie. |
@@ -144,10 +144,10 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 | `progress` | integer | `request_ids`, `request_ids.stage_id.done` | % hijas con `stage_id.done = True`. |
 | `delta_days_from_planned` | integer | `close_date`, `scheduled_date` | `close - scheduled` (en días). |
 | `adjusted_from_scheduled` | boolean | `scheduled_date`, `original_scheduled_date` | True si difieren. |
-| `gantt_start` | date (computed, **stored** ✓) | `scheduled_date`, `slack_days` | `scheduled_date − slack_days`. La barra Gantt = ventana de tolerancia. |
-| `gantt_stop` | date (computed, **stored** ✓) | `scheduled_date`, `slack_days` | `scheduled_date + slack_days`. Stored es obligatorio: la Gantt lee por search/read_group. |
+| `gantt_start` | date (computed, **stored** Sí) | `scheduled_date`, `slack_days` | `scheduled_date − slack_days`. La barra Gantt = ventana de tolerancia. |
+| `gantt_stop` | date (computed, **stored** Sí) | `scheduled_date`, `slack_days` | `scheduled_date + slack_days`. Stored es obligatorio: la Gantt lee por search/read_group. |
 
-> ⚠ **Limitación de Studio en compute:** el sandbox bloquea `STORE_ATTR`. **No** uses `record.x_field = …`; usá la forma `for record in self: record['x_field'] = …`. Las dependencias se declaran en el campo "Dependencies" del panel derecho, separadas por coma. ([ref](https://medium.com/cybrosys/how-to-set-compute-function-for-field-using-odoo-17-studio-aa2ad46dd305))
+> **Limitación de Studio en compute:** el sandbox bloquea `STORE_ATTR`. **No** uses `record.x_field = …`; usá la forma `for record in self: record['x_field'] = …`. Las dependencias se declaran en el campo "Dependencies" del panel derecho, separadas por coma. ([ref](https://medium.com/cybrosys/how-to-set-compute-function-for-field-using-odoo-17-studio-aa2ad46dd305))
 
 **Snippet `progress`** (pegar en el field → Compute):
 ```python
@@ -204,7 +204,7 @@ Dependencies: `scheduled_date,slack_days`
 
 ### 3.10 Contrato (related — la verdad vive en `x_maintenance_location`)
 
-> ✅ **Decisión confirmada:** los campos de contrato viven en `x_maintenance_location` (single source of truth por punto/cliente). El plan los lee como **related store=True** para poder filtrar/indexar y para que el constraint de cascada sea performante.
+> **Decisión confirmada:** los campos de contrato viven en `x_maintenance_location` (single source of truth por punto/cliente). El plan los lee como **related store=True** para poder filtrar/indexar y para que el constraint de cascada sea performante.
 
 **Crear en `x_maintenance_location` (sección 3.bis.6 más abajo):**
 
@@ -220,13 +220,13 @@ Dependencies: `scheduled_date,slack_days`
 | `contract_start_date` | date (related, **store=True**) | `location_id.x_contract_start_date` | indexed para reportes. |
 | `contract_end_date` | date (related, **store=True**) | `location_id.x_contract_end_date` | **límite duro**: la cascada NO genera ocurrencias con `scheduled_date > contract_end_date`. |
 
-> 📌 En Studio 16 los related fields se configuran desde **+ Field → Related Field**. Marcar **Stored = ✓** es crítico: sin store, el related se evalúa en cada acceso y no puede usarse en dominios eficientes ni en constrains.
+> En Studio 16 los related fields se configuran desde **+ Field → Related Field**. Marcar **Stored = Sí** es crítico: sin store, el related se evalúa en cada acceso y no puede usarse en dominios eficientes ni en constrains.
 >
 > **Cambio si se modifica el contrato en location**: el related almacenado se invalida automáticamente — el ORM recomputa al primer acceso o al próximo write. No requiere migración manual.
 >
 > **Comportamiento en cascada (SA-02):** después de calcular `next_date`, si `next_date > contract_end_date` (leído del related), se aborta la generación y se loggea `"Serie finalizada por término de contrato"` en el chatter. La serie muere sin tener que cancelarla manualmente.
 
-> 🔵 **Coexistencia con los campos de contrato de `maintenance.equipment`.** La base **ya tiene** `contract_start_date` / `contract_end_date` ("Fecha Inicio/Fin de Contrato") + `contract_dates_valid` a nivel de **equipo** (verificado en `er_introspection.json`). Ambos niveles conviven y significan cosas distintas — **no se migran ni se deprecan**:
+> **Coexistencia con los campos de contrato de `maintenance.equipment`.** La base **ya tiene** `contract_start_date` / `contract_end_date` ("Fecha Inicio/Fin de Contrato") + `contract_dates_valid` a nivel de **equipo** (verificado en `er_introspection.json`). Ambos niveles conviven y significan cosas distintas — **no se migran ni se deprecan**:
 > - Contrato del **punto** (`x_maintenance_location.x_contract_*`): gobierna la cascada del plan de mantención por punto.
 > - Contrato del **equipo** (`maintenance.equipment.contract_*`): gobierna ciclos propios del instrumento bajo otra frecuencia (p. ej. calibraciones vía `period`/cron nativo), independiente del punto donde esté.
 >
@@ -247,25 +247,25 @@ Dependencies: `scheduled_date,slack_days`
 
 **Camino:** Studio → **+ New Model** → name: `Movimiento de Equipo` → technical: `x_equipment_movement`.
 
-**Features a marcar:** ✅ Chatter · ✅ Company. *Nada más* (es un modelo simple de bitácora).
+**Features a marcar:** Chatter · Company. *Nada más* (es un modelo simple de bitácora).
 
 ### 3.bis.1 Campos
 
 | Campo | Tipo | Required | Notas |
 |---|---|---|---|
-| `name` | char | ✓ | autogenerado por SA-MOV-00: `MOV-{YYYY}-{seq:04d} / {equipment.name}`. Secuencia `x_equipment_movement`. |
-| `equipment_id` | m2o → `maintenance.equipment` | ✓ | indexed. `ondelete='restrict'` (no se borra un equipo con historial). |
+| `name` | char | Sí | autogenerado por SA-MOV-00: `MOV-{YYYY}-{seq:04d} / {equipment.name}`. Secuencia `x_equipment_movement`. |
+| `equipment_id` | m2o → `maintenance.equipment` | Sí | indexed. `ondelete='restrict'` (no se borra un equipo con historial). |
 | `from_location_id` | m2o → `x_maintenance_location` | — | NULL = venía de stock / equipo nuevo. |
 | `to_location_id` | m2o → `x_maintenance_location` | — | NULL = sale a stock / servicio externo / baja. |
-| `reason` | selection | ✓ | `installation` · `calibration` · `repair` · `reassignment` · `return_from_service` · `decommission`. |
-| `date_out` | date | ✓ | default `today`. |
+| `reason` | selection | Sí | `installation` · `calibration` · `repair` · `reassignment` · `return_from_service` · `decommission`. |
+| `date_out` | date | Sí | default `today`. |
 | `date_in` | date | — | fecha de llegada al destino. SA-09 la setea `= date_out`: el cambio de ubicación se registra como **hecho consumado**, no como tránsito abierto. |
 | `replaced_by_id` | m2o → `maintenance.equipment` | — | equipo que ocupó el lugar (anotación manual opcional). |
 | `linked_request_id` | m2o → `maintenance.request` | — | orden de calibración/reparación asociada. |
 | `linked_plan_id` | m2o → `x_maintenance_plan` | — | plan de origen (referencia débil, no FK fuerte). |
-| `state` | selection | ✓ | `completed` · `cancelled`. Default `completed`. **No existe estado `in_transit`**: el movement es una bitácora de hechos consumados. La estadía en Laboratorio (593) o Bodega cliente (594) se lee directamente de `x_studio_location` del equipo — mientras esté ahí, simplemente *no está en ningún punto* y por lo tanto queda fuera de los snapshots de los planes. |
+| `state` | selection | Sí | `completed` · `cancelled`. Default `completed`. **No existe estado `in_transit`**: el movement es una bitácora de hechos consumados. La estadía en Laboratorio (593) o Bodega cliente (594) se lee directamente de `x_studio_location` del equipo — mientras esté ahí, simplemente *no está en ningún punto* y por lo tanto queda fuera de los snapshots de los planes. |
 | `notes` | text | — | libre. |
-| `company_id` | m2o → `res.company` | ✓ | heredado de `equipment_id.company_id` (default compute). |
+| `company_id` | m2o → `res.company` | Sí | heredado de `equipment_id.company_id` (default compute). |
 
 **Snippet default `company_id`** (en el field → Default Value):
 ```python
@@ -336,14 +336,14 @@ for eq in env['maintenance.equipment'].search([('x_studio_location', '!=', False
 | Campo | Tipo | Required | Notas |
 |---|---|---|---|
 | `x_contract_start_date` | date | — | inicio del contrato de servicio con el cliente. |
-| `x_contract_end_date` | date | — | **fin del contrato — corta la generación de planes futuros**. Tracking ✓ (chatter). |
+| `x_contract_end_date` | date | — | **fin del contrato — corta la generación de planes futuros**. Tracking Sí (chatter). |
 | `plan_ids` | one2many → `x_maintenance_plan` (inv `location_id`) | — | inverso — habilita la lista de planes en el form del punto. |
 | `movement_out_ids` | o2m → `x_equipment_movement` (inv `from_location_id`) | — | inverso. |
 | `movement_in_ids` | o2m → `x_equipment_movement` (inv `to_location_id`) | — | inverso. |
 
 **Form view del punto** (sugerencia): tab "Contrato" con `x_contract_start_date`, `x_contract_end_date` + tab "Planes" con `plan_ids` (list embebida) + tab "Historial de equipos" con `movement_out_ids` y `movement_in_ids` unidos en una vista combinada.
 
-> ⚠ Si cambiás `x_contract_end_date` para acortar el contrato y ya existen planes futuros generados más allá de la nueva fecha, **no se cancelan automáticamente**. Considerá una SA-12 manual "Recalcular serie por cambio de contrato" o un constraint que avise.
+> Si cambiás `x_contract_end_date` para acortar el contrato y ya existen planes futuros generados más allá de la nueva fecha, **no se cancelan automáticamente**. Considerá una SA-12 manual "Recalcular serie por cambio de contrato" o un constraint que avise.
 
 ---
 
@@ -353,10 +353,10 @@ for eq in env['maintenance.equipment'].search([('x_studio_location', '!=', False
 
 | Campo | Tipo | Propiedades |
 |---|---|---|
-| `x_managed_by_plan` | boolean (computed, stored) | Compute: ver snippet abajo. Dependencies: `x_studio_location,x_studio_location.plan_ids.state,x_studio_location.plan_ids.active`. **Stored = ✓** (necesario para filtros). Readonly = ✓. |
-| `x_studio_period_backup` | integer | guarda el `period` original antes de que SA-01 / SA-03 / SA-09 lo pongan en 0. Readonly = ✓. |
+| `x_managed_by_plan` | boolean (computed, stored) | Compute: ver snippet abajo. Dependencies: `x_studio_location,x_studio_location.plan_ids.state,x_studio_location.plan_ids.active`. **Stored = Sí** (necesario para filtros). Readonly = Sí. |
+| `x_studio_period_backup` | integer | guarda el `period` original antes de que SA-01 / SA-03 / SA-09 lo pongan en 0. Readonly = Sí. |
 
-> ℹ **No hay campo "en servicio externo".** Un equipo está en servicio externo cuando su `x_studio_location` es Laboratorio (593) o Bodega cliente (594) — es un dato derivable por dominio (`[('x_studio_location','in',(593,594))]`), no necesita campo propio. Al no estar en ningún punto, queda automáticamente fuera de los snapshots de los planes (SA-01/SA-03 buscan por `x_studio_location = punto`).
+> **No hay campo "en servicio externo".** Un equipo está en servicio externo cuando su `x_studio_location` es Laboratorio (593) o Bodega cliente (594) — es un dato derivable por dominio (`[('x_studio_location','in',(593,594))]`), no necesita campo propio. Al no estar en ningún punto, queda automáticamente fuera de los snapshots de los planes (SA-01/SA-03 buscan por `x_studio_location = punto`).
 
 **Snippet compute `x_managed_by_plan`:**
 ```python
@@ -370,12 +370,12 @@ for record in self:
     record['x_managed_by_plan'] = bool(plans)
 ```
 
-> ⚠ **`x_managed_by_plan` es informativo, no disparador.** Al ser computed **stored**, su recomputación se escribe vía `_write` durante el flush y **no pasa por `write()`** — que es lo que `base_automation` parchea en 16. Una AA que lo "escuche" jamás dispararía cuando el plan cambia de estado. Sirve para el badge y para filtros; la gestión de `period` vive en los eventos de negocio reales: SA-01 y SA-03 (neutralizan al programar/sincronizar), SA-02 (restaura al morir la serie por contrato), SA-04 (restaura al cancelar) y SA-09 (gestiona al reubicar el equipo).
+> **`x_managed_by_plan` es informativo, no disparador.** Al ser computed **stored**, su recomputación se escribe vía `_write` durante el flush y **no pasa por `write()`** — que es lo que `base_automation` parchea en 16. Una AA que lo "escuche" jamás dispararía cuando el plan cambia de estado. Sirve para el badge y para filtros; la gestión de `period` vive en los eventos de negocio reales: SA-01 y SA-03 (neutralizan al programar/sincronizar), SA-02 (restaura al morir la serie por contrato), SA-04 (restaura al cancelar) y SA-09 (gestiona al reubicar el equipo).
 
-> 💡 `plan_ids` es el **inverso** que tenés que crear sobre `x_maintenance_location`: campo one2many → `x_maintenance_plan`, inverse `location_id`. Hacelo ahora — *Studio → x_maintenance_location → + Field*.
+> `plan_ids` es el **inverso** que tenés que crear sobre `x_maintenance_location`: campo one2many → `x_maintenance_plan`, inverse `location_id`. Hacelo ahora — *Studio → x_maintenance_location → + Field*.
 
 **UX:** agregá en la cabecera del Form view de equipment:
-- Badge "⚙ Gestionado por plan PMP-XXX" si `x_managed_by_plan = True`.
+- Badge "Gestionado por plan PMP-XXX" si `x_managed_by_plan = True`.
 - El estado "en servicio externo" **no necesita badge propio**: el propio campo `x_studio_location` mostrando "Laboratorio | Metrocal" o "Bodega cliente" ya lo comunica. El pipeline existente (`processor.py`) gestiona los flujos de calibración/reemplazo desde Connecteam moviendo ese campo (ver Paso 12), y SA-09 deja la bitácora.
 
 Adicionalmente, agregá en el form de equipment un **tab "Historial de movimientos"** con el campo `movement_ids` como lista embebida (columnas: `date_out`, `from_location_id`, `to_location_id`, `reason`, `state`). Esto da timeline inmediata por equipo.
@@ -386,7 +386,7 @@ Adicionalmente, agregá en el form de equipment un **tab "Historial de movimient
 
 | Campo | Tipo | Propiedades |
 |---|---|---|
-| `plan_id` | many2one → `x_maintenance_plan` | nombre real: **`x_studio_plan_id`** (transponer en todos los snippets/dominios de esta guía). `ondelete='set null'` (la baja del padre no borra trazabilidad). Indexed = ✓. Tracking = ✓ (Chatter). |
+| `plan_id` | many2one → `x_maintenance_plan` | nombre real: **`x_studio_plan_id`** (transponer en todos los snippets/dominios de esta guía). `ondelete='set null'` (la baja del padre no borra trazabilidad). Indexed = Sí. Tracking = Sí (Chatter). |
 
 Adicionalmente, abrí el **Form view** de `maintenance.request` y agregá `plan_id` arriba del bloque de programación, en modo readonly cuando el campo viene autogenerado:
 ```xml
@@ -425,7 +425,7 @@ Adicionalmente, abrí el **Form view** de `maintenance.request` y agregá `plan_
 - **Default group by:** `location_id` → una fila por punto, con la serie completa del contrato como secuencia de barras (pre-generada con el botón "Proyectar serie" / SA-07).
 - **Color:** `state` (draft = proyectada, scheduled/in_progress = comprometida, done = cerrada, cancelled = recortada por contrato).
 - Escala por defecto: mes; rango año para ver el contrato completo.
-- ⚠ Las barras **no son arrastrables**: `gantt_start/gantt_stop` son computed stored sin inverse — un drag fallaría. Es deliberado: la fecha se cambia editando `scheduled_date` en el form (AA-03 → SA-06 propaga), o la mueve la cascada. Documentáselo a los usuarios.
+- Las barras **no son arrastrables**: `gantt_start/gantt_stop` son computed stored sin inverse — un drag fallaría. Es deliberado: la fecha se cambia editando `scheduled_date` en el form (AA-03 → SA-06 propaga), o la mueve la cascada. Documentáselo a los usuarios.
 
 ---
 
@@ -433,7 +433,7 @@ Adicionalmente, abrí el **Form view** de `maintenance.request` y agregá `plan_
 
 En Odoo 16 **no existe un trigger "Before save"**: todas las automated actions disparan *después* de guardar. Para validaciones que **bloqueen el guardado**, cada restricción se implementa como una **Server Action "Execute Python Code"** (modelo `x_maintenance_plan`) que hace `raise UserError(...)` — el raise revierte la transacción completa —, disparada por una **Automated Action con trigger "On Creation & Update"** (ver AA-07…AA-12 en el Paso 9). Crealas como `SA-C01`…`SA-C06` junto al resto de las Server Actions del Paso 8.
 
-> ⚠ **Sandbox 16:** `ValidationError` y `_` (traducción) **no** están en el contexto de evaluación. Usá `raise UserError("...")` con strings planos. `UserError`, `Warning`, `Command`, `datetime`, `dateutil` y `float_compare` **sí** están disponibles. En una Server Action el recordset disparado es `records` (y `model` para `search`).
+> **Sandbox 16:** `ValidationError` y `_` (traducción) **no** están en el contexto de evaluación. Usá `raise UserError("...")` con strings planos. `UserError`, `Warning`, `Command`, `datetime`, `dateutil` y `float_compare` **sí** están disponibles. En una Server Action el recordset disparado es `records` (y `model` para `search`).
 
 ### C-01 (SA-C01) — frequency_value > 0
 ```python
@@ -480,7 +480,7 @@ if not env.context.get('x_skip_c04'):
         window_end   = record.scheduled_date + datetime.timedelta(days=record.slack_days)
         overlap = model.search([
             ('id', '!=', record.id),
-            ('series_id', '!=', record.series_id),   # ⬅ excluir la propia serie
+            ('series_id', '!=', record.series_id),   # excluir la propia serie
             ('location_id', '=', record.location_id.id),
             ('state', 'in', ACTIVE),
             ('scheduled_date', '<=', window_end),
@@ -534,7 +534,7 @@ for record in records:
 
 **Camino:** *Settings → Technical → Server Actions → New*. Para cada SA: **Model = x_maintenance_plan** salvo cuando se indique otro modelo (SA-09 es sobre `maintenance.equipment`; SA-MOV-00 sobre `x_equipment_movement`); **Type = Execute Python Code**.
 
-> 📚 Ref: [Server Actions reference — Odoo 16](https://www.odoo.com/documentation/16.0/developer/reference/backend/actions.html)
+> Ref: [Server Actions reference — Odoo 16](https://www.odoo.com/documentation/16.0/developer/reference/backend/actions.html)
 >
 > **Variables disponibles en el sandbox 16** (verificado en `ir_actions.py` rama 16.0, [doc](https://www.odoo.com/documentation/16.0/applications/studio/automated_actions.html)):
 > `env, model, record, records, uid, user, time, datetime, dateutil, timezone, float_compare, b64encode, b64decode, log(), Warning, UserError, Command, action`
@@ -563,7 +563,7 @@ for rec in records:
         rec.write(vals)
 ```
 
-> 💡 Cargá **dos** secuencias en *Settings → Technical → Sequences → New*: (1) code `x_maintenance_plan`, prefix `PMP-`, padding 4 (numeración visible); (2) code `x_maintenance_plan_series`, sin prefijo, padding 6 (identificador de serie — reemplaza al `uuid` que el sandbox de 16 no permite importar).
+> Cargá **dos** secuencias en *Settings → Technical → Sequences → New*: (1) code `x_maintenance_plan`, prefix `PMP-`, padding 4 (numeración visible); (2) code `x_maintenance_plan_series`, sin prefijo, padding 6 (identificador de serie — reemplaza al `uuid` que el sandbox de 16 no permite importar).
 
 ---
 
@@ -762,7 +762,7 @@ for plan in records:
         ) % len(pendientes))
 ```
 
-> ⚠ La cascada **no** se re-ejecuta sobre planes futuros: cada ocurrencia dispara su propia cascada al cerrar (AA-02). El paso 4-bis solo *re-fecha* la cola pre-generada (writes planos, sin recursión); el `guard < 60` es un tope de iteración alineado con el `MAX_OCC` de SA-07, no un guard de recursión.
+> La cascada **no** se re-ejecuta sobre planes futuros: cada ocurrencia dispara su propia cascada al cerrar (AA-02). El paso 4-bis solo *re-fecha* la cola pre-generada (writes planos, sin recursión); el `guard < 60` es un tope de iteración alineado con el `MAX_OCC` de SA-07, no un guard de recursión.
 
 ---
 
@@ -866,13 +866,13 @@ for plan in records:
 
 ---
 
-> ❌ **SA-05 / AA-04 eliminados del diseño.** La idea original era una AA sobre `maintenance.equipment` que escuchara cambios de `x_managed_by_plan` — pero ese campo es computed **stored** y su recomputación no pasa por `write()` en 16, así que la AA solo disparaba en writes casuales del equipo: comportamiento errático e impredecible. La gestión de `period` queda repartida en los eventos de negocio reales, todos deterministas: **SA-01** y **SA-03** neutralizan (al programar / al sincronizar), **SA-02** restaura (serie muerta por contrato), **SA-04** restaura (cancelación), **SA-09** gestiona (reubicación del equipo).
+> **SA-05 / AA-04 eliminados del diseño.** La idea original era una AA sobre `maintenance.equipment` que escuchara cambios de `x_managed_by_plan` — pero ese campo es computed **stored** y su recomputación no pasa por `write()` en 16, así que la AA solo disparaba en writes casuales del equipo: comportamiento errático e impredecible. La gestión de `period` queda repartida en los eventos de negocio reales, todos deterministas: **SA-01** y **SA-03** neutralizan (al programar / al sincronizar), **SA-02** restaura (serie muerta por contrato), **SA-04** restaura (cancelación), **SA-09** gestiona (reubicación del equipo).
 
 ---
 
 ### SA-06 — Propagación de `scheduled_date` a las hijas (autofiltrada)
 
-**Trigger:** AA-03 (On Update sobre el plan). ⚠ En 16 dispara ante **cualquier** write de un plan en draft/scheduled (no hay watched fields), por eso el guard: solo actúa sobre hijas cuya fecha difiere de la del plan. Esto también la convierte en el único punto de propagación — la cascada (SA-02) escribe `scheduled_date` en n+1 y deja que esta SA haga el resto.
+**Trigger:** AA-03 (On Update sobre el plan). En 16 dispara ante **cualquier** write de un plan en draft/scheduled (no hay watched fields), por eso el guard: solo actúa sobre hijas cuya fecha difiere de la del plan. Esto también la convierte en el único punto de propagación — la cascada (SA-02) escribe `scheduled_date` en n+1 y deja que esta SA haga el resto.
 
 ```python
 for plan in records:
@@ -972,9 +972,9 @@ for plan in records:
          horizon or "12 ocurrencias por defecto"))
 ```
 
-> ✅ **Idempotente:** re-ejecutar el botón no duplica nada — camina hasta el final de la cadena existente y solo completa lo que falte hasta el horizonte. Si la serie ya llega a `contract_end_date`, genera 0 y lo dice en el chatter.
+> **Idempotente:** re-ejecutar el botón no duplica nada — camina hasta el final de la cadena existente y solo completa lo que falte hasta el horizonte. Si la serie ya llega a `contract_end_date`, genera 0 y lo dice en el chatter.
 >
-> 📅 **Las fechas proyectadas son teóricas** (cadencia ideal desde la última ocurrencia). Cuando la realidad se imponga — un cierre fuera de slack — SA-02 re-fecha la cola completa en bloque, y las ocurrencias que el deslizamiento empuje más allá del contrato se cancelan solas (ver paso 4-bis de SA-02).
+> **Las fechas proyectadas son teóricas** (cadencia ideal desde la última ocurrencia). Cuando la realidad se imponga — un cierre fuera de slack — SA-02 re-fecha la cola completa en bloque, y las ocurrencias que el deslizamiento empuje más allá del contrato se cancelan solas (ver paso 4-bis de SA-02).
 
 ---
 
@@ -996,7 +996,7 @@ for mov in records:
         mov.write(vals)
 ```
 
-> 💡 Cargá la secuencia: *Settings → Technical → Sequences → New*, code `x_equipment_movement`, prefix `MOV-`, padding 4.
+> Cargá la secuencia: *Settings → Technical → Sequences → New*, code `x_equipment_movement`, prefix `MOV-`, padding 4.
 
 ---
 
@@ -1073,7 +1073,7 @@ for eq in records:
             ) % eq.period)
 ```
 
-> ⚠ Si en el futuro agregás una SA propia que también escriba `x_studio_location`, usá `eq.with_context(skip_auto_movement=True).write({'x_studio_location': …})` para no disparar SA-09 dos veces sobre el mismo cambio.
+> Si en el futuro agregás una SA propia que también escriba `x_studio_location`, usá `eq.with_context(skip_auto_movement=True).write({'x_studio_location': …})` para no disparar SA-09 dos veces sobre el mismo cambio.
 
 ---
 
@@ -1081,9 +1081,9 @@ for eq in records:
 
 **Camino:** *Studio → Automations → New* (o *Settings → Technical → Automation → Automated Actions*).
 
-> 📚 Ref: [Automated actions — Odoo 16](https://www.odoo.com/documentation/16.0/applications/studio/automated_actions.html). Triggers en 16: `On Creation`, `On Update`, `On Creation & Update`, `On Deletion`, `Based on Form Modification`, `Based on Timed Condition`. **No existe trigger de webhook en 16.**
+> Ref: [Automated actions — Odoo 16](https://www.odoo.com/documentation/16.0/applications/studio/automated_actions.html). Triggers en 16: `On Creation`, `On Update`, `On Creation & Update`, `On Deletion`, `Based on Form Modification`, `Based on Timed Condition`. **No existe trigger de webhook en 16.**
 >
-> ⚠ **Diferencia clave con 17:** en 16 el trigger `On Update` **no tiene "Watched field"** — dispara ante *cualquier* write del registro. Se acota declarativamente con **"Before Update Domain"** (`filter_pre_domain`, evaluado sobre los valores **previos**) + **"Apply on"** (`filter_domain`, valores **nuevos**), ambos presentes en 16. Cuando no alcanza, la propia Server Action filtra (ej. SA-09 compara el último movement).
+> **Diferencia clave con 17:** en 16 el trigger `On Update` **no tiene "Watched field"** — dispara ante *cualquier* write del registro. Se acota declarativamente con **"Before Update Domain"** (`filter_pre_domain`, evaluado sobre los valores **previos**) + **"Apply on"** (`filter_domain`, valores **nuevos**), ambos presentes en 16. Cuando no alcanza, la propia Server Action filtra (ej. SA-09 compara el último movement).
 
 | ID | Modelo | Trigger (16) | Before Update Domain / Apply on | Acción |
 |---|---|---|---|---|
@@ -1102,14 +1102,14 @@ for eq in records:
 | AA-11 | `x_maintenance_plan` | On Update | Apply on: `[('state','=','done')]` | Execute → SA-C05 (`done` exige hijas resueltas) |
 | AA-12 | `x_maintenance_plan` | On Update | Apply on: `[('active','=',False)]` | Execute → SA-C06 (no archivar plan vivo) |
 
-> ⚙ **Orden de ejecución:** cuando varias AAs disparan sobre el mismo write, corren por su campo `sequence`. Asigná **sequence bajo a las validaciones** (AA-07…AA-12, p. ej. 1–6) y más alto a las de negocio (AA-01/AA-02/AA-03, p. ej. 10+): si una validación va a revertir todo, mejor que reviente *antes* de que la cascada haya creado registros — el resultado es el mismo (rollback), pero el debugging es mucho más claro.
+> **Orden de ejecución:** cuando varias AAs disparan sobre el mismo write, corren por su campo `sequence`. Asigná **sequence bajo a las validaciones** (AA-07…AA-12, p. ej. 1–6) y más alto a las de negocio (AA-01/AA-02/AA-03, p. ej. 10+): si una validación va a revertir todo, mejor que reviente *antes* de que la cascada haya creado registros — el resultado es el mismo (rollback), pero el debugging es mucho más claro.
 
-> 💡 La diferencia entre **Before Update Domain** y **Apply on**:
+> La diferencia entre **Before Update Domain** y **Apply on**:
 > - *Before Update Domain*: condición evaluada con los valores **previos** al save (solo aplica a `On Update`).
 > - *Apply on*: condición con los valores **nuevos** (aplica a `On Update` y `On Creation & Update`).
 > Combinarlas evita disparos espurios (ej: para AA-01 solo querés disparar cuando *entra* a `scheduled`, no cuando ya estaba).
 >
-> 🛡 **AA-07…AA-12 (validaciones).** En 16 reemplazan a los constraints "Before save" inexistentes: ejecutan SA-C01…SA-C06 con `raise UserError(...)`. El raise revierte la transacción, bloqueando el guardado igual que un `@api.constrains`.
+> **AA-07…AA-12 (validaciones).** En 16 reemplazan a los constraints "Before save" inexistentes: ejecutan SA-C01…SA-C06 con `raise UserError(...)`. El raise revierte la transacción, bloqueando el guardado igual que un `@api.constrains`.
 
 ---
 
@@ -1130,20 +1130,20 @@ for eq in records:
 
 | Grupo | read | write | create | unlink |
 |---|---|---|---|---|
-| Plan Manager | ✓ | ✓ | ✓ | ✓ |
-| Plan User | ✓ | ✗ | ✗ | ✗ |
+| Plan Manager | Yes | Yes | Yes | Yes |
+| Plan User | Yes | No | No | No |
 
 Para `x_equipment_movement`:
 
 | Grupo | read | write | create | unlink |
 |---|---|---|---|---|
-| Plan Manager | ✓ | ✓ | ✓ | ✗ (auditoría: no borrar bitácora) |
-| Plan User | ✓ | ✗ | ✓ | ✗ |
-| **Maintenance / User** | ✓ | ✗ | **✓** | ✗ |
+| Plan Manager | Yes | Yes | Yes | No (auditoría: no borrar bitácora) |
+| Plan User | Yes | No | Yes | No |
+| **Maintenance / User** | Yes | No | **Yes** | No |
 
-> ⚠ **Por qué Maintenance/User necesita `create` sobre movements:** las Server Actions disparadas por Automated Actions corren **como el usuario que hizo el write**. AA-06 → SA-09 crea un `x_equipment_movement` cada vez que *cualquiera* cambia `x_studio_location` de un equipo — incluido el write XML-RPC de `pipeline_registro_II`. Sin permiso de create, la AA lanza `AccessError` y **revierte el write del pipeline completo**. Verificá que el usuario API que usa `pipeline_registro_II` esté en *Maintenance / User* (o dale el ACL directo). El `write`/`unlink` siguen cerrados: la bitácora es append-only para todos salvo Plan Manager.
+> **Por qué Maintenance/User necesita `create` sobre movements:** las Server Actions disparadas por Automated Actions corren **como el usuario que hizo el write**. AA-06 → SA-09 crea un `x_equipment_movement` cada vez que *cualquiera* cambia `x_studio_location` de un equipo — incluido el write XML-RPC de `pipeline_registro_II`. Sin permiso de create, la AA lanza `AccessError` y **revierte el write del pipeline completo**. Verificá que el usuario API que usa `pipeline_registro_II` esté en *Maintenance / User* (o dale el ACL directo). El `write`/`unlink` siguen cerrados: la bitácora es append-only para todos salvo Plan Manager.
 >
-> 📌 Nota de alcance: las ACLs no aplican al superusuario (`admin`/OdooBot bypasea `ir.model.access`) — la prohibición de unlink protege contra usuarios normales, no contra el admin.
+> Nota de alcance: las ACLs no aplican al superusuario (`admin`/OdooBot bypasea `ir.model.access`) — la prohibición de unlink protege contra usuarios normales, no contra el admin.
 
 Para `maintenance.equipment`: no tocar (heredan de Maintenance). Idem `maintenance.request`.
 
@@ -1219,7 +1219,7 @@ Probar en este orden, con un punto que tenga 3 equipos:
 
 ## 12. Paso 12 — Integración con el pipeline existente (NO crear script puente)
 
-> ✅ **Decisión confirmada:** Connecteam → Odoo **ya está implementado en producción** en `pipeline_registro_II/`. No se construye un script puente nuevo. La trazabilidad de movimientos se cierra desde Odoo con AA-06 + SA-09 (definidos en Pasos 8 y 9).
+> **Decisión confirmada:** Connecteam → Odoo **ya está implementado en producción** en `pipeline_registro_II/`. No se construye un script puente nuevo. La trazabilidad de movimientos se cierra desde Odoo con AA-06 + SA-09 (definidos en Pasos 8 y 9).
 
 ### 12.1 Por qué no hay script puente
 
@@ -1363,4 +1363,4 @@ calendar = plan.resource_calendar_id or plan.company_id.resource_calendar_id
 
 ---
 
-**Fin del plan.** Cualquier ajuste antes de empezar a tipear en la instancia: revisalo contra `propuesta_plan_punto.drawio` y confirmá los 12 puntos del bloque "Notas de diseño" del diagrama (4 quedan como 🟡 pendientes).
+**Fin del plan.** Cualquier ajuste antes de empezar a tipear en la instancia: revisalo contra `propuesta_plan_punto.drawio` y confirmá los 12 puntos del bloque "Notas de diseño" del diagrama (4 quedan como pendientes).
