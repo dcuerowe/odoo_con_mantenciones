@@ -40,6 +40,10 @@ def _buscar_equipo_por_serial(odoo_client, serial):
       Si no calza y el form es del tipo `WE+dígitos`, fallback que tolera mismatch
       de ceros entre `WE` y la cola numérica (mismo "WE-número lógico"). Solo
       devuelve el equipo si la cola identifica unívocamente uno.
+    El técnico puede tipear el prefijo WE en cualquier combinación de
+    mayúsculas/minúsculas (WE/We/we/wE); en Odoo siempre está como "WE", así que
+    el prefijo del input se normaliza a "WE" antes de cualquier búsqueda.
+
     - Si `serial` ES puramente numérico → búsqueda por substring sobre el universo
       restringido a serials que son `.isdigit()` o contienen "WE" (mayúsculas), y
       se aplica el árbol de decisión (ver general_doc/processor_documentation.md):
@@ -56,6 +60,11 @@ def _buscar_equipo_por_serial(odoo_client, serial):
     """
     if not serial:
         return []
+
+    # El técnico puede tipear el prefijo WE en cualquier combinación de
+    # mayúsculas/minúsculas (WE/We/we/wE); en Odoo siempre está como "WE".
+    if serial[:2].upper() == 'WE':
+        serial = 'WE' + serial[2:]
 
     if not serial.isdigit():
         # Alfanumérico: búsqueda exacta de siempre.
