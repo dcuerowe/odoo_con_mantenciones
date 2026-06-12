@@ -274,7 +274,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
         created_inbox,
         f"<b>Caso a ser revisado:</b> {id_tipo} | {id_etiqueta}",
         message_type='notification',
-        partner_ids=[5205, 172],
+        partner_ids=[5205, 172, 5242],
         attachment_ids=[informe] if informe else [])
     
     if id_etiqueta == "Creación en espera":
