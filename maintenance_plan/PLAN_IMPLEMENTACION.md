@@ -124,6 +124,8 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 
 ### 3.5 Responsables (se heredan a hijas)
 
+* [X] 
+
 | Campo                   | Tipo                            | Notas                                                     |
 | ----------------------- | ------------------------------- | --------------------------------------------------------- |
 | `user_id`             | many2one →`res.users`        | nativo (feature User assignment) — responsable del plan. |
@@ -133,11 +135,15 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 
 ### 3.6 Calendario laboral
 
+* [X] 
+
 | Campo                    | Tipo                             | Notas                                                                         |
 | ------------------------ | -------------------------------- | ----------------------------------------------------------------------------- |
 | `resource_calendar_id` | many2one →`resource.calendar` | default:`company_id.resource_calendar_id` (vía related compute o default). |
 
 ### 3.7 Snapshot de equipos
+
+* [X] 
 
 | Campo                       | Tipo                                  | Notas                                                                        |
 | --------------------------- | ------------------------------------- | ---------------------------------------------------------------------------- |
@@ -147,6 +153,8 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 > Studio crea la tabla M2M con nombre automático tipo `x_maintenance_plan_maintenance_equipment_rel`. Anotalo: lo vas a usar en queries de auditoría.
 
 ### 3.8 Calculados (read-only)
+
+* [X] 
 
 | Campo                       | Tipo                                 | Dependencias                                    | Notas                                                                                       |
 | --------------------------- | ------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -225,12 +233,16 @@ Dependencies: `scheduled_date,slack_days`
 
 **Crear en `x_maintenance_location` (sección 3.bis.6 más abajo):**
 
+* [X] 
+
 | Campo en location         | Tipo | Notas                                                             |
 | ------------------------- | ---- | ----------------------------------------------------------------- |
 | `x_contract_start_date` | date | informativo (inicio de servicio).                                 |
 | `x_contract_end_date`   | date | **límite duro**: corta la cascada de los planes del punto. |
 
 **Crear en `x_maintenance_plan` (esta sección):**
+
+* [X] 
 
 | Campo                   | Tipo                                | Related                               | Notas                                                                                                |
 | ----------------------- | ----------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
@@ -269,6 +281,8 @@ Dependencies: `scheduled_date,slack_days`
 
 ### 3.bis.1 Campos
 
+* [X] 
+
 | Campo                 | Tipo                             | Required | Notas                                                                                                                                                                                                                                                                                                                                                                                             |
 | --------------------- | -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`              | char                             | Sí      | autogenerado por SA-MOV-00:`MOV-{YYYY}-{seq:04d} / {equipment.name}`. Secuencia `x_equipment_movement`.                                                                                                                                                                                                                                                                                       |
@@ -292,6 +306,8 @@ equipment_id and equipment_id.company_id or env.company
 ```
 
 ### 3.bis.2 Inversos a crear en otros modelos
+
+* [X] 
 
 | Modelo                     | Campo                | Tipo                                                              |
 | -------------------------- | -------------------- | ----------------------------------------------------------------- |
@@ -353,6 +369,8 @@ for eq in env['maintenance.equipment'].search([('x_studio_location', '!=', False
 
 **Camino:** Studio → seleccioná cualquier punto → ícono Studio → **Form view** → **+ Field**.
 
+* [X] 
+
 | Campo                     | Tipo                                                      | Required | Notas                                                                                         |
 | ------------------------- | --------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------- |
 | `x_contract_start_date` | date                                                      | —       | inicio del contrato de servicio con el cliente.                                               |
@@ -367,7 +385,7 @@ for eq in env['maintenance.equipment'].search([('x_studio_location', '!=', False
 
 ---
 
-## 4. Paso 4 — Cambios en `maintenance.equipment`
+## 4. ~~Paso 4 — Cambios en `maintenance.equipment`~~
 
 **Camino:** Studio → seleccioná un equipo → ícono Studio → **Form view** → **+ Field**.
 
@@ -405,6 +423,8 @@ Adicionalmente, agregá en el form de equipment un **tab "Historial de movimient
 ---
 
 ## 5. Paso 5 — Cambios en `maintenance.request`
+
+* [X] 
 
 | Campo       | Tipo                              | Propiedades                                                                                                                                                                                                       |
 | ----------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -583,20 +603,7 @@ for record in records:
 **Trigger:** se invoca desde la AA-00 (On creation).
 
 ```python
-for rec in records:
-    vals = {}
-    if not rec.series_id:
-        # 'uuid' no está permitido en el sandbox de 16: usamos una secuencia dedicada.
-        vals['series_id'] = env['ir.sequence'].next_by_code('x_maintenance_plan_series') or str(rec.id)
-        vals['seq_in_series'] = 1
-    if not rec.original_scheduled_date and rec.scheduled_date:
-        vals['original_scheduled_date'] = rec.scheduled_date
-    if not rec.name or rec.name in (False, 'New', '/'):
-        seq = env['ir.sequence'].next_by_code('x_maintenance_plan') or '0001'
-        loc = rec.location_id.x_name or '?'
-        vals['name'] = f"PMP-{rec.scheduled_date.year if rec.scheduled_date else '????'}-{seq} / {loc}"
-    if vals:
-        rec.write(vals)
+
 ```
 
 > Cargá **dos** secuencias en *Settings → Technical → Sequences → New*: (1) code `x_maintenance_plan`, prefix `PMP-`, padding 4 (numeración visible); (2) code `x_maintenance_plan_series`, sin prefijo, padding 6 (identificador de serie — reemplaza al `uuid` que el sandbox de 16 no permite importar).
@@ -635,11 +642,12 @@ for plan in records:
             'name': f"{plan.name} - {equipo.name}",
             'equipment_id': equipo.id,
             'plan_id': plan.id,
+            'stage_id': '1'
             'schedule_date': sched_dt,
             'maintenance_type': plan.maintenance_type or 'preventive',
             'user_id': (plan.technician_user_id or plan.user_id).id or False,
             'maintenance_team_id': plan.maintenance_team_id.id or False,
-            'company_id': plan.company_id.id,
+            'x_studio_tipo_de_trabajo': 'Mantención Preventiva',
         })
 
     # 3) Neutralizar el cron nativo: respaldar y poner period=0 en los equipos
