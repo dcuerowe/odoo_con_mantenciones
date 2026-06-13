@@ -595,6 +595,8 @@ for record in records:
 > **Variables disponibles en el sandbox 16** (verificado en `ir_actions.py` rama 16.0, [doc](https://www.odoo.com/documentation/16.0/applications/studio/automated_actions.html)):
 > `env, model, record, records, uid, user, time, datetime, dateutil, timezone, float_compare, b64encode, b64decode, log(), Warning, UserError, Command, action`
 > **NO disponibles:** `_` (traducción), `ValidationError` ni `_logger`. Usá strings planos, `raise UserError(...)` y `log(...)`. **No uses `import`** (safe_eval lo bloquea salvo un whitelist mínimo): `datetime`, `dateutil`, `time` ya vienen como variables.
+>
+> **`STORE_ATTR` prohibido (igual que en los computes):** el sandbox bloquea la asignación directa de atributos `registro.campo = valor` (lanza `forbidden opcode(s) ... STORE_ATTR`). Para escribir un campo usá **`registro.write({'campo': valor})`** (escribe varios de una) o la forma subíndice `registro['campo'] = valor` (usa `STORE_SUBSCR`, permitido). Esto aplica a TODAS las SA: ya está reflejado en SA-01, SA-02, SA-03 y SA-07.
 
 ---
 
@@ -626,8 +628,11 @@ for plan in records:
             ('active', '=', True),
             ('company_id', 'in', (False, plan.company_id.id)),
         ])
-        plan.equipment_snapshot_ids = [Command.set(equipos.ids)]
-        plan.last_sync_with_location = datetime.datetime.now()
+        # .write() en vez de asignación directa: el sandbox prohíbe STORE_ATTR
+        plan.write({
+            'equipment_snapshot_ids': [Command.set(equipos.ids)],
+            'last_sync_with_location': datetime.datetime.now(),
+        })
 
     # schedule_date de la hija es DATETIME: anclar a las 12:00 UTC.
     # Medianoche UTC se mostraría como el día ANTERIOR a las 20:00/21:00
@@ -695,7 +700,7 @@ def shift_to_workday(date, calendar):
 
 for plan in records:
     if not plan.close_date:
-        plan.close_date = datetime.date.today()
+        plan.write({'close_date': datetime.date.today()})   # .write(): el sandbox prohíbe STORE_ATTR
 
     # 1) Calcular próxima fecha base
     delta_days = (plan.close_date - plan.scheduled_date).days
@@ -780,7 +785,7 @@ for plan in records:
                 'force_close_reason': False,
                 # 'contract_start_date' y 'contract_end_date' viajan tal cual via copy()
             })
-            plan.next_plan_id = new_plan.id
+            plan.write({'next_plan_id': new_plan.id})   # .write(): el sandbox prohíbe STORE_ATTR
 
     # 6) Carryover si cerró parcial
     if plan.state == 'partially_done' and plan.next_plan_id:
@@ -829,8 +834,11 @@ for plan in records:
     faltantes = equipos_punto - en_snapshot
     sobrantes = en_snapshot - equipos_punto
 
-    plan.equipment_snapshot_ids = [Command.set(equipos_punto.ids)]
-    plan.last_sync_with_location = datetime.datetime.now()
+    # .write() en vez de asignación directa: el sandbox prohíbe STORE_ATTR
+    plan.write({
+        'equipment_snapshot_ids': [Command.set(equipos_punto.ids)],
+        'last_sync_with_location': datetime.datetime.now(),
+    })
 
     # Crear hijas para los faltantes si el plan ya está scheduled.
     # Misma receta que SA-01: datetime anclado 12:00 UTC + herencia de
@@ -1006,7 +1014,7 @@ for plan in records:
             'equipment_snapshot_ids': [Command.clear()],
             'force_close_reason': False,
         })
-        current.next_plan_id = new_plan.id
+        current.write({'next_plan_id': new_plan.id})   # .write(): el sandbox prohíbe STORE_ATTR
         current = new_plan
         creadas += 1
 
