@@ -391,8 +391,13 @@ for eq in env['maintenance.equipment'].search([('x_studio_location', '!=', False
 
 | Campo                      | Tipo                       | Propiedades                                                                                                                                                                                         |
 | -------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `x_managed_by_plan`      | boolean (computed, stored) | Compute: ver snippet abajo. Dependencies:`x_studio_location,x_studio_location.plan_ids.state,x_studio_location.plan_ids.active`. **Stored = Sí** (necesario para filtros). Readonly = Sí. |
-| `x_studio_period_backup` | integer                    | guarda el `period` original antes de que SA-01 / SA-03 / SA-09 lo pongan en 0. Readonly = Sí.                                                                                                    |
+| `x_managed_by_plan`      | boolean (computed, stored) | Compute: ver snippet abajo. Dependencies:`x_studio_location,x_studio_location.plan_ids.state,x_studio_location.plan_ids.active`. **Stored = Sí** (necesario para filtros). Readonly = Sí. **Solo informativo** (badge/filtros). |
+
+> **Dos ciclos de mantención coexisten sobre el equipo (decisión confirmada).** El `period` nativo **NO se toca**. El cron nativo de Maintenance sigue generando las hijas **propias del equipo** (p. ej. calibración del instrumento) con `plan_id = False`; el plan del punto genera sus hijas con `plan_id` seteado. Son **dos trabajos distintos** que conviven sin interferir:
+>
+> - `progress`, la cascada y C-05 operan sobre `request_ids` (inverso de `plan_id`), así que **ignoran automáticamente** las hijas nativas.
+> - Para que no parezcan duplicados en kanban/lista, las hijas nativas se etiquetan vía **AA-13 → SA-10** (Pasos 8 y 9): si `plan_id` es False y `maintenance_type='preventive'`, se estampa `x_studio_tipo_de_trabajo = 'Mantención del Equipo'`.
+> - Por eso se **eliminó** el campo `x_studio_period_backup` y toda la lógica de respaldo/restauración de `period`: ya no hay neutralización del cron nativo en ninguna SA.
 
 > **No hay campo "en servicio externo".** Un equipo está en servicio externo cuando su `x_studio_location` es Laboratorio (593) o Bodega cliente (594) — es un dato derivable por dominio (`[('x_studio_location','in',(593,594))]`), no necesita campo propio. Al no estar en ningún punto, queda automáticamente fuera de los snapshots de los planes (SA-01/SA-03 buscan por `x_studio_location = punto`).
 
@@ -409,7 +414,7 @@ for record in self:
     record['x_managed_by_plan'] = bool(plans)
 ```
 
-> **`x_managed_by_plan` es informativo, no disparador.** Al ser computed **stored**, su recomputación se escribe vía `_write` durante el flush y **no pasa por `write()`** — que es lo que `base_automation` parchea en 16. Una AA que lo "escuche" jamás dispararía cuando el plan cambia de estado. Sirve para el badge y para filtros; la gestión de `period` vive en los eventos de negocio reales: SA-01 y SA-03 (neutralizan al programar/sincronizar), SA-02 (restaura al morir la serie por contrato), SA-04 (restaura al cancelar) y SA-09 (gestiona al reubicar el equipo).
+> **`x_managed_by_plan` es informativo, no disparador.** Al ser computed **stored**, su recomputación se escribe vía `_write` durante el flush y **no pasa por `write()`** — que es lo que `base_automation` parchea en 16. Una AA que lo "escuche" jamás dispararía. Sirve **solo** para el badge y para filtros; ninguna automatización depende de él (en particular, el `period` nativo ya no se gestiona — ver la nota de coexistencia arriba).
 
 > `plan_ids` es el **inverso** que tenés que crear sobre `x_maintenance_location`: campo one2many → `x_maintenance_plan`, inverse `location_id`. Hacelo ahora — *Studio → x_maintenance_location → + Field*.
 
@@ -571,16 +576,16 @@ for record in records:
 ### C-06 (SA-C06) — No archivar un plan vivo
 
 ```python
-# El archivado (x_active=False) saltea SA-04 y dejaría los equipos con
-# period=0 huérfanos para siempre. Única puerta de salida de un plan vivo:
-# cancelarlo (SA-04 restaura period y archiva hijas). Ya cancelado/cerrado,
-# archivar es libre.
+# El archivado (x_active=False) saltea SA-04 y dejaría las hijas vivas
+# huérfanas (sin archivar) y la cadena de la serie sin puentear. Única puerta
+# de salida de un plan vivo: cancelarlo (SA-04 archiva hijas y puentea la
+# cadena). Ya cancelado/cerrado, archivar es libre.
 for record in records:
     if not record.active and record.state in ('draft', 'scheduled', 'in_progress'):
         raise UserError(
             "No se puede archivar un plan vivo (%s está en '%s'). "
-            "Cancelalo primero: la cancelación restaura el period de los equipos "
-            "y archiva las hijas. Después podés archivarlo."
+            "Cancelalo primero: la cancelación archiva las hijas y puentea la "
+            "serie. Después podés archivarlo."
             % (record.name, record.state))
 ```
 
@@ -647,7 +652,7 @@ for plan in records:
             'name': f"{plan.name} - {equipo.name}",
             'equipment_id': equipo.id,
             'plan_id': plan.id,
-            'stage_id': '1'
+            'stage_id': 1,
             'schedule_date': sched_dt,
             'maintenance_type': plan.maintenance_type or 'preventive',
             'user_id': (plan.technician_user_id or plan.user_id).id or False,
@@ -655,15 +660,9 @@ for plan in records:
             'x_studio_tipo_de_trabajo': 'Mantención Preventiva',
         })
 
-    # 3) Neutralizar el cron nativo: respaldar y poner period=0 en los equipos
-    #    del snapshot. (Antes era SA-05/AA-04 sobre x_managed_by_plan, pero en 16
-    #    base_automation NO ve la recomputación de campos almacenados.)
-    for eq in plan.equipment_snapshot_ids:
-        if eq.period and eq.period > 0:
-            eq.write({'x_studio_period_backup': eq.period, 'period': 0})
-            eq.message_post(body=(
-                "period (%s días) respaldado y puesto a 0: gestionado por %s."
-            ) % (eq.x_studio_period_backup, plan.name))
+    # NOTA: el period nativo NO se toca. El equipo conserva su ciclo propio
+    # (cron nativo → hijas con plan_id=False), que coexiste con las hijas del
+    # plan (plan_id seteado). Son dos trabajos distintos; ver Paso 4.
 
     plan.message_post(
         body="Generadas %s solicitudes hijas a partir del snapshot del punto." % len(nuevos),
@@ -711,16 +710,10 @@ for plan in records:
     # 2) Ajuste por calendario laboral
     next_date = shift_to_workday(next_date, plan.resource_calendar_id)
 
-    # 3) ✨ LÍMITE DURO POR TÉRMINO DE CONTRATO
+    # 3) LÍMITE DURO POR TÉRMINO DE CONTRATO
     if plan.contract_end_date and next_date > plan.contract_end_date:
-        # La serie muere: restaurar el period nativo de los equipos que no
-        # queden gestionados por ningún otro plan activo.
-        for eq in plan.equipment_snapshot_ids:
-            if not eq.x_managed_by_plan and eq.period == 0 and eq.x_studio_period_backup:
-                eq.write({'period': eq.x_studio_period_backup, 'x_studio_period_backup': 0})
-                eq.message_post(body=(
-                    "period restaurado a %s días: la serie del punto finalizó por contrato."
-                ) % eq.period)
+        # La serie muere: no se genera la próxima ocurrencia. El period nativo
+        # del equipo NO se toca (su ciclo propio sigue corriendo, ver Paso 4).
         plan.message_post(body=(
             "Serie %s finalizada por término de contrato (%s). "
             "No se generará la próxima ocurrencia (next_date hubiera sido %s)."
@@ -856,14 +849,6 @@ for plan in records:
                 'maintenance_team_id': plan.maintenance_team_id.id or False,
                 'company_id': plan.company_id.id,
             })
-        # Neutralizar el cron nativo de los recién llegados (paso 3 de SA-01):
-        # un equipo agregado mid-cycle también queda gestionado por el plan.
-        for eq in faltantes:
-            if eq.period and eq.period > 0:
-                eq.write({'x_studio_period_backup': eq.period, 'period': 0})
-                eq.message_post(body=(
-                    "period (%s días) respaldado y puesto a 0: agregado por sync a %s."
-                ) % (eq.x_studio_period_backup, plan.name))
 
     # Las hijas de los sobrantes no se borran: se loggean
     plan.message_post(body=(
@@ -895,30 +880,20 @@ for plan in records:
             "Cadena puenteada: %s → %s (esta ocurrencia queda fuera de la serie activa)."
         ) % (plan.previous_plan_id.name, plan.next_plan_id.name))
 
-    # Restaurar el period nativo de los equipos del snapshot que no queden
-    # gestionados por ningún otro plan activo (mismo criterio que el branch
-    # de término de contrato en SA-02). Sin esto, cancelar dejaba los equipos
-    # con period=0 para siempre — sin alertas nativas ni plan que los cubra.
-    restaurados = 0
-    for eq in plan.equipment_snapshot_ids:
-        if not eq.x_managed_by_plan and eq.period == 0 and eq.x_studio_period_backup:
-            eq.write({'period': eq.x_studio_period_backup, 'x_studio_period_backup': 0})
-            eq.message_post(body=(
-                "period restaurado a %s días: el plan %s fue cancelado."
-            ) % (eq.period, plan.name))
-            restaurados += 1
+    # El period nativo del equipo NO se toca: su ciclo propio sigue corriendo
+    # independientemente de que el plan del punto se cancele (ver Paso 4).
 
     plan.message_post(body=(
-        "Plan cancelado. %s hijas archivadas, period restaurado en %s equipos. "
+        "Plan cancelado. %s hijas archivadas. "
         "La serie continúa desde el último plan ‘done’."
-    ) % (len(hijas_vivas), restaurados))
+    ) % len(hijas_vivas))
 ```
 
 > Para la confirmación: definí esta SA con `binding_model_id = x_maintenance_plan` y `binding_view_types = form`, y al disparar abrí un wizard transitorio que pida confirmación. Si no querés crear el wizard, configurá la AA con un `confirm` JS-side desde el form view button.
 
 ---
 
-> **SA-05 / AA-04 eliminados del diseño.** La idea original era una AA sobre `maintenance.equipment` que escuchara cambios de `x_managed_by_plan` — pero ese campo es computed **stored** y su recomputación no pasa por `write()` en 16, así que la AA solo disparaba en writes casuales del equipo: comportamiento errático e impredecible. La gestión de `period` queda repartida en los eventos de negocio reales, todos deterministas: **SA-01** y **SA-03** neutralizan (al programar / al sincronizar), **SA-02** restaura (serie muerta por contrato), **SA-04** restaura (cancelación), **SA-09** gestiona (reubicación del equipo).
+> **SA-05 / AA-04 eliminados del diseño.** La idea original era una AA sobre `maintenance.equipment` que escuchara cambios de `x_managed_by_plan` para gestionar el `period`. Eso quedó **doblemente obsoleto**: (1) el campo es computed **stored** y su recomputación no pasa por `write()` en 16, así que la AA nunca habría disparado de forma confiable; y (2) **el diseño ya no toca el `period`** — el equipo conserva su ciclo propio nativo, que coexiste con las hijas del plan (decisión confirmada, ver Paso 4). No hay ninguna gestión de `period` en ninguna SA.
 
 ---
 
@@ -1104,28 +1079,29 @@ for eq in records:
         'notes': "Movement auto-generado por AA-06 (cambio de x_studio_location).",
     })
 
-    # ── Gestión de period del cron nativo al reubicar ──
-    # Solo decide cuando el destino es un PUNTO real (Lab/Bodega/baja no
-    # alteran el regimen vigente: si venía gestionado, period sigue en 0
-    # hasta que aterrice en un punto y se evalúe de nuevo).
-    if new_loc and new_loc.id not in (LAB_LOC_ID, STOCK_LOC_ID):
-        ACTIVE = ('draft', 'scheduled', 'in_progress')
-        plan_activo = new_loc.plan_ids.filtered(
-            lambda p: p.active and p.state in ACTIVE)
-        if plan_activo and eq.period and eq.period > 0:
-            eq.write({'x_studio_period_backup': eq.period, 'period': 0})
-            eq.message_post(body=(
-                "period (%s días) respaldado y puesto a 0: llegó a un punto "
-                "gestionado por %s."
-            ) % (eq.x_studio_period_backup, plan_activo[0].name))
-        elif not plan_activo and eq.period == 0 and eq.x_studio_period_backup:
-            eq.write({'period': eq.x_studio_period_backup, 'x_studio_period_backup': 0})
-            eq.message_post(body=(
-                "period restaurado a %s días: el punto de destino no tiene plan activo."
-            ) % eq.period)
+    # El period nativo del equipo NO se toca al reubicar: su ciclo propio sigue
+    # corriendo donde sea que esté. SA-09 solo registra la bitácora de movimientos.
 ```
 
 > Si en el futuro agregás una SA propia que también escriba `x_studio_location`, usá `eq.with_context(skip_auto_movement=True).write({'x_studio_location': …})` para no disparar SA-09 dos veces sobre el mismo cambio.
+
+---
+
+### SA-10 — Etiquetar las hijas propias del equipo (ciclo nativo)
+
+**Modelo:** `maintenance.request`. **Trigger:** AA-13 (On Creation).
+
+**Propósito:** las dos corrientes de hijas (plan del punto vs ciclo propio del equipo) ya quedan distinguidas en los datos por `plan_id`, pero el cron nativo crea sus requests con un tipo genérico. Esta SA las etiqueta para que en kanban/lista no se confundan con las del plan. Las del plan ya nacen con `x_studio_tipo_de_trabajo = 'Mantención Preventiva'` desde SA-01, así que no se tocan.
+
+```python
+for req in records:
+    # Solo las hijas NATIVAS (sin plan) y preventivas, que aún no tengan tipo.
+    if not req.plan_id and req.maintenance_type == 'preventive' \
+            and not (req.x_studio_tipo_de_trabajo or '').strip():
+        req.write({'x_studio_tipo_de_trabajo': 'Mantención del Equipo'})
+```
+
+> Ajustá el literal `'Mantención del Equipo'` al valor que uses en tu campo `x_studio_tipo_de_trabajo`. Si el campo es selection, usá la `key` correspondiente.
 
 ---
 
@@ -1145,7 +1121,7 @@ for eq in records:
 | AA-03            | `x_maintenance_plan`    | On Update                | Apply on:`[('state','in',('draft','scheduled'))]` (dispara en cada write; SA-06 se autofiltra: solo escribe si la fecha de las hijas difiere) | Execute → SA-06                                                                                             |
 | ~~AA-04~~       | —                        | —                       | **Eliminada** (ver nota SA-05 en Paso 8: la recomputación de `x_managed_by_plan` no dispara AAs en 16)                                 | —                                                                                                           |
 | AA-05 (opcional) | `x_maintenance_plan`    | Based on Timed Condition | Trigger Date:`scheduled_date`. Delay: 0 días.                                                                                                | Execute → SA-XX (notificación al técnico el día del trabajo)                                             |
-| AA-06            | `maintenance.equipment` | On Update                | — (en 16 dispara en cada write; SA-09 compara el último movement y sale si la ubicación no cambió)                                          | Execute → SA-09 (auto-movement + gestión de `period`)                                                    |
+| AA-06            | `maintenance.equipment` | On Update                | — (en 16 dispara en cada write; SA-09 compara el último movement y sale si la ubicación no cambió)                                          | Execute → SA-09 (solo bitácora de movimientos; ya no toca `period`)                                       |
 | AA-MOV-00        | `x_equipment_movement`  | On Creation              | —                                                                                                                                              | Execute → SA-MOV-00 (autogen name, company)                                                                 |
 | AA-07            | `x_maintenance_plan`    | On Creation & Update     | —                                                                                                                                              | Execute → SA-C01 (`frequency_value > 0`)                                                                  |
 | AA-08            | `x_maintenance_plan`    | On Creation & Update     | —                                                                                                                                              | Execute → SA-C02 (`slack_days` < período base)                                                           |
@@ -1153,6 +1129,7 @@ for eq in records:
 | AA-10            | `x_maintenance_plan`    | On Creation & Update     | Apply on:`[('state','in',('draft','scheduled','in_progress'))]`                                                                               | Execute → SA-C04 (no solapamiento; se salta si el contexto trae `x_skip_c04` — escrituras de la cascada) |
 | AA-11            | `x_maintenance_plan`    | On Update                | Apply on:`[('state','=','done')]`                                                                                                             | Execute → SA-C05 (`done` exige hijas resueltas)                                                           |
 | AA-12            | `x_maintenance_plan`    | On Update                | Apply on:`[('active','=',False)]`                                                                                                             | Execute → SA-C06 (no archivar plan vivo)                                                                    |
+| AA-13            | `maintenance.request`   | On Creation              | Apply on:`[('plan_id','=',False),('maintenance_type','=','preventive')]`                                                                      | Execute → SA-10 (etiqueta las hijas propias del equipo / ciclo nativo)                                       |
 
 > **Orden de ejecución:** cuando varias AAs disparan sobre el mismo write, corren por su campo `sequence`. Asigná **sequence bajo a las validaciones** (AA-07…AA-12, p. ej. 1–6) y más alto a las de negocio (AA-01/AA-02/AA-03, p. ej. 10+): si una validación va a revertir todo, mejor que reviente *antes* de que la cascada haya creado registros — el resultado es el mismo (rollback), pero el debugging es mucho más claro.
 
@@ -1222,7 +1199,7 @@ Probar en este orden, con un punto que tenga 3 equipos:
 - [ ] **T-01** Crear plan en draft. → name autogenerado, series_id se completa, original_scheduled_date = scheduled_date.
 - [ ] **T-02** Click "Sync con punto" en draft. → equipment_snapshot_ids se llena con los 3.
 - [ ] **T-03** Cambiar state a `scheduled`. → se crean 3 `maintenance.request` con `plan_id` apuntando al plan, `schedule_date` = plan.scheduled_date.
-- [ ] **T-04** Verificar en cada uno de los 3 equipos: `x_managed_by_plan = True`, `period = 0`, `x_studio_period_backup = period_original`.
+- [ ] **T-04** Verificar en cada uno de los 3 equipos: `x_managed_by_plan = True` y que el `period` nativo **sigue intacto** (no se toca). Si el equipo tenía `period > 0`, el cron nativo debe seguir generando sus hijas propias (`plan_id = False`) en paralelo a las del plan.
 - [ ] **T-05** Cerrar 3 hijas en stage "Repaired/Done". → `progress` = 100%.
 - [ ] **T-06** Cerrar el plan dentro del slack (state → `done` con close_date = scheduled_date). → se crea next_plan_id con scheduled_date = scheduled_date + frequency.
 - [ ] **T-07** Cerrar fuera del slack (close_date = scheduled_date + slack + 5 días). → next_plan_id.scheduled_date = close_date + frequency (cadencia deslizada).
@@ -1231,7 +1208,7 @@ Probar en este orden, con un punto que tenga 3 equipos:
 - [ ] **T-09b** Intentar cerrar como `done` con 1 hija pendiente. → SA-C05 (AA-11) dispara UserError: o se completan las hijas o se cierra `partially_done`.
 - [ ] **T-10** Crear segundo plan para el mismo punto con scheduled_date dentro del slack del primero. → SA-C04 (AA-10) dispara UserError.
 - [ ] **T-11** Editar manualmente scheduled_date en un plan `scheduled`. → AA-03 propaga a hijas vivas + log en chatter.
-- [ ] **T-12** Cancelar el plan padre. → state = cancelled, hijas archivadas, `period` restaurado en los equipos del snapshot que no tengan otro plan activo, mensaje en chatter.
+- [ ] **T-12** Cancelar el plan padre. → state = cancelled, hijas archivadas, cadena puenteada, mensaje en chatter. El `period` nativo de los equipos **no cambia** (sigue corriendo su ciclo propio).
 - [ ] **T-12b** Intentar archivar (`active = False`) un plan `scheduled`. → SA-C06 (AA-12) bloquea con UserError. Tras cancelarlo (T-12), archivar sí funciona.
 - [ ] **T-13** Borrar el punto. → restricción impide borrar si tiene planes (cambiar `ondelete` si no se desea).
 - [ ] **T-14** Agregar un nuevo equipo al punto entre Paso T-03 y T-05. Sync con punto. → se crea 1 hija extra, `last_sync_with_location` se actualiza.
@@ -1244,9 +1221,10 @@ Probar en este orden, con un punto que tenga 3 equipos:
 
 **Tests específicos de `x_equipment_movement` (Opción B):**
 
-- [ ] **T-18** Equipo S1 en punto Norte → cambiar `x_studio_location` a Laboratorio (593). → AA-06/SA-09 crea movement `completed` con `from=Norte`, `to=Lab`, `reason='calibration'`, `date_in=date_out=today`. El `period` del equipo no cambia (Lab/Bodega no alteran el régimen vigente).
-- [ ] **T-19** S1 vuelve del Lab al punto Norte (con plan activo). → movement `reason='return_from_service'`; `period` queda/entra en 0 con backup (punto gestionado).
-- [ ] **T-20** S1 se mueve de Norte a un punto Sur **sin** plan activo. → movement `reason='reassignment'`; `period` restaurado desde `x_studio_period_backup`.
+- [ ] **T-18** Equipo S1 en punto Norte → cambiar `x_studio_location` a Laboratorio (593). → AA-06/SA-09 crea movement `completed` con `from=Norte`, `to=Lab`, `reason='calibration'`, `date_in=date_out=today`. El `period` del equipo **no cambia** (SA-09 ya no toca `period`).
+- [ ] **T-19** S1 vuelve del Lab al punto Norte (con plan activo). → movement `reason='return_from_service'`. El `period` del equipo **no cambia**.
+- [ ] **T-20** S1 se mueve de Norte a un punto Sur **sin** plan activo. → movement `reason='reassignment'`. El `period` del equipo **no cambia**.
+- [ ] **T-20b** Equipo con `period > 0` dentro de un plan: el cron nativo genera una hija `plan_id=False`. → AA-13/SA-10 le estampa `x_studio_tipo_de_trabajo='Mantención del Equipo'`; el `progress` del plan **no se altera** y cerrarla no dispara cascada.
 - [ ] **T-21** Quitar `x_studio_location` de un equipo (baja). → movement `reason='decommission'` con `to=NULL`.
 - [ ] **T-22** Cambiar manualmente `x_studio_location` desde el form (como Plan User o Maintenance User). → AA-06 dispara SA-09 sin AccessError (ACL de create verificada) y el reason se infiere según destino.
 - [ ] **T-23** Intentar borrar un movement como Plan Manager o Plan User. → bloqueado por ACL. (El superusuario admin bypasea ACLs — esta protección no aplica para él.)
@@ -1375,8 +1353,7 @@ calendar = plan.resource_calendar_id or plan.company_id.resource_calendar_id
 | ↑                                                | `request_ids`                                                          | o2m → maintenance.request    | nuevo                  | inverso plan_id                                                                    |
 | ↑                                                | `movement_ids`                                                         | o2m → x_equipment_movement   | nuevo                  | inverso linked_plan_id                                                             |
 | ↑                                                | `active` / `company_id` / chatter                                    | varios                        | nativos features       | —                                                                                 |
-| `maintenance.equipment`                         | `x_managed_by_plan`                                                    | bool (computed, stored)       | nuevo                  | dependencies en doc                                                                |
-| ↑                                                | `x_studio_period_backup`                                               | int                           | nuevo                  | respaldo del period nativo                                                         |
+| `maintenance.equipment`                         | `x_managed_by_plan`                                                    | bool (computed, stored)       | nuevo                  | solo informativo (badge/filtros)                                                   |
 | ↑                                                | `movement_ids`                                                         | o2m → x_equipment_movement   | nuevo                  | inverso equipment_id                                                               |
 | `maintenance.request`                           | `plan_id`                                                              | m2o → x_maintenance_plan     | nuevo                  | indexed, ondelete=set null, tracked                                                |
 | `x_maintenance_location`                        | `plan_ids`                                                             | o2m → x_maintenance_plan     | nuevo                  | inverso location_id                                                                |
@@ -1417,7 +1394,7 @@ calendar = plan.resource_calendar_id or plan.company_id.resource_calendar_id
 | Studio compute sandbox bloquea `record.x_field = …`.                  | Usar `record['x_field'] = …` siempre (ya aplicado en snippets).                                                                                                                                        |
 | `equipment_snapshot_ids` puede divergir del punto si nadie sincroniza. | UI: badge "Snapshot desactualizado" si `last_sync_with_location < write_date` del punto.                                                                                                                |
 | Cancelación masiva archiva hijas; perdés métricas.                    | No usar `active=False`; mejor estado `cancelled` en hijas (requiere kanban_state custom).                                                                                                             |
-| `period=0` queda huérfano si el plan muere.                           | Restauración cubierta en todos los caminos de salida: SA-02 (fin de contrato), SA-04 (cancelación), SA-09 (equipo reubicado a punto sin plan); SA-C06 bloquea el único bypass (archivar un plan vivo). |
+| Hijas duplicadas: plan vs ciclo propio del equipo.                    | Por diseño conviven dos corrientes (plan_id seteado vs `plan_id=False`). `progress`/cascada/C-05 filtran por `request_ids`, así que las nativas se ignoran solas; AA-13/SA-10 las etiqueta para que no confundan en la UI. Solo es problema si ambas modelan el **mismo** trabajo (no es el caso: son tareas distintas). |
 | Solapamiento C-04 bloquea la cascada legítima.                          | Implementado: SA-02 escribe/copia con `with_context(x_skip_c04=True)` y SA-C04 se salta esas escrituras. Las ediciones manuales siguen validándose.                                                    |
 | Cambios concurrentes en el padre y una hija.                             | Activar tracking en `plan_id` y `state` para tener el log; considerar lock pesimista vía `for_update()` solo si aparece en producción.                                                            |
 
