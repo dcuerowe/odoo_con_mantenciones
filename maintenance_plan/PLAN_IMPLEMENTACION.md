@@ -1045,8 +1045,11 @@ for eq in records:
     if env.context.get('skip_auto_movement'):
         continue
 
-    # Último movement → from_location
-    last = eq.movement_ids.sorted('date_out', reverse=True)[:1]
+    # Último movement → from_location. Ordenar por (date_out, id) desc: date_out
+    # es granularidad DÍA y casi todos nacen con date_out=hoy, así que a igualdad
+    # de fecha hay que desempatar por id (monótono) o el [:1] toma el más viejo
+    # del día y el guard / from_location_id quedan mal.
+    last = eq.movement_ids.sorted(key=lambda m: (m.date_out, m.id), reverse=True)[:1]
     last_to = last.to_location_id if last else False
 
     # Si la ubicación no cambió realmente, no hacer nada
@@ -1084,6 +1087,8 @@ for eq in records:
 ```
 
 > Si en el futuro agregás una SA propia que también escriba `x_studio_location`, usá `eq.with_context(skip_auto_movement=True).write({'x_studio_location': …})` para no disparar SA-09 dos veces sobre el mismo cambio.
+
+> ⚠ **SA-09 detecta el cambio reconstruyendo la ubicación anterior desde la bitácora** (una SA *On Update* en Studio 16 no puede leer el valor viejo de `x_studio_location`). Ese planteo solo es correcto si se sostienen **las 3 patas juntas**: (1) **orden monótono** del "último movement" por `(date_out, id)` desc — ya aplicado arriba; (2) **seed inicial** de la bitácora antes de activar AA-06 (sección 3.bis.5-bis); (3) **bitácora append-only** (la ACL bloquea `unlink` salvo Plan Manager — Paso 10). Si la bitácora se desincroniza (un move con `skip_auto_movement`, un `create` fallido, o un movement editado/borrado), el `from_location_id` y el guard quedan mal desde ahí. La alternativa robusta de verdad es hacerlo en un módulo de código sobreescribiendo `write()` (compara viejo vs nuevo), pero rompe el enfoque 100% Studio.
 
 ---
 
