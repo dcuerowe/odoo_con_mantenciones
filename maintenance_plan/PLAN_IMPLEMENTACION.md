@@ -285,7 +285,7 @@ Dependencies: `scheduled_date,slack_days`
 
 | Campo                 | Tipo                             | Required | Notas                                                                                                                                                                                                                                                                                                                                                                                             |
 | --------------------- | -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`              | char                             | Sí      | autogenerado por SA-MOV-00:`MOV-{YYYY}-{seq:04d} / {equipment.name}`. Secuencia `x_equipment_movement`.                                                                                                                                                                                                                                                                                       |
+| `name`              | char                             | **No**  | rec_name (`x_name`). **NO marcar Required** (y si Studio lo dejó NOT NULL, quitalo en *Technical → Fields*): SA-MOV-00 llena el name **post-insert** vía AA-MOV-00 (*On Creation*); con required, el `INSERT` con `x_name=NULL` revienta en Postgres (`NotNullViolation`) antes de que la AA corra — y **SA-09** también crea movements sin name, así que en runtime fallaría igual. Mismo caso que `x_maintenance_plan` §3.1. Default `'New'`. Autogenerado por SA-MOV-00: `MOV-{YYYY}-{seq:04d} / {equipment.name}`. Secuencia `x_equipment_movement`.                                                                                                                                                                                                                                                                                       |
 | `equipment_id`      | m2o →`maintenance.equipment`  | Sí      | indexed.`ondelete='restrict'` (no se borra un equipo con historial).                                                                                                                                                                                                                                                                                                                            |
 | `from_location_id`  | m2o →`x_maintenance_location` | —       | NULL = venía de stock / equipo nuevo.                                                                                                                                                                                                                                                                                                                                                            |
 | `to_location_id`    | m2o →`x_maintenance_location` | —       | NULL = sale a stock / servicio externo / baja.                                                                                                                                                                                                                                                                                                                                                    |
@@ -351,10 +351,20 @@ equipos = movements.mapped('equipment_id')
 
 SA-09 infiere `from_location_id` del **último movement** del equipo. Con la bitácora vacía, el primer write de cada equipo generaría un movement `installation` espurio (aunque solo se haya editado una nota) y el historial previo sería invisible. **Antes de activar AA-06**, correr un script one-shot (shell de Odoo o Server Action manual) que cree el movement inicial por equipo:
 
+> **Excluí Bodega cliente (594).** Es la ubicación **default al crear un equipo**: significa "stock / no instalado", no una posición real en un punto. Sembrar un `installation → 594` sería falso (el equipo no está instalado en ningún lado) y además mal-etiquetaría su primer traslado real como `return_from_service`. Estos equipos **no se seedean**: SA-09 los cubre con un **baseline implícito de 594** (sin movement = está en stock), de modo que su primer movimiento real sale correctamente como `installation` desde `from=NULL`. **Sí** se seedean los equipos en puntos reales y los que estén en Laboratorio (593) al go-live — su ubicación previa NO es el baseline 594, así que necesitan el movement semilla.
+
+> El seed setea el `name` **explícitamente** (no lo deja en NULL): así funciona aunque AA-MOV-00 todavía no esté activa, y aunque por error `x_name` siguiera siendo NOT NULL. Si AA-MOV-00 ya está activa, SA-MOV-00 ve el name puesto y se saltea (chequea `if not mov.name`) — no hay doble nombrado.
+
 ```python
-for eq in env['maintenance.equipment'].search([('x_studio_location', '!=', False)]):
+STOCK_LOC_ID = 594   # Bodega cliente = ubicación default / stock
+for eq in env['maintenance.equipment'].search([
+    ('x_studio_location', '!=', False),
+    ('x_studio_location', '!=', STOCK_LOC_ID),
+]):
     seed_date = eq.effective_date or datetime.date.today()
+    seq = env['ir.sequence'].next_by_code('x_equipment_movement') or '0001'
     env['x_equipment_movement'].create({
+        'name': f"MOV-{seed_date.year}-{seq} / {eq.name or '?'}",
         'equipment_id': eq.id,
         'to_location_id': eq.x_studio_location.id,
         'reason': 'installation',
@@ -613,7 +623,7 @@ for record in records:
 
 ```
 
-> Cargá **dos** secuencias en *Settings → Technical → Sequences → New*: (1) code `x_maintenance_plan`, prefix `PMP-`, padding 4 (numeración visible); (2) code `x_maintenance_plan_series`, sin prefijo, padding 6 (identificador de serie — reemplaza al `uuid` que el sandbox de 16 no permite importar).
+> Cargá **dos** secuencias en *Settings → Technical → Sequences → New*: (1) code `x_maintenance_plan`, **sin prefijo** (solo padding 4) — el `PMP-` ya lo agrega SA-00 en el formato del name (`f"PMP-{year}-{seq}"`); si la secuencia **también** lleva prefix `PMP-`, el nombre sale duplicado: `PMP-2026-PMP-0003`; (2) code `x_maintenance_plan_series`, sin prefijo, padding 6 (identificador de serie — reemplaza al `uuid` que el sandbox de 16 no permite importar).
 
 ---
 
@@ -786,7 +796,7 @@ for plan in records:
         carry_dt = datetime.datetime.combine(plan.next_plan_id.scheduled_date, datetime.time(12, 0))
         for hija in pendientes:
             env['maintenance.request'].create({
-                'name': f"[CARRYOVER {plan.name}] {hija.name}",
+                'name': f"[CARRYOVER] {hija.name}",   # hija.name ya incluye el nombre del plan; no repetirlo
                 'equipment_id': hija.equipment_id.id,
                 'plan_id': plan.next_plan_id.id,
                 'schedule_date': carry_dt,
@@ -1052,8 +1062,17 @@ for eq in records:
     last = eq.movement_ids.sorted(key=lambda m: (m.date_out, m.id), reverse=True)[:1]
     last_to = last.to_location_id if last else False
 
+    # Baseline implícito: los equipos sin seed son los que están en Bodega
+    # cliente (594), la ubicación default = "stock" (sección 3.bis.5-bis). Sin
+    # movement previo, su ubicación anterior efectiva es 594 — así un write que
+    # NO cambia la ubicación (editar una nota estando en bodega) no dispara un
+    # movement 594→594 espurio. El from_location real sigue siendo NULL (abajo),
+    # de modo que el primer traslado real sale como 'installation' desde stock.
+    prev_loc_id = last_to.id if last_to else STOCK_LOC_ID
+    cur_loc_id  = eq.x_studio_location.id if eq.x_studio_location else False
+
     # Si la ubicación no cambió realmente, no hacer nada
-    if last_to and last_to == eq.x_studio_location:
+    if prev_loc_id == cur_loc_id:
         continue
 
     # Inferir reason según origen y destino
@@ -1088,7 +1107,7 @@ for eq in records:
 
 > Si en el futuro agregás una SA propia que también escriba `x_studio_location`, usá `eq.with_context(skip_auto_movement=True).write({'x_studio_location': …})` para no disparar SA-09 dos veces sobre el mismo cambio.
 
-> ⚠ **SA-09 detecta el cambio reconstruyendo la ubicación anterior desde la bitácora** (una SA *On Update* en Studio 16 no puede leer el valor viejo de `x_studio_location`). Ese planteo solo es correcto si se sostienen **las 3 patas juntas**: (1) **orden monótono** del "último movement" por `(date_out, id)` desc — ya aplicado arriba; (2) **seed inicial** de la bitácora antes de activar AA-06 (sección 3.bis.5-bis); (3) **bitácora append-only** (la ACL bloquea `unlink` salvo Plan Manager — Paso 10). Si la bitácora se desincroniza (un move con `skip_auto_movement`, un `create` fallido, o un movement editado/borrado), el `from_location_id` y el guard quedan mal desde ahí. La alternativa robusta de verdad es hacerlo en un módulo de código sobreescribiendo `write()` (compara viejo vs nuevo), pero rompe el enfoque 100% Studio.
+> ⚠ **SA-09 detecta el cambio reconstruyendo la ubicación anterior desde la bitácora** (una SA *On Update* en Studio 16 no puede leer el valor viejo de `x_studio_location`). Ese planteo solo es correcto si se sostienen **las 3 patas juntas**: (1) **orden monótono** del "último movement" por `(date_out, id)` desc — ya aplicado arriba; (2) **seed inicial** de la bitácora antes de activar AA-06 (sección 3.bis.5-bis) — **excepto** los equipos en Bodega cliente (594), deliberadamente sin seed y cubiertos por el baseline implícito de 594 del guard de arriba; (3) **bitácora append-only** (la ACL bloquea `unlink` salvo Plan Manager — Paso 10). Si la bitácora se desincroniza (un move con `skip_auto_movement`, un `create` fallido, o un movement editado/borrado), el `from_location_id` y el guard quedan mal desde ahí. La alternativa robusta de verdad es hacerlo en un módulo de código sobreescribiendo `write()` (compara viejo vs nuevo), pero rompe el enfoque 100% Studio.
 
 ---
 
@@ -1235,6 +1254,8 @@ Probar en este orden, con un punto que tenga 3 equipos:
 - [ ] **T-23** Intentar borrar un movement como Plan Manager o Plan User. → bloqueado por ACL. (El superusuario admin bypasea ACLs — esta protección no aplica para él.)
 - [ ] **T-24** Consulta "todas las sondas que pasaron por Norte en los últimos 90 días" desde la list view filtrada. → resultados consistentes con los movements creados.
 - [ ] **T-25** Equipo con `x_studio_location = Lab (593)` + plan de su punto de origen pasa a `scheduled`. → SA-01 NO le genera hija: ya no está en el punto, queda fuera del snapshot naturalmente.
+- [ ] **T-25b** Equipo recién creado en **Bodega cliente (594)** (default), **sin** seed. Editar cualquier campo NO-ubicación (p. ej. una nota). → SA-09 **NO** crea ningún movement (baseline implícito 594 == 594). No aparece un `594→594 'repair'` espurio.
+- [ ] **T-25c** Ese mismo equipo de 594 se mueve por primera vez a un punto real. → SA-09 crea movement con `from=NULL`, `to=punto`, `reason='installation'` (no `return_from_service`). Confirma que el primer traslado desde stock se etiqueta como instalación.
 
 **Tests de proyección de serie (SA-07) y Gantt:**
 
