@@ -61,6 +61,12 @@ def _buscar_equipo_por_serial(odoo_client, serial):
     if not serial:
         return []
 
+    # S/N centinela "sin número de serie" (0, 00, 0000...): no es un serial real.
+    # Tratarlo como vacío evita disparar la búsqueda numérica `like '%0%'`, que
+    # matchea casi todo el universo de equipos y tumbaba a Odoo con un 502 (OT 282).
+    if serial.strip().strip('0') == '':
+        return []
+
     # El técnico puede tipear el prefijo WE en cualquier combinación de
     # mayúsculas/minúsculas (WE/We/we/wE); en Odoo siempre está como "WE".
     if serial[:2].upper() == 'WE':
