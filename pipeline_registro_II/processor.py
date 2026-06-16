@@ -61,6 +61,12 @@ def _buscar_equipo_por_serial(odoo_client, serial):
     if not serial:
         return []
 
+    # S/N centinela "sin número de serie" (0, 00, 0000...): no es un serial real.
+    # Tratarlo como vacío evita disparar la búsqueda numérica `like '%0%'`, que
+    # matchea casi todo el universo de equipos y tumbaba a Odoo con un 502 (OT 282).
+    if serial.strip().strip('0') == '':
+        return []
+
     # El técnico puede tipear el prefijo WE en cualquier combinación de
     # mayúsculas/minúsculas (WE/We/we/wE); en Odoo siempre está como "WE".
     if serial[:2].upper() == 'WE':
@@ -403,6 +409,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             
             conteo_instancias_I_C = len(I_C_prefijo)
             
+            print(conteo_instancias_I_C)
             
 
             conteo_I = {
@@ -2728,7 +2735,17 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                                 'maintenance.request',
                                                                 [id_CI], 
                                                                 update_CI
-                                                            )   
+                                                            )
+
+                                                            close_date_CI = {
+                                                                'close_date': fecha,
+                                                            }
+
+                                                            update_close_date_CI = odoo_client.write(
+                                                                'maintenance.request',
+                                                                [id_CI], 
+                                                                close_date_CI
+                                                            )
 
                                                             #Actualizamos la actividad que se genera por defecto
 
