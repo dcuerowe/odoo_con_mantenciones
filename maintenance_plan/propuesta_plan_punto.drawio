@@ -1,12 +1,9 @@
 <mxfile host="65bd71144e">
     <diagram name="Propuesta x_maintenance_plan" id="propuesta-plan">
-        <mxGraphModel dx="4551" dy="2784" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" background="#ffffff" math="0" shadow="0">
+        <mxGraphModel dx="2680" dy="3063" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2400" pageHeight="1800" background="#ffffff" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="title" value="Propuesta: Plan de Mantención Preventiva por Punto&#10;Nueva entidad x_maintenance_plan como aglutinador de maintenance.request por x_maintenance_location" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;fillColor=none;strokeColor=none;fontColor=#050505;" parent="1" vertex="1">
-                    <mxGeometry x="2490" y="40" width="2020" height="60" as="geometry"/>
-                </mxCell>
                 <mxCell id="loc" value="x_maintenance_location&#10;Punto de Monitoreo (Studio)" style="swimlane;fontSize=13;fontStyle=1;align=center;startSize=44;rounded=0;shadow=0;strokeWidth=2;fillColor=#d5e8d4;strokeColor=#82b366;swimlaneFillColor=#ffffff;fontColor=#050505;" parent="1" vertex="1">
                     <mxGeometry x="40" y="-460" width="320" height="372" as="geometry"/>
                 </mxCell>
@@ -265,14 +262,8 @@
                 <mxCell id="rq_more" value="… (resto de atributos sin cambios)" style="text;strokeColor=#cccccc;fillColor=none;align=left;verticalAlign=middle;spacingLeft=10;fontSize=11;fontStyle=2;fontColor=#050505;" parent="rq" vertex="1">
                     <mxGeometry y="388" width="400" height="26" as="geometry"/>
                 </mxCell>
-                <mxCell id="cascade" value="Lógica de cascada al cerrar un plan padre (auto_replan = True)" style="swimlane;fontSize=13;fontStyle=1;align=center;startSize=32;rounded=0;fillColor=#fff2cc;strokeColor=#d6b656;swimlaneFillColor=#fffdf5;strokeWidth=2;fontColor=#050505;" parent="1" vertex="1">
-                    <mxGeometry x="1900" y="1700" width="660" height="410" as="geometry"/>
-                </mxCell>
-                <mxCell id="cascade_body" value="# Trigger: state → 'done' o 'partially_done'&#10;&#10;delta_days   = close_date − scheduled_date&#10;within_slack = abs(delta_days) ≤ slack_days&#10;&#10;# 1) Próxima fecha programada (base)&#10;if within_slack:&#10;    next_date = scheduled_date + frequency      # cadencia RÍGIDA&#10;else:&#10;    next_date = close_date     + frequency      # cadencia DESLIZADA&#10;&#10;# 2) Ajuste por calendario laboral (resource.calendar)&#10;if self.resource_calendar_id:&#10;    next_date = self.resource_calendar_id.plan_days(1, next_date)&#10;&#10;# 3) LÍMITE DURO POR CONTRATO (contract_end_date related de location)&#10;if self.contract_end_date and next_date &amp;gt; self.contract_end_date:&#10;    # restaura period de equipos sin otro plan activo y corta la serie&#10;    self.message_post(body=&quot;Serie %s finalizada por término de contrato (%s).&quot;&#10;                      % (self.series_id, self.contract_end_date))&#10;    continue  # NO se genera próxima ocurrencia (sandbox 16: sin _() ni return)&#10;&#10;# 4) Aplicar a la ocurrencia siguiente&#10;if self.next_plan_id and self.next_plan_id.state in ('draft','scheduled'):&#10;    # re-fecha n+1 (AA-03 → SA-06 propaga a las hijas vivas)&#10;    self.next_plan_id.with_context(x_skip_c04=True).write(&#10;        {'scheduled_date': next_date})&#10;    # 4-bis) re-fecha EN BLOQUE la cola pre-generada por SA-07 (sin recursión):&#10;    #        cada eslabón = anterior + período; lo que pase el contrato se cancela&#10;else:&#10;    # genera la siguiente ocurrencia: copy() hereda contract_start/end&#10;    self.copy(default={'scheduled_date': next_date, 'state': 'draft', ...})&#10;&#10;# 5) Carryover si cerró ‘partially_done’&#10;if self.state == 'partially_done' and self.next_plan_id:&#10;    pending = self.request_ids.filtered(lambda r: not r.stage_id.done and not r.archive)&#10;    self.next_plan_id._add_carryover_children(pending)  # y ARCHIVA las originales&#10;&#10;# 6) Auditoría: adjusted_from_scheduled, log mail.message" style="text;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;fontSize=10;fontFamily=Courier New;fillColor=none;strokeColor=none;whiteSpace=wrap;fontColor=#050505;" parent="cascade" vertex="1">
-                    <mxGeometry y="32" width="660" height="378" as="geometry"/>
-                </mxCell>
                 <mxCell id="mov" value="x_equipment_movement&#10;NUEVA · Bitácora de movimientos de equipos" style="swimlane;fontSize=13;fontStyle=1;align=center;startSize=48;rounded=0;shadow=1;strokeWidth=3;fillColor=#d5e8d4;strokeColor=#82b366;swimlaneFillColor=#ffffff;fontColor=#050505;" parent="1" vertex="1">
-                    <mxGeometry x="1840" y="-800" width="500" height="745" as="geometry"/>
+                    <mxGeometry x="1910" y="-800" width="500" height="745" as="geometry"/>
                 </mxCell>
                 <mxCell id="mov_id" value="id : integer&#9;PK" style="text;strokeColor=#82b366;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=10;fontStyle=4;fontSize=12;fontColor=#050505;" parent="mov" vertex="1">
                     <mxGeometry y="48" width="500" height="26" as="geometry"/>
@@ -322,42 +313,16 @@
                 <mxCell id="mov_query" value="Consulta de oro habilitada por este modelo:&#10;&quot;Todas las sondas que pasaron por Norte entre 2026-01-01 y hoy&quot;&#10;= search([('from_location_id','=',norte_id),('date_out','&amp;gt;=','2026-01-01')])&#10;+ search([('to_location_id','=',norte_id),('date_in','&amp;gt;=','2026-01-01')])" style="text;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;fontSize=10;fillColor=#fff2cc;strokeColor=#d6b656;whiteSpace=wrap;fontStyle=2;fontColor=#050505;" parent="mov" vertex="1">
                     <mxGeometry y="648" width="500" height="84" as="geometry"/>
                 </mxCell>
-                <mxCell id="integration_panel" value="Integración: pipeline_registro_II YA cubre Connecteam→Odoo" style="swimlane;fontSize=13;fontStyle=1;align=center;startSize=32;rounded=0;fillColor=#d5e8d4;strokeColor=#82b366;swimlaneFillColor=#f0f7ed;strokeWidth=2;fontColor=#050505;" parent="1" vertex="1">
-                    <mxGeometry x="1280" y="1750" width="500" height="360" as="geometry"/>
-                </mxCell>
-                <mxCell id="integration_body" value="NO se construye script puente nuevo.&#10;&#10;El pipeline existente (main.py + processor.py)&#10;ya polea Connecteam por cron y procesa el form R&#10;(Reemplazo/Extracción) con su sub-flujo de&#10;calibración, mueve x_studio_location a 593/594/punto,&#10;y crea Extracción/Calibración/Instalación.&#10;&#10;Ver: pipeline_registro_II/general_doc/&#10;     processor_documentation.md §8 (Módulo R)&#10;&#10;Plug del modelo x_maintenance_movement:&#10;  AA-06 escucha cambios de x_studio_location&#10;  SA-09 crea el movement automáticamente.&#10;  Cubre processor.py + Studio + edición manual.&#10;  Cero código nuevo en pipeline_registro_II.&#10;&#10;Limitación conocida:&#10;  linked_request_id queda NULL.&#10;  Si se necesita linkeo, agregar en futuro&#10;  iter un equipment_movement_linker.py que&#10;  matchee por equipo+fecha." style="text;align=left;verticalAlign=top;spacingLeft=10;spacingTop=6;fontSize=10;fillColor=none;strokeColor=none;whiteSpace=wrap;fontFamily=Courier New;fontColor=#050505;" parent="integration_panel" vertex="1">
-                    <mxGeometry y="32" width="500" height="328" as="geometry"/>
-                </mxCell>
-                <mxCell id="rel_mov_eq" value="equipment_id&#10;(REQUERIDO)" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.1;entryX=1;entryY=0.3;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#82b366;strokeWidth=2;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="mov_eq" target="eq_id" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="1780" y="234"/>
-                            <mxPoint x="1780" y="80"/>
-                            <mxPoint x="380" y="80"/>
-                            <mxPoint x="380" y="408"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rel_mov_plan" value="linked_plan_id" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.3;startArrow=ERmany;startFill=0;endArrow=ERzeroToOne;endFill=0;strokeColor=#9673a6;strokeWidth=1;dashed=1;fontSize=10;fontStyle=2;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="mov_plan" target="plan_id" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="1500" y="510"/>
-                            <mxPoint x="1500" y="194"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rel_mov_req" value="linked_request_id" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;startArrow=ERmany;startFill=0;endArrow=ERzeroToOne;endFill=0;strokeColor=#d79b00;strokeWidth=1;dashed=1;fontSize=10;fontStyle=2;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="mov_req" target="rq_id" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="1800" y="482"/>
-                            <mxPoint x="1800" y="155"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="rel_plan_snap_eq" value="equipment_snapshot_ids&#10;(M:N · snapshot al pasar a scheduled)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=0;entryY=0.5;startArrow=none;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#9673a6;strokeWidth=3;dashed=1;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;entryDx=0;entryDy=0;" parent="1" source="notes" target="eq_managed" edge="1">
+                <mxCell id="rel_mov_eq" value="equipment_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.1;entryX=1;entryY=0.3;startArrow=ERmany;startFill=0;endArrow=ERone;endFill=0;strokeColor=#82b366;strokeWidth=3;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="mov_eq" target="eq_id" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="rel_loc_plan" value="location_id&#10;(REQUERIDO)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#82b366;strokeWidth=3;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="loc_id" target="plan_location" edge="1">
+                <mxCell id="rel_mov_plan" value="linked_plan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.3;startArrow=ERmany;startFill=0;endArrow=ERzeroToOne;endFill=0;strokeColor=#9673a6;strokeWidth=3;dashed=1;fontSize=10;fontStyle=2;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="mov_plan" target="plan_id" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel_mov_req" value="linked_request_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;startArrow=ERmany;startFill=0;endArrow=ERzeroToOne;endFill=0;strokeColor=#d79b00;strokeWidth=3;dashed=1;fontSize=10;fontStyle=2;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="mov_req" target="rq_id" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="rel_loc_plan" value="location_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#82b366;strokeWidth=3;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="loc_id" target="plan_location" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="rel_loc_eq" value="x_studio_location" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=ERzeroToOne;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#82b366;strokeWidth=3;dashed=1;fontSize=10;fontStyle=2;labelBackgroundColor=#ffffff;fontColor=#050505;entryDx=0;entryDy=0;spacing=5;" parent="1" source="loc_id" target="eq_xloc" edge="1">
@@ -368,23 +333,13 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="rel_plan_rq" value="plan_id&#10;(NUEVO · ondelete set null)" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#9673a6;strokeWidth=3;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="plan_inv" target="rq_plan" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="1260" y="921"/>
-                            <mxPoint x="1260" y="259"/>
-                        </Array>
-                    </mxGeometry>
+                <mxCell id="rel_plan_rq" value="plan_id&lt;br&gt;ondelete set null)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#9673a6;strokeWidth=3;fontSize=11;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="plan_inv" target="rq_plan" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="rel_eq_rq" value="equipment_id" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=ERzeroToOne;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#6c8ebf;strokeWidth=1;dashed=1;fontSize=10;fontStyle=2;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="eq_id" target="rq_eq" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="1200" y="407"/>
-                            <mxPoint x="1200" y="230"/>
-                        </Array>
-                    </mxGeometry>
+                <mxCell id="rel_eq_rq" value="equipment_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;startArrow=ERzeroToOne;startFill=0;endArrow=ERmany;endFill=0;strokeColor=#6c8ebf;strokeWidth=3;dashed=1;fontSize=10;fontStyle=2;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="eq_id" target="rq_eq" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="rel_plan_self_prev" value="previous_plan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=0;entryY=0.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERone;endFill=0;strokeColor=#9673a6;strokeWidth=2;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="plan_prev" target="plan_id" edge="1">
+                <mxCell id="rel_plan_self_prev" value="previous_plan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=0;entryY=0.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERone;endFill=0;strokeColor=#9673a6;strokeWidth=3;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="plan_prev" target="plan_id" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
                             <mxPoint x="640" y="-759"/>
@@ -392,30 +347,13 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="rel_plan_self_next" value="next_plan_id" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=1;entryY=0.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERone;endFill=0;strokeColor=#9673a6;strokeWidth=2;curved=1;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="plan_next" target="plan_id" edge="1">
+                <mxCell id="rel_plan_self_next" value="next_plan_id" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;exitX=1;exitY=0.5;entryX=1;entryY=0.4;startArrow=ERzeroToOne;startFill=0;endArrow=ERone;endFill=0;strokeColor=#9673a6;strokeWidth=3;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="plan_next" target="plan_id" edge="1">
                     <mxGeometry relative="1" as="geometry">
                         <Array as="points">
-                            <mxPoint x="1180" y="627"/>
-                            <mxPoint x="1180" y="100"/>
-                            <mxPoint x="1180" y="194"/>
+                            <mxPoint x="1310" y="-733"/>
+                            <mxPoint x="1310" y="-1162"/>
                         </Array>
                     </mxGeometry>
-                </mxCell>
-                <mxCell id="2" value="" style="edgeStyle=entityRelationEdgeStyle;rounded=0;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;startArrow=ERmany;startFill=0;endArrow=none;endFill=0;strokeColor=#9673a6;strokeWidth=3;dashed=1;fontSize=10;fontStyle=1;labelBackgroundColor=#ffffff;fontColor=#050505;" parent="1" source="plan_equip_snap" target="notes" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="540" y="1121"/>
-                            <mxPoint x="540" y="592"/>
-                        </Array>
-                        <mxPoint x="600.0000000000005" y="1121" as="sourcePoint"/>
-                        <mxPoint x="359.99999999999955" y="592" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="notes" value="Notas de diseño y puntos a validar" style="swimlane;fontSize=13;fontStyle=1;align=center;startSize=32;rounded=0;fillColor=#f5f5f5;strokeColor=#666666;swimlaneFillColor=#ffffff;strokeWidth=2;fontColor=#050505;" parent="1" vertex="1">
-                    <mxGeometry x="90" y="1660" width="540" height="1080" as="geometry"/>
-                </mxCell>
-                <mxCell id="notes_body" value="1) Slack simétrico vs asimétrico — PENDIENTE&#10;    Hoy: ±slack_days. En terreno se tolera más atraso que adelanto.&#10;    → Sugerido: slack_days_before + slack_days_after (no confirmado).&#10;&#10;2) Cierre parcial del padre — CONFIRMADO&#10;    Estado ‘partially_done’ + force_close_reason (texto obligatorio).&#10;    Las hijas no done se replican como ‘carryover’ en la ocurrencia&#10;    siguiente (ver cascade step 4).&#10;&#10;3) Equipos añadidos/quitados mid-cycle — CONFIRMADO&#10;    SNAPSHOT al pasar a ‘scheduled’ (equipment_snapshot_ids).&#10;    + Wizard ‘Sync con punto’ (actualiza last_sync_with_location).&#10;    El snapshot es la verdad operacional; el punto es la fuente.&#10;&#10;4) Dos ciclos coexisten sobre el equipo — CONFIRMADO&#10;    El period nativo NO se toca. Conviven dos corrientes de hijas:&#10;     - Plan del punto (SA-01): plan_id seteado.&#10;     - Ciclo propio del equipo (cron nativo, period&amp;gt;0): plan_id=False.&#10;    Son trabajos distintos y no se pisan: progress/cascada/C-05 filtran por&#10;    request_ids (inverso de plan_id), así que ignoran las hijas nativas.&#10;    AA-13/SA-10 etiqueta las nativas (x_studio_tipo_de_trabajo) para no&#10;    confundirlas en kanban/lista.&#10;    x_managed_by_plan queda solo informativo; SA-05/AA-04 eliminados.&#10;    NO hay respaldo/restauración de period en ninguna SA.&#10;&#10;5) Identidad de la serie — CONFIRMADO&#10;    series_id = char (uuid) generado en creación del primer plan.&#10;&#10;6) Prevención de solapamiento — CONFIRMADO (SA-C04 vía AA-10)&#10;    No permitir dos SERIES distintas del mismo location_id (draft|scheduled|&#10;    in_progress) cuyas ventanas [sched-slack, sched+slack] se intersecten.&#10;    Excluye la propia serie (la cadencia intra-serie la garantiza C-02:&#10;    2·slack &amp;lt; período). Las escrituras de la cascada llevan x_skip_c04=True.&#10;&#10;7) Calendario laboral — CONFIRMADO&#10;    resource_calendar_id en el plan (heredado de team o company).&#10;    Si la fecha calculada cae fuera de jornada hábil →&#10;    resource_calendar_id.plan_days(1, next_date) corre al siguiente.&#10;&#10;8) Edición manual de scheduled_date — CONFIRMADO&#10;    onchange: si cambia y hay hijas en draft/scheduled →&#10;    abrir wizard de confirmación; al aceptar, propagar a hijas y&#10;    loggear en chatter (autor, fecha previa, fecha nueva, motivo).&#10;&#10;9) Cancelación del padre — CONFIRMADO (SA-04)&#10;    cancela_padre ⇒ archiva hijas vivas + restaura period de los equipos del&#10;    snapshot sin otro plan activo + puentea la cadena (prev ↔ next).&#10;    La serie continúa desde el último ‘done’ / ‘partially_done’.&#10;    SA-C06 (AA-12) impide archivar un plan vivo (cierra el único bypass).&#10;&#10;10) Multi-empresa — CONFIRMADO&#10;    company_id heredado de location; Record Rules por company_ids sobre&#10;    x_maintenance_plan y x_equipment_movement; equipos filtrados por company.&#10;&#10;11) Generación de hijas (operativa)&#10;    Trigger: draft → scheduled.&#10;    Source: equipment_snapshot_ids (snapshot del punto).&#10;    Por cada equipo: 1 maintenance.request con plan_id=self.id,&#10;    schedule_date=plan.scheduled_date, type=‘preventive’,&#10;    team/technician heredados (sobrescribibles).&#10;&#10;12) Permisos — CONFIRMADO (Paso 10)&#10;    Grupos: Plan Manager (CRUD) y Plan User (lectura + CRUD de sus hijas).&#10;    Maintenance/User necesita create sobre x_equipment_movement (las AA&#10;    corren como el usuario del write; el pipeline lo dispara vía XML-RPC).&#10;&#10;13) Límite por contrato + proyección de serie — CONFIRMADO&#10;    contract_end_date (related store) corta la cascada (SA-02).&#10;    SA-07 ‘Proyectar serie’ pre-genera ocurrencias draft (sin hijas) hasta el&#10;    fin de contrato para la Gantt (barras gantt_start..gantt_stop = ±slack).&#10;&#10;14) Cierres válidos — CONFIRMADO&#10;    SA-C05 (AA-11): ‘done’ exige todas las hijas resueltas.&#10;    SA-C03 (AA-09): ‘partially_done’ exige force_close_reason." style="text;align=left;verticalAlign=top;spacingLeft=12;spacingTop=8;fontSize=10;fillColor=none;strokeColor=none;whiteSpace=wrap;fontColor=#050505;" parent="notes" vertex="1">
-                    <mxGeometry y="32" width="540" height="1040" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
