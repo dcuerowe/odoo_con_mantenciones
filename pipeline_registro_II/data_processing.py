@@ -248,7 +248,7 @@ def inbox(ot, id_tecnico, fecha, id_punto, id_tipo, modelo, serial, trabajo_id, 
     follow = odoo_client.message_subscribe(
         'x_inbox_integracion',
         [created_inbox],
-        [5205, 172, 158]
+        [5205, 172, 158, 5242]
     )
 
     if informe_name != False and informe_data != False:
