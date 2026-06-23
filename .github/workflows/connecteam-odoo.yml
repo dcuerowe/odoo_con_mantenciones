@@ -2,9 +2,11 @@ name: Sincronizar
 
 on:
   schedule:
-    # 12:00 UTC = 08:00 AM Chile en horario de invierno (UTC-4).
-    # OJO: en horario de verano (UTC-3) esto corre a las 09:00 AM.
-    - cron: '0 12 * * 1-5'  # Lunes a viernes
+    # 11:13 UTC = 07:13 AM Chile en horario de invierno (UTC-4).
+    # OJO: en horario de verano (UTC-3) esto corre a las 08:13 AM.
+    # Minuto "raro" (:13) y fuera de la hora en punto para reducir la cola
+    # de GitHub Actions; aun así el disparo de 'schedule' es best-effort.
+    - cron: '13 11 * * 1-5'  # Lunes a viernes
   workflow_dispatch:
 
 jobs:
