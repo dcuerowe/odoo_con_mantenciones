@@ -9,6 +9,23 @@ from report_generator import informe_pdf_profesional
 from config import SHAREPOINT_UPLOAD_BASE_URL, SHAREPOINT_UPLOAD_INSTALL_BASE_URL
 
 
+def _ind_op(operativo):
+    """Indicación de operatividad para anexar a los mensajes de inbox().
+
+    Según el campo "¿Equipo operativo tras trabajos?" del formulario:
+    - "Sí" → " | Equipo operativo"
+    - "No" → " | Sin equipo operativo"
+    Cualquier otro valor (p.ej. "Irrecuperable" o vacío) no agrega indicación.
+    El separador inicial permite concatenar directamente al mensaje sin dejar
+    espacios sobrantes cuando no aplica.
+    """
+    if operativo == 'Sí':
+        return ' | Equipo operativo'
+    if operativo == 'No':
+        return ' | Sin equipo operativo'
+    return ''
+
+
 def normalizar_serial(serial):
     """Normaliza un N° de serie a string limpio para la búsqueda exacta en Odoo (OBS-11).
 
@@ -576,11 +593,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                         break
 
                                 if not id_punto:
-                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id, 
+                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MC, modelo_MC, serial_MC, id,
                                             f'{punto} no se encuentra listado en Odoo y Connecteam')
-                                    
+
                                     inbox(ot, operators[tecnico], fecha, False, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
-                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación{_ind_op(operativo_MC)}',
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo',
@@ -602,7 +619,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                         #trabajos sobre equipos que no estan con punto asignado
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
-                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MC}',
+                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MC}{_ind_op(operativo_MC)}',
                                             'N',
                                             'Sin evento de instalación',
                                             'En proceso',
@@ -1087,7 +1104,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'{punto} no se encuentra listado en Odoo y Connecteam')
 
                                     inbox(ot, operators[tecnico], fecha, False, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
-                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación{_ind_op(operativo_MC)}',
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo',
@@ -1117,7 +1134,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 if search_read:
                                     inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
-                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}',
+                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}{_ind_op(operativo_MC)}',
                                             'M',
                                             'Creación en espera',
                                             'Nuevo',
@@ -1125,7 +1142,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             informe_codificado_MC)
                                 else:
                                     inbox(ot, operators[tecnico], fecha, id_punto, tipo_MC, modelo_MC, serial_MC, id, odoo_client,
-                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}',
+                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MC}{_ind_op(operativo_MC)}',
                                             'M',
                                             'S/N no encontrado',
                                             'Nuevo',
@@ -1205,11 +1222,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 
 
                                 if not id_punto:
-                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id, 
+                                    detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_CF, modelo_CF, serial_CF, id,
                                             f'{punto} no se encuentra listado en Odoo y Connecteam')
 
                                     inbox(ot, operators[tecnico], fecha, False, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
-                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación{_ind_op(operativo_CF)}',
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo',
@@ -1229,7 +1246,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                         #trabajos sobre equipos que no estan con punto asignado
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
-                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_CF}',
+                                            f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_CF}{_ind_op(operativo_CF)}',
                                             'N',
                                             'Sin evento de instalación',
                                             'En proceso',
@@ -1823,7 +1840,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             f'{punto} no se encuentra listado en Odoo y Connecteam')
 
                                     inbox(ot, operators[tecnico], fecha, False, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
-                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                            f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación{_ind_op(operativo_CF)}',
                                             'M',
                                             'Punto no existe en sistema',
                                             'Nuevo',
@@ -1854,7 +1871,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                 if search_read:
                                     inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
-                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}',
+                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}{_ind_op(operativo_CF)}',
                                             'M',
                                             'Creación en espera',
                                             'Nuevo',
@@ -1862,7 +1879,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                             informe_codificado_CF)
                                 else:
                                     inbox(ot, operators[tecnico], fecha, id_punto, tipo_CF, modelo_CF, serial_CF, id, odoo_client,
-                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}',
+                                            f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_CF}{_ind_op(operativo_CF)}',
                                             'M',
                                             'S/N no encontrado',
                                             'Nuevo',
@@ -3216,7 +3233,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                             modelo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Modelo"]
                             tipo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Tipo de {I_translate[t]}"] if t != 'C' else dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | {I_translate[t]}"]
                             serial_I = normalizar_serial(dic_trabajo_I[f'{i}.2.{equipo} I ({t}) | N° de serie'])
-                            operativo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | ¿Equipo operativo tras trabajos?"] if t != 'C' else 'Sí'
+                            operativo_I = dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | ¿Equipo operativo tras trabajos?"]
                             obs_I = dic_trabajo_I[f'{i}.2.{equipo} I ({t}) | Observación']
                             alcance_I = 'IH | Habilitación de equipo' if t != 'T' else dic_trabajo_I[f"{i}.2.{equipo} I ({t}) | Alcance de la intervención"]
 
@@ -3272,11 +3289,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                 
                                     if not id_punto:
 
-                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id, 
+                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_I, modelo_I, serial_I, id,
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam')
 
                                         inbox(ot, operators[tecnico], fecha, False, tipo_I, modelo_I, serial_I, id, odoo_client,
-                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación{_ind_op(operativo_I)}',
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo',
@@ -3876,7 +3893,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam')
 
                                         inbox(ot, operators[tecnico], fecha, False, tipo_I, modelo_I, serial_I, id, odoo_client,
-                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación{_ind_op(operativo_I)}',
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo',
@@ -3907,7 +3924,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                     if search_read:
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
-                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}',
+                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}{_ind_op(operativo_I)}',
                                                 'M',
                                                 'Creación en espera',
                                                 'Nuevo',
@@ -3915,7 +3932,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 informe_codificado_I)
                                     else:
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_I, modelo_I, serial_I, id, odoo_client,
-                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}',
+                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_I}{_ind_op(operativo_I)}',
                                                 'M',
                                                 'S/N no encontrado',
                                                 'Nuevo',
@@ -4002,11 +4019,11 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     
 
                                     if not id_punto:
-                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id, 
+                                        detalle_op(resumen, ot, tecnico, fecha, proyecto, punto, tipo_MP, modelo_MP, serial_MP, id,
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam')
 
                                         inbox(ot, operators[tecnico], fecha, False, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación{_ind_op(operativo_MP)}',
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo',
@@ -4026,7 +4043,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                             # trabajos sobre equipos que no estan con punto asignado
                                             inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MP}',
+                                                f'Equipo sin evento de instalación We en el punto {punto}. Validar {nombre_archivo_MP}{_ind_op(operativo_MP)}',
                                                 'N',
                                                 'Sin evento de instalación',
                                                 'En proceso',
@@ -4647,7 +4664,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                                 f'{punto} no se encuentra listado en Odoo y Connecteam')
 
                                         inbox(ot, operators[tecnico], fecha, False, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación',
+                                                f'{punto} no se encuentra listado en Odoo y Connecteam. Solicitar creación{_ind_op(operativo_MP)}',
                                                 'M',
                                                 'Punto no existe en sistema',
                                                 'Nuevo',
@@ -4677,7 +4694,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
                                     if search_read:
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}',
+                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}{_ind_op(operativo_MP)}',
                                                 'M',
                                                 'Creación en espera',
                                                 'Nuevo',
@@ -4686,7 +4703,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                                     else:
                                     
                                         inbox(ot, operators[tecnico], fecha, id_punto, tipo_MP, modelo_MP, serial_MP, id, odoo_client,
-                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}',
+                                                f'N° de serie no encontrado en Odoo. Revisar OT | {nombre_archivo_MP}{_ind_op(operativo_MP)}',
                                                 'M',
                                                 'S/N no encontrado',
                                                 'Nuevo',
