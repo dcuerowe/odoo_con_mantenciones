@@ -274,7 +274,8 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
             "Rodrigo López": 172,
             "Tomás Bustamante": 178,
             "Elías Sanchez": 5432,
-            "Cristian Cardenas": 5544
+            "Cristian Cardenas": 5544,
+            "Andrés Valenzuela": 5326
         }
 
         #Puntos que efectivamente se visitaron
@@ -425,8 +426,6 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
                     I_C_prefijo.add(prefix)
             
             conteo_instancias_I_C = len(I_C_prefijo)
-            
-            print(conteo_instancias_I_C)
             
 
             conteo_I = {
