@@ -9,15 +9,16 @@
 
 ## 0. Prerrequisitos
 
-| # | Requisito                                                                                                                             | Verificación                                                                |
-| - | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 1 | Módulo**Studio** instalado (acceso al ícono superior derecho).                                                                | Menú principal → Aplicaciones → "Studio".                                 |
-| 2 | Módulo**Maintenance** instalado y con datos (equipos, requests).                                                               | Menú principal → Mantenimiento.                                            |
-| 3 | Modelo Studio`x_maintenance_location` ya existe (verificado vía introspección).                                                   | `er_introspection.json` lo confirma.                                       |
-| 4 | Usuario con permisos de**Administrador Settings** + **Studio Manager**.                                                   | Settings → Users → tu usuario.                                             |
-| 5 | **Snapshot / backup** de la base antes de empezar.                                                                              | Odoo Online: módulo Database Manager; on-premise:`pg_dump`.               |
-| 6 | Módulo`base_automation` (se instala con Studio).                                                                                   | Settings → Technical → Automation → Automated Actions debe ser accesible. |
-| 7 | Acceso al menú **Settings → Technical → Server Actions** y **Settings → Technical → Database Structure → Models**. | Activá "Modo Desarrollador" (`?debug=1` en la URL o vía Settings).       |
+
+| # | Requisito                                                                                                               | Verificación                                                                |
+| --- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 1 | Módulo**Studio** instalado (acceso al ícono superior derecho).                                                        | Menú principal → Aplicaciones → "Studio".                                 |
+| 2 | Módulo**Maintenance** instalado y con datos (equipos, requests).                                                       | Menú principal → Mantenimiento.                                            |
+| 3 | Modelo Studio`x_maintenance_location` ya existe (verificado vía introspección).                                       | `er_introspection.json` lo confirma.                                         |
+| 4 | Usuario con permisos de**Administrador Settings** + **Studio Manager**.                                                 | Settings → Users → tu usuario.                                             |
+| 5 | **Snapshot / backup** de la base antes de empezar.                                                                      | Odoo Online: módulo Database Manager; on-premise:`pg_dump`.                 |
+| 6 | Módulo`base_automation` (se instala con Studio).                                                                       | Settings → Technical → Automation → Automated Actions debe ser accesible. |
+| 7 | Acceso al menú**Settings → Technical → Server Actions** y **Settings → Technical → Database Structure → Models**. | Activá "Modo Desarrollador" (`?debug=1` en la URL o vía Settings).         |
 
 > **Modo desarrollador obligatorio** durante toda la implementación. URL: agregá `?debug=1` o activá en *Settings → Developer Tools → Activate the developer mode*.
 
@@ -46,12 +47,13 @@ Paso 12  · Integración con pipeline_registro_II                   [Doc]
 
 **Camino:** abrí cualquier vista del módulo Mantenimiento → click en el ícono **Studio** (esquina superior derecha) → en el panel izquierdo "Customizations" → **+ New Model**.
 
-| Campo del wizard            | Valor                                                                                         |
-| --------------------------- | --------------------------------------------------------------------------------------------- |
-| Model Name                  | `Plan de Mantención Preventiva`                                                            |
-| Technical Name (auto)       | `x_maintenance_plan`                                                                        |
-| **Features a marcar** | Chatter · Archiving · User assignment · Date & Calendar · Custom Sorting · Company       |
-| Features a NO marcar        | **Pipeline stages** · Tags · Picture · Lines · Notes · Monetary · Contact details |
+
+| Campo del wizard      | Valor                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| Model Name            | `Plan de Mantención Preventiva`                                                        |
+| Technical Name (auto) | `x_maintenance_plan`                                                                    |
+| **Features a marcar** | Chatter · Archiving · User assignment · Date & Calendar · Custom Sorting · Company |
+| Features a NO marcar  | **Pipeline stages** · Tags · Picture · Lines · Notes · Monetary · Contact details |
 
 > **Pipeline stages NO se marca.** Ese feature crea `stage_id` + `kanban_state` Studio: una segunda máquina de estados en paralelo al campo `state` (Paso 2) que gobierna todas las automatizaciones. Se desincronizan inevitablemente (arrastrar una card en kanban movería `stage_id` sin tocar `state` → ninguna AA dispara). Un solo ciclo de vida: `state`. El kanban se agrupa por `state`.
 
@@ -77,90 +79,122 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 
 > **Convención de nombres — LEER ANTES DE PEGAR CUALQUIER SNIPPET.** En modelos creados por Studio **todo lleva prefijo**, incluidos los campos de features: el rec_name es **`x_name`** y el archivado **`x_active`** (verificado en `er_introspection.json`: `x_maintenance_location` tiene `x_name`/`x_active`, no `name`/`active`); los demás features y campos manuales salen como `x_studio_<nombre>` (`x_studio_user_id`, `x_studio_company_id`, `x_studio_state`, …). Los únicos sin prefijo son los heredados del chatter (`message_ids`, `activity_ids`, …). En esta guía los snippets usan los **nombres lógicos sin prefijo** por legibilidad: al pegar cada snippet o dominio, **transponé** (`name`→`x_name`, `active`→`x_active`, `state`→`x_studio_state`, `plan_id`→`x_studio_plan_id`, etc.). Verificá el nombre técnico real de cada campo en *Settings → Technical → Fields* después de crearlo. Los campos de modelos **core** (`maintenance.request.archive`, `maintenance.equipment.period`, `stage_id`, …) sí van sin prefijo, tal cual aparecen acá.
 
-### 3.1 Identificación
+### 3.1 Identificación (listo)
 
 * [X]
 
-| Campo           | Tipo                                  | Required     | Default              | Notas                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| --------------- | ------------------------------------- | ------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `name`        | char                                  | **No** | `'New'`            | nativo (`x_name`). **NO marcar Required**: la cascada (SA-02) crea la ocurrencia n+1 con name vacío y SA-00 lo completa *después* del insert — con required a nivel de campo el `create()` revienta antes de que la AA corra. La obligatoriedad efectiva la da SA-00, que siempre lo rellena. Pattern: `PMP-{seq:04d}` (solo `PMP-` + correlativo, **sin año ni punto**, Req 2; el punto se identifica por `x_studio_location_id`).<br />Cam |
-| `location_id` | many2one →`x_maintenance_location` | Sí          | —                   | `ondelete='restrict'` para no borrar un punto con planes vivos.                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `company_id`  | many2one →`res.company`            | Sí          | `=user.company_id` | nativo (feature Company).                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 
-### 3.2 Programación
+| Campo         | Tipo                                | Required | Default            | Notas                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------- | ------------------------------------- | ---------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`        | char                                | **No**   | `'New'`            | nativo (`x_name`). **NO marcar Required**: la cascada (SA-02) crea la ocurrencia n+1 con name vacío y SA-00 lo completa *después* del insert — con required a nivel de campo el `create()` revienta antes de que la AA corra. La obligatoriedad efectiva la da SA-00, que siempre lo rellena. Pattern: `PMP-{seq:04d}` (solo `PMP-` + correlativo, **sin año ni punto**, Req 2; el punto se identifica por `x_studio_location_id`).<br />Cam |
+| `location_id` | many2one →`x_maintenance_location` | Sí      | —                 | `ondelete='restrict'` para no borrar un punto con planes vivos.                                                                                                                                                                                                                                                                                                                                                                                  |
+| `company_id`  | many2one →`res.company`            | Sí      | `=user.company_id` | nativo (feature Company).                                                                                                                                                                                                                                                                                                                                                                                                                        |
+
+### 3.2 Programación (listo)
 
 * [X]
 
-| Campo                       | Tipo      | Required | Notas                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| --------------------------- | --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `scheduled_date`          | date      | Sí      | —                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `original_scheduled_date` | date      | —       | escrito en`create()` vía SA-00. Solo lectura desde UI.                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `close_date`              | date      | —       | seteado por SA-02 al cerrar.                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+
+| Campo                     | Tipo      | Required | Notas                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------------- | ----------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scheduled_date`          | date      | Sí      | —                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `original_scheduled_date` | date      | —       | escrito en`create()` vía SA-00. Solo lectura desde UI.                                                                                                                                                                                                                                                                                                                                                                  |
+| `close_date`              | date      | —       | seteado por SA-02 al cerrar.                                                                                                                                                                                                                                                                                                                                                                                             |
 | `state`                   | selection | Sí      | Valores:`draft` · `scheduled` · `in_progress` · `done` · `partially_done` · `out_of_range` · `cancelled`. *Default:* `draft`. Nombre real: **`x_studio_state`**. El valor **`out_of_range`** (fuera de rango, Req 5) lo setea la automatización cuando una ocurrencia se mueve más allá de `x_studio_contract_end_date` (ver SA-13). Para el color tipo semáforo de cada valor ver §6 "Semáforo de estados". |
 
 > En Studio el tipo *Selection* se configura desde el panel derecho → **Values** (formato `key:Label`).
 
-### 3.3 Cadencia
+### 3.3 Cadencia (related — fuente única en `x_maintenance_location`) (listo)
+
+> **La cadencia (`frequency_value`, `frequency_unit`) y la tolerancia (`slack_days`) NO viven en el plan: viven en `x_maintenance_location`** (fuente única por punto), igual que las fechas de contrato (§3.10). El plan las lee como **related store=True** para poder filtrar/indexar y para que las lean la cascada (SA-02) y la proyección (SA-07). Así el ritmo del contrato tiene un solo lugar donde cambiarse: editarlo en el punto se propaga a **toda la serie** vía SA-19 (§8). El precio de esta decisión es que **una ocurrencia puntual ya no puede tener su propio ritmo** — todas las de un punto comparten cadencia y slack. `auto_replan` **sí** es propio de cada plan (permite congelar una serie sin tocar a las demás del punto).
+>
+> Los campos fuente (`x_frequency_value`, `x_frequency_unit`, `x_slack_days`) se crean en `x_maintenance_location` — ver §3.bis.6. Acá se crean solo los espejos related.
 
 * [X]
 
-| Campo               | Tipo      | Required | Notas                                                            |
-| ------------------- | --------- | -------- | ---------------------------------------------------------------- |
-| `frequency_value` | integer   | Sí      | default 1, validar > 0 (constrain en Paso 6).                    |
-| `frequency_unit`  | selection | Sí      | `day` · `week` · `month` · `year`. default `month`. |
-| `slack_days`      | integer   | —       | tolerancia ± en días. default 3.                               |
-| `auto_replan`     | boolean   | —       | default`True`.                                                 |
 
-### 3.4 Serie (auto-referencia)
+| Campo             | Tipo                               | Related                         | Notas                                                                                    |
+| ------------------- | ------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `frequency_value` | integer (related,**store=True**)   | `location_id.x_frequency_value` | indexed. Validación > 0 en el punto (C-01). Readonly en el form (se edita en el punto). |
+| `frequency_unit`  | selection (related,**store=True**) | `location_id.x_frequency_unit`  | `day` · `week` · `month` · `year`. Readonly en el form.                               |
+| `slack_days`      | integer (related,**store=True**)   | `location_id.x_slack_days`      | tolerancia ± en días. Readonly en el form.                                             |
+| `auto_replan`     | boolean                            | — (propio del plan)            | default`True`. **No** related: cada ocurrencia lo controla por separado.                 |
+
+> **Related store=True es crítico** (mismo criterio que los campos de contrato, §3.10): sin store, la cascada y C-04 no pueden usarlos en dominios ni queries eficientes. Al cambiar la cadencia/slack en el punto, el ORM invalida y recomputa los espejos en **todas** las ocurrencias automáticamente — pero eso solo cambia el *número*, no re-fecha las ocurrencias: de eso se encarga SA-19 (ver §8).
+
+> **Migración de go-live (paso obligatorio si ya hay planes con cadencia propia).** Si construís esto sobre planes que **ya** tenían `frequency_value`/`frequency_unit`/`slack_days` como campos **propios**, al convertirlos en related perdés esos valores (el related pasa a leer del punto, que todavía está vacío). Antes de eliminar los campos propios, corré un script one-shot (shell de Odoo o SA manual) que suba el ritmo vigente de cada serie a su punto. Tomá la **ocurrencia canónica** de cada punto (p. ej. la más reciente no cancelada) como origen:
+
+```python
+# Correr ANTES de cambiar los campos a related (o sobre una copia de los valores).
+for punto in env['x_maintenance_location'].search([]):
+    canon = env['x_maintenance_plan'].search(
+        [('location_id', '=', punto.id), ('x_studio_state', '!=', 'cancelled')],
+        order='x_studio_scheduled_date desc', limit=1)
+    if canon:
+        punto.write({
+            'x_frequency_value': canon.x_studio_frequency_value or 1,
+            'x_frequency_unit':  canon.x_studio_frequency_unit or 'month',
+            'x_slack_days':      canon.x_studio_slack_days or 3,
+        })
+```
+
+> Si es una instancia limpia (sin planes previos), este paso no aplica: cargás la cadencia directo en cada punto.
+
+### 3.4 Serie (auto-referencia) (listo)
 
 * [X]
 
-| Campo                | Tipo                              | Notas                                                             |
-| -------------------- | --------------------------------- | ----------------------------------------------------------------- |
-| `series_id`        | char                              | uuid generado en SA-00. Indexed = Sí (panel Field → "Indexed"). |
-| `previous_plan_id` | many2one →`x_maintenance_plan` | `ondelete='set null'`.                                          |
-| `next_plan_id`     | many2one →`x_maintenance_plan` | `ondelete='set null'`.                                          |
-| `seq_in_series`    | integer                           | computado por SA-00; 1 para el primero de la serie.               |
 
-### 3.5 Responsables (se heredan a hijas)
+| Campo              | Tipo                            | Notas                                                             |
+| -------------------- | --------------------------------- | ------------------------------------------------------------------- |
+| `series_id`        | char                            | uuid generado en SA-00. Indexed = Sí (panel Field → "Indexed"). |
+| `previous_plan_id` | many2one →`x_maintenance_plan` | `ondelete='set null'`.                                            |
+| `next_plan_id`     | many2one →`x_maintenance_plan` | `ondelete='set null'`.                                            |
+| `seq_in_series`    | integer                         | computado por SA-00; 1 para el primero de la serie.               |
+
+### 3.5 Responsables (se heredan a hijas) (listo)
 
 * [X]
 
-| Campo                   | Tipo                            | Notas                                                     |
-| ----------------------- | ------------------------------- | --------------------------------------------------------- |
+
+| Campo                 | Tipo                          | Notas                                                     |
+| ----------------------- | ------------------------------- | ----------------------------------------------------------- |
 | `user_id`             | many2one →`res.users`        | nativo (feature User assignment) — responsable del plan. |
 | `technician_user_id`  | many2one →`res.users`        | técnico por defecto.                                     |
 | `maintenance_team_id` | many2one →`maintenance.team` | —                                                        |
-| `maintenance_type`    | selection                       | `preventive` (default) · `corrective`.               |
+| `maintenance_type`    | selection                     | `preventive` (default) · `corrective`.                   |
 
-### 3.6 Calendario laboral
+### 3.6 Calendario laboral (listo)
 
 * [X]
 
-| Campo                    | Tipo                             | Notas                                                                         |
+
+| Campo                  | Tipo                           | Notas                                                                       |
 | ------------------------ | -------------------------------- | ----------------------------------------------------------------------------- |
 | `resource_calendar_id` | many2one →`resource.calendar` | default:`company_id.resource_calendar_id` (vía related compute o default). |
 
-### 3.7 Snapshot de equipos
+### 3.7 Snapshot de equipos (listo)
 
 * [X]
 
-| Campo                       | Tipo                                  | Notas                                                                        |
-| --------------------------- | ------------------------------------- | ---------------------------------------------------------------------------- |
+
+| Campo                     | Tipo                                | Notas                                                                        |
+| --------------------------- | ------------------------------------- | ------------------------------------------------------------------------------ |
 | `equipment_snapshot_ids`  | many2many →`maintenance.equipment` | sin restricción de dominio en Studio; el dominio operativo lo aplica SA-01. |
-| `last_sync_with_location` | datetime                              | timestamp del último wizard "Sync con punto".                               |
+| `last_sync_with_location` | datetime                            | timestamp del último wizard "Sync con punto".                               |
 
 > Studio crea la tabla M2M con nombre automático tipo `x_maintenance_plan_maintenance_equipment_rel`. Anotalo: lo vas a usar en queries de auditoría.
 
-### 3.8 Calculados (read-only)
+### 3.8 Calculados (read-only) **(Listo)**
 
 * [X]
 
-| Campo                       | Tipo                                 | Dependencias                                    | Notas                                                                                       |
-| --------------------------- | ------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `progress`                | integer                              | `request_ids`, `request_ids.stage_id.done`  | % hijas con`stage_id.done = True`.                                                        |
-| `delta_days_from_planned` | integer                              | `close_date`, `scheduled_date`              | `close - scheduled` (en días).                                                           |
-| `adjusted_from_scheduled` | boolean                              | `scheduled_date`, `original_scheduled_date` | True si difieren.                                                                           |
+
+| Campo                     | Tipo                           | Dependencias                                | Notas                                                                                     |
+| --------------------------- | -------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `progress`                | integer                        | `request_ids`, `request_ids.stage_id.done`  | % hijas con`stage_id.done = True`.                                                        |
+| `delta_days_from_planned` | integer                        | `close_date`, `scheduled_date`              | `close - scheduled` (en días).                                                           |
+| `adjusted_from_scheduled` | boolean                        | `scheduled_date`, `original_scheduled_date` | True si difieren.                                                                         |
 | `gantt_start`             | date (computed,**stored** Sí) | `scheduled_date`, `slack_days`              | `scheduled_date − slack_days`. La barra Gantt = ventana de tolerancia.                   |
 | `gantt_stop`              | date (computed,**stored** Sí) | `scheduled_date`, `slack_days`              | `scheduled_date + slack_days`. Stored es obligatorio: la Gantt lee por search/read_group. |
 
@@ -233,14 +267,15 @@ for record in self:
 
 Dependencies: `scheduled_date,state` · **Stored = No** (un stored no se recomputaría al cambiar el día). Readonly = Sí.
 
-### 3.9 Operativos extra
+### 3.9 Operativos extra **(listo)**
 
-| Campo                  | Tipo | Notas                                                           |
-| ---------------------- | ---- | --------------------------------------------------------------- |
+
+| Campo                | Tipo | Notas                                                         |
+| ---------------------- | ------ | --------------------------------------------------------------- |
 | `force_close_reason` | text | requerido al pasar a`partially_done` (validación en Paso 6). |
-| `notes`              | text | libre.                                                          |
+| `notes`              | text | libre.                                                        |
 
-### 3.10 Contrato (related — fuente única en `x_maintenance_location`)
+### 3.10 Contrato (related — fuente única en `x_maintenance_location`) (listo)
 
 > Los campos de contrato viven en `x_maintenance_location` (fuente única por punto/cliente). El plan los lee como **related store=True** para poder filtrar/indexar y para que el constraint de cascada sea performante.
 
@@ -248,18 +283,20 @@ Dependencies: `scheduled_date,state` · **Stored = No** (un stored no se recompu
 
 * [X]
 
-| Campo en location         | Tipo | Notas                                                             |
-| ------------------------- | ---- | ----------------------------------------------------------------- |
-| `x_contract_start_date` | date | informativo (inicio de servicio).                                 |
+
+| Campo en location       | Tipo | Notas                                                       |
+| ------------------------- | ------ | ------------------------------------------------------------- |
+| `x_contract_start_date` | date | informativo (inicio de servicio).                           |
 | `x_contract_end_date`   | date | **límite duro**: corta la cascada de los planes del punto. |
 
 **Crear en `x_maintenance_plan` (esta sección):**
 
 * [X]
 
-| Campo                   | Tipo                                | Related                               | Notas                                                                                                |
-| ----------------------- | ----------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `contract_start_date` | date (related,**store=True**) | `location_id.x_contract_start_date` | indexed para reportes.                                                                               |
+
+| Campo                 | Tipo                          | Related                             | Notas                                                                                        |
+| ----------------------- | ------------------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `contract_start_date` | date (related,**store=True**) | `location_id.x_contract_start_date` | indexed para reportes.                                                                       |
 | `contract_end_date`   | date (related,**store=True**) | `location_id.x_contract_end_date`   | **límite duro**: la cascada NO genera ocurrencias con `scheduled_date > contract_end_date`. |
 
 > En Studio 16 los related fields se configuran desde **+ Field → Related Field**. Marcar **Stored = Sí** es crítico: sin store, el related se evalúa en cada acceso y no puede usarse en dominios eficientes ni en constrains.
@@ -277,10 +314,11 @@ Dependencies: `scheduled_date,state` · **Stored = No** (un stored no se recompu
 
 ### 3.11 Inverso
 
-| Campo            | Tipo                                                            | Notas                                                                  |
-| ---------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------- |
+
+| Campo          | Tipo                                                        | Notas                                                              |
+| ---------------- | ------------------------------------------------------------- | -------------------------------------------------------------------- |
 | `request_ids`  | one2many →`maintenance.request`, inverse `plan_id`         | aparece una vez creado`plan_id` en `maintenance.request` (Paso 5). |
-| `movement_ids` | one2many →`x_equipment_movement`, inverse `linked_plan_id` | trazabilidad de movimientos asociados al plan.                         |
+| `movement_ids` | one2many →`x_equipment_movement`, inverse `linked_plan_id` | trazabilidad de movimientos asociados al plan.                     |
 
 ---
 
@@ -292,25 +330,26 @@ Esta entidad guarda la **bitácora de movimientos de equipos** (salidas a calibr
 
 **Features a marcar:** Chatter · Company. *Nada más* (es un modelo simple de bitácora).
 
-### 3.bis.1 Campos
+### 3.bis.1 Campos (listo)
 
 * [X]
 
-| Campo                 | Tipo                             | Required     | Notas                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| --------------------- | -------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `name`              | char                             | **No** | rec_name (`x_name`). **NO marcar Required** (y si Studio lo dejó NOT NULL, quitalo en *Technical → Fields*): SA-MOV-00 llena el name **post-insert** vía AA-MOV-00 (*On Creation*); con required, el `INSERT` con `x_name=NULL` revienta en Postgres (`NotNullViolation`) antes de que la AA corra — y **SA-09** también crea movements sin name, así que en runtime fallaría igual. Mismo caso que `x_maintenance_plan` §3.1. Default `'New'`. Autogenerado por SA-MOV-00: `MOV-{YYYY}-{seq:04d} / {equipment.name}`. Secuencia `x_equipment_movement`. |
-| `equipment_id`      | m2o →`maintenance.equipment`  | Sí          | indexed.`ondelete='restrict'` (no se borra un equipo con historial).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `from_location_id`  | m2o →`x_maintenance_location` | —           | NULL = venía de stock / equipo nuevo.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `to_location_id`    | m2o →`x_maintenance_location` | —           | NULL = sale a stock / servicio externo / baja.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `reason`            | selection                        | Sí          | `installation` · `calibration` · `repair` · `reassignment` · `return_from_service` · `decommission`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `date_out`          | date                             | Sí          | default`today`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `date_in`           | date                             | —           | fecha de llegada al destino. SA-09 la setea`= date_out`: el cambio de ubicación se registra como **hecho consumado**, no como tránsito abierto.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `replaced_by_id`    | m2o →`maintenance.equipment`  | —           | equipo que ocupó el lugar (anotación manual opcional).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `linked_request_id` | m2o →`maintenance.request`    | —           | orden de calibración/reparación asociada.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `linked_plan_id`    | m2o →`x_maintenance_plan`     | —           | plan de origen (referencia débil, no FK fuerte).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `state`             | selection                        | Sí          | `completed` · `cancelled`. Default `completed`. **No existe estado `in_transit`**: el movement es una bitácora de hechos consumados. La estadía en Laboratorio (593) o Bodega cliente (594) se lee directamente de `x_studio_location` del equipo — mientras esté ahí, simplemente *no está en ningún punto* y por lo tanto queda fuera de los snapshots de los planes.                                                                                                                                                                                                      |
-| `notes`             | text                             | —           | libre.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| `company_id`        | m2o →`res.company`            | Sí          | heredado de`equipment_id.company_id` (default compute).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+
+| Campo               | Tipo                           | Required | Notas                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --------------------- | -------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `name`              | char                           | **No**   | rec_name (`x_name`). **NO marcar Required** (y si Studio lo dejó NOT NULL, quitalo en *Technical → Fields*): SA-MOV-00 llena el name **post-insert** vía AA-MOV-00 (*On Creation*); con required, el `INSERT` con `x_name=NULL` revienta en Postgres (`NotNullViolation`) antes de que la AA corra — y **SA-09** también crea movements sin name, así que en runtime fallaría igual. Mismo caso que `x_maintenance_plan` §3.1. Default `'New'`. Autogenerado por SA-MOV-00: `MOV-{YYYY}-{seq:04d} / {equipment.name}`. Secuencia `x_equipment_movement`. |
+| `equipment_id`      | m2o →`maintenance.equipment`  | Sí      | indexed.`ondelete='restrict'` (no se borra un equipo con historial).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `from_location_id`  | m2o →`x_maintenance_location` | —       | NULL = venía de stock / equipo nuevo.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `to_location_id`    | m2o →`x_maintenance_location` | —       | NULL = sale a stock / servicio externo / baja.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `reason`            | selection                      | Sí      | `installation` · `calibration` · `repair` · `reassignment` · `return_from_service` · `decommission`.                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `date_out`          | date                           | Sí      | default`today`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `date_in`           | date                           | —       | fecha de llegada al destino. SA-09 la setea`= date_out`: el cambio de ubicación se registra como **hecho consumado**, no como tránsito abierto.                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `replaced_by_id`    | m2o →`maintenance.equipment`  | —       | equipo que ocupó el lugar (anotación manual opcional).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `linked_request_id` | m2o →`maintenance.request`    | —       | orden de calibración/reparación asociada.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `linked_plan_id`    | m2o →`x_maintenance_plan`     | —       | plan de origen (referencia débil, no FK fuerte).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `state`             | selection                      | Sí      | `completed` · `cancelled`. Default `completed`. **No existe estado `in_transit`**: el movement es una bitácora de hechos consumados. La estadía en Laboratorio (593) o Bodega cliente (594) se lee directamente de `x_studio_location` del equipo — mientras esté ahí, simplemente *no está en ningún punto* y por lo tanto queda fuera de los snapshots de los planes.                                                                                                                                                                                  |
+| `notes`             | text                           | —       | libre.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `company_id`        | m2o →`res.company`            | Sí      | heredado de`equipment_id.company_id` (default compute).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 **Snippet default `company_id`** (en el field → Default Value):
 
@@ -318,12 +357,13 @@ Esta entidad guarda la **bitácora de movimientos de equipos** (salidas a calibr
 equipment_id and equipment_id.company_id or env.company
 ```
 
-### 3.bis.2 Inversos a crear en otros modelos
+### 3.bis.2 Inversos a crear en otros modelos (Listo)
 
 * [X]
 
-| Modelo                     | Campo                | Tipo                                                              |
-| -------------------------- | -------------------- | ----------------------------------------------------------------- |
+
+| Modelo                   | Campo              | Tipo                                                          |
+| -------------------------- | -------------------- | --------------------------------------------------------------- |
 | `maintenance.equipment`  | `movement_ids`     | one2many →`x_equipment_movement`, inverse `equipment_id`     |
 | `x_maintenance_location` | `movement_out_ids` | one2many →`x_equipment_movement`, inverse `from_location_id` |
 | `x_maintenance_location` | `movement_in_ids`  | one2many →`x_equipment_movement`, inverse `to_location_id`   |
@@ -388,19 +428,27 @@ for eq in env['maintenance.equipment'].search([
     })
 ```
 
-### 3.bis.6 Cambios complementarios en `x_maintenance_location`
+### 3.bis.6 Cambios complementarios en `x_maintenance_location` **(listo)**
 
 **Camino:** Studio → seleccioná cualquier punto → ícono Studio → **Form view** → **+ Field**.
 
 * [X]
 
-| Campo                     | Tipo                                                      | Required | Notas                                                                                         |
-| ------------------------- | --------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------- |
-| `x_contract_start_date` | date                                                      | —       | inicio del contrato de servicio con el cliente.                                               |
-| `x_contract_end_date`   | date                                                      | —       | **fin del contrato — corta la generación de planes futuros**. Tracking Sí (chatter). |
-| `plan_ids`              | one2many →`x_maintenance_plan` (inv `location_id`)   | —       | inverso — habilita la lista de planes en el form del punto.                                  |
-| `movement_out_ids`      | o2m →`x_equipment_movement` (inv `from_location_id`) | —       | inverso.                                                                                      |
-| `movement_in_ids`       | o2m →`x_equipment_movement` (inv `to_location_id`)   | —       | inverso.                                                                                      |
+
+| Campo                   | Tipo                                                  | Required | Notas                                                                                                    |
+| ------------------------- | ------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------- |
+| `x_contract_start_date` | date                                                  | —       | inicio del contrato de servicio con el cliente.                                                          |
+| `x_contract_end_date`   | date                                                  | —       | **fin del contrato — corta la generación de planes futuros**. Tracking Sí (chatter).                  |
+| `x_frequency_value`     | integer                                               | Sí      | **cadencia del punto** (fuente única). default 1, > 0 (C-01). Tracking Sí.                             |
+| `x_frequency_unit`      | selection                                             | Sí      | `day` · `week` · `month` · `year`. default `month`. Tracking Sí.                                     |
+| `x_slack_days`          | integer                                               | —       | **tolerancia ± del punto** (fuente única). default 3. C-02 la valida contra la cadencia. Tracking Sí. |
+| `plan_ids`              | one2many →`x_maintenance_plan` (inv `location_id`)   | —       | inverso — habilita la lista de planes en el form del punto.                                             |
+| `movement_out_ids`      | o2m →`x_equipment_movement` (inv `from_location_id`) | —       | inverso.                                                                                                 |
+| `movement_in_ids`       | o2m →`x_equipment_movement` (inv `to_location_id`)   | —       | inverso.                                                                                                 |
+
+> **Cadencia y slack a nivel de punto (fuente única).** `x_frequency_value`/`x_frequency_unit`/`x_slack_days` gobiernan el ritmo y la tolerancia de **todas** las ocurrencias de la serie del punto; el plan las lee como related store=True (§3.3). Llevan **Tracking Sí** para que quede en el chatter del punto quién cambió el ritmo, y porque **AA-18 → SA-19** (§8) usa ese write para re-fechar la cola pendiente. C-02 (§7) valida en el punto que `x_slack_days · 2 < período base` para no solapar ventanas de ocurrencias consecutivas.
+
+**Form view del punto — tab "Contrato"** (actualizado): además de `x_contract_start_date`/`x_contract_end_date`, agregá `x_frequency_value` + `x_frequency_unit` (inline) y `x_slack_days`. Este tab pasa a ser el **único lugar** donde se define el ritmo de la serie.
 
 **Form view del punto** (sugerencia): tab "Contrato" con `x_contract_start_date`, `x_contract_end_date` + tab "Planes" con `plan_ids` (list embebida) + tab "Historial de equipos" con `movement_out_ids` y `movement_in_ids` unidos en una vista combinada.
 
@@ -408,12 +456,13 @@ for eq in env['maintenance.equipment'].search([
 
 ---
 
-## 4. Paso 4 — Cambios en `maintenance.equipment`
+## 4. Paso 4 — Cambios en `maintenance.equipment` (listo)
 
 **Camino:** Studio → seleccioná un equipo → ícono Studio → **Form view** → **+ Field**.
 
-| Campo                 | Tipo                       | Propiedades                                                                                                                                                                                                                                     |
-| --------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+| Campo               | Tipo                       | Propiedades                                                                                                                                                                                                                       |
+| --------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `x_managed_by_plan` | boolean (computed, stored) | Compute: ver snippet abajo. Dependencies:`x_studio_location,x_studio_location.plan_ids.state,x_studio_location.plan_ids.active`. **Stored = Sí** (necesario para filtros). Readonly = Sí. **Solo informativo** (badge/filtros). |
 
 > **Dos ciclos de mantención sobre el equipo.** El `period` nativo no se modifica. El cron nativo de Maintenance genera las hijas **propias del equipo** (p. ej. calibración del instrumento) con `plan_id = False`; el plan del punto genera sus hijas con `plan_id` seteado. Son trabajos distintos que conviven sin interferir:
@@ -449,12 +498,13 @@ Adicionalmente, agregá en el form de equipment un **tab "Historial de movimient
 
 ---
 
-## 5. Paso 5 — Cambios en `maintenance.request`
+## 5. Paso 5 — Cambios en `maintenance.request` **(listo)**
 
 * [X]
 
-| Campo       | Tipo                              | Propiedades                                                                                                                                                                                                       |
-| ----------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+| Campo     | Tipo                            | Propiedades                                                                                                                                                                                             |
+| ----------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `plan_id` | many2one →`x_maintenance_plan` | nombre real:**`x_studio_plan_id`** (transponer en todos los snippets/dominios de esta guía). `ondelete='set null'` (la baja del padre no borra trazabilidad). Indexed = Sí. Tracking = Sí (Chatter). |
 
 Adicionalmente, abrí el **Form view** de `maintenance.request` y agregá `plan_id` arriba del bloque de programación, en modo readonly cuando el campo viene autogenerado:
@@ -475,7 +525,7 @@ Adicionalmente, abrí el **Form view** de `maintenance.request` y agregá `plan_
 
 - Header: `state` como statusbar (botones `scheduled`, `in_progress`, `done`, `partially_done`, `cancelled` en ese orden) + botón **"Proyectar serie"** (Trigger Server Action → SA-07).
 - 2 columnas:
-  - Columna izq: `location_id`, `name`, `scheduled_date`, `close_date`, `frequency_value`/`frequency_unit` (inline), `slack_days`, `auto_replan`.
+  - Columna izq: `location_id`, `name`, `scheduled_date`, `close_date`, `frequency_value`/`frequency_unit` (inline), `slack_days`, `auto_replan`. **`frequency_value`/`frequency_unit`/`slack_days` van readonly** (son related del punto, §3.3): mostralos como referencia y, al lado, un link/botón "Editar ritmo en el punto" que abra `location_id`. `auto_replan` sí es editable en el plan.
   - Columna der: `user_id`, `technician_user_id`, `maintenance_team_id`, `resource_calendar_id`, `series_id`, `seq_in_series`, `previous_plan_id`, `next_plan_id`.
 - Tab "Equipos" → `equipment_snapshot_ids` (vista list) + botón "Sync con punto" (Server Action SA-03).
 - Tab "Hijas" → `request_ids` (vista list embebida) con columnas `name`, `equipment_id`, `schedule_date`, `stage_id`, `kanban_state`.
@@ -508,14 +558,15 @@ Adicionalmente, abrí el **Form view** de `maintenance.request` y agregá `plan_
 
 La "tiquetera de estados" (`x_studio_state`) se muestra con **colores tipo semáforo** para leer de un vistazo cómo va cada ocurrencia de la serie. Mapeo:
 
+
 | `x_studio_state` | Color semáforo | `decoration-*` (badge/tree) | Lectura                                    |
-| ------------------ | --------------- | ----------------------------- | ------------------------------------------ |
+| ------------------ | ----------------- | ----------------------------- | -------------------------------------------- |
 | `draft`          | gris            | `decoration-muted`          | proyectada, sin compromiso todavía        |
 | `scheduled`      | azul            | `decoration-info`           | comprometida, hijas generadas, a futuro    |
 | `in_progress`    | amarillo        | `decoration-warning`        | en ejecución (al menos una hija arrancó) |
 | `done`           | verde           | `decoration-success`        | cerrada al 100%                            |
 | `partially_done` | naranja         | `decoration-warning`        | cerrada incompleta (con carryover)         |
-| `out_of_range`   | **rojo**  | `decoration-danger`         | fuera del contrato por moverse (Req 5)     |
+| `out_of_range`   | **rojo**        | `decoration-danger`         | fuera del contrato por moverse (Req 5)     |
 | `cancelled`      | gris oscuro     | `decoration-muted`          | anulada                                    |
 
 > **Odoo 16 no colorea el widget `statusbar` por valor.** Dos caminos Studio-friendly:
@@ -553,31 +604,37 @@ En Odoo 16 **no existe un trigger "Before save"**: todas las automated actions d
 
 > **Sandbox 16:** `ValidationError` y `_` (traducción) **no** están en el contexto de evaluación. Usá `raise UserError("...")` con strings planos. `UserError`, `Warning`, `Command`, `datetime`, `dateutil` y `float_compare` **sí** están disponibles. En una Server Action el recordset disparado es `records` (y `model` para `search`).
 
-### C-01 (SA-C01) — frequency_value > 0
+### C-01 (SA-C01) — frequency_value > 0 · **Modelo: `x_maintenance_location`** **(listo)**
+
+> Como la cadencia vive ahora en el punto (§3.3), la validación se hace **en la fuente**: SA-C01 corre sobre `x_maintenance_location` (disparada por AA-07, ver §9). `records` = puntos.
 
 ```python
-for record in records:
-    if record.frequency_value <= 0:
-        raise UserError("La frecuencia debe ser mayor a 0.")
+for punto in records:
+    if not punto.x_frequency_value or punto.x_frequency_value <= 0:
+        raise UserError("La frecuencia del punto '%s' debe ser mayor a 0." % punto.x_name)
 ```
 
-### C-02 (SA-C02) — slack_days debe ser menor que la MITAD del período base
+### C-02 (SA-C02) — slack_days menor que la MITAD del período base · **Modelo: `x_maintenance_location`** **(listo)**
+
+> También se valida en el punto (AA-08 sobre `x_maintenance_location`): cadencia y slack conviven ahí, así que la restricción que los acopla vive con ellos y no puede desincronizarse. `records` = puntos.
 
 ```python
 UNIT_DAYS = {'day': 1, 'week': 7, 'month': 30, 'year': 365}
-for record in records:
-    period_days = record.frequency_value * UNIT_DAYS.get(record.frequency_unit, 30)
-    if record.slack_days * 2 >= period_days:
+for punto in records:
+    period_days = punto.x_frequency_value * UNIT_DAYS.get(punto.x_frequency_unit, 30)
+    if (punto.x_slack_days or 0) * 2 >= period_days:
         raise UserError(
-            "slack_days (%s) debe ser menor que la mitad del período base (%s días): "
-            "si no, las ventanas ±slack de dos ocurrencias consecutivas se solapan "
-            "y la cascada chocaría contra C-04."
-            % (record.slack_days, period_days))
+            "slack_days (%s) del punto '%s' debe ser menor que la mitad del período base "
+            "(%s días): si no, las ventanas ±slack de dos ocurrencias consecutivas se "
+            "solapan y la cascada chocaría contra C-04."
+            % (punto.x_slack_days, punto.x_name, period_days))
 ```
 
 > El factor `* 2`: dos ocurrencias separadas por `período` tienen ventanas `[d−slack, d+slack]` que se intersectan cuando `período < 2·slack`. Por eso `slack_days` debe ser menor que la mitad del período base; de lo contrario las ventanas de dos ocurrencias consecutivas se solapan y C-04 bloquea la generación de n+1.
+>
+> **Validar en el punto bloquea el guardado del punto** (el `raise` revierte el write de `x_maintenance_location`), que es donde el usuario edita el ritmo. Los planes leen el valor ya validado vía related, así que no necesitan revalidarlo. Si preferís defensa en profundidad, podés dejar además una copia de C-01/C-02 sobre `x_maintenance_plan` (AA On Creation) leyendo los related — es redundante pero inofensivo.
 
-### C-03 (SA-C03) — `force_close_reason` requerido si state='partially_done'
+### C-03 (SA-C03) — `force_close_reason` requerido si state='partially_done' **(listo)**
 
 ```python
 for record in records:
@@ -586,7 +643,7 @@ for record in records:
             "Para cerrar como ‘partially_done’ debe registrar el motivo en force_close_reason.")
 ```
 
-### C-04 (SA-C04) — No solapamiento de planes activos en el mismo punto
+### C-04 (SA-C04) — No solapamiento de planes activos en el mismo punto **(listo)**
 
 ```python
 # Las escrituras de la cascada (SA-02) viajan con x_skip_c04=True en el
@@ -618,7 +675,7 @@ if not env.context.get('x_skip_c04'):
 
 > Las escrituras de la cascada (SA-02) viajan con `x_skip_c04=True` en el contexto y C-04 las omite; cualquier creación o edición manual se valida completa.
 
-### C-05 (SA-C05) — `done` exige todas las hijas resueltas
+### C-05 (SA-C05) — `done` exige todas las hijas resueltas **(listo)**
 
 ```python
 # Sin esto, un usuario puede marcar 'done' con hijas pendientes y se pierden
@@ -636,7 +693,7 @@ for record in records:
             % len(pendientes))
 ```
 
-### C-06 (SA-C06) — No archivar un plan vivo
+### C-06 (SA-C06) — No archivar un plan vivo (listo)
 
 ```python
 # El archivado (x_active=False) saltea SA-04 y dejaría las hijas vivas
@@ -827,6 +884,9 @@ for plan in records:
             # frecuencia entre n+1 y n+2 quedaría rota. Cada eslabón =
             # anterior + período; lo que el deslizamiento empuje más allá
             # del contrato se marca fuera de rango (out_of_range), no se cancela.
+            # NOTA: frequency_value/unit son related del punto (§3.3), así que
+            # todos los eslabones usan el MISMO ritmo — no hay divergencia de
+            # cadencia entre saltos. Recadenciar la serie entera es de SA-19.
             prev = nxt
             cur = nxt.next_plan_id
             guard = 0
@@ -1093,6 +1153,78 @@ for plan in records:
 > **Idempotente:** re-ejecutar el botón no duplica nada — camina hasta el final de la cadena existente y solo completa lo que falte hasta el horizonte. Si la serie ya llega a `contract_end_date`, genera 0 y lo dice en el chatter.
 >
 > **Las fechas proyectadas son teóricas** (cadencia ideal desde la última ocurrencia). Cuando la realidad se imponga — un cierre fuera de slack — SA-02 re-fecha la cola completa en bloque, y las ocurrencias que el deslizamiento empuje más allá del contrato se cancelan solas (ver paso 4-bis de SA-02).
+
+---
+
+### SA-19 — Recadenciar las series del punto al cambiar cadencia/slack
+
+**Modelo:** `x_maintenance_location`. **Trigger:** AA-18 (On Update del punto).
+
+**Propósito:** cuando se edita `x_frequency_value`/`x_frequency_unit`/`x_slack_days` en el punto, re-fechar **la cola pendiente de cada serie viva** con el ritmo nuevo. El related-store ya propagó el *número* a todas las ocurrencias; esta SA propaga las *fechas*. Reutiliza los helpers `add_period` / `shift_to_workday` del paso 4-bis de SA-02.
+
+> **Regla de anclaje:** la primera ocurrencia no cerrada de cada serie **conserva su `scheduled_date`** (es un compromiso ya tomado / a punto de tomarse); a partir de ella se recalcula el resto encadenando `anterior + período`. Cambiar el slack **no mueve ninguna fecha** — solo se recalculan `gantt_start`/`gantt_stop`, que son computed y se ajustan solos; por eso el bucle no reacciona al slack, únicamente a la cadencia.
+
+```python
+# Modelo: x_maintenance_location. Idempotente (como SA-12): en 16 no hay
+# watched fields → dispara en cualquier write del punto, pero el guard
+# 'cur.scheduled_date != new_date' no escribe si las fechas ya reflejan el ritmo.
+def add_period(base, value, unit):
+    if unit == 'day':
+        return base + datetime.timedelta(days=value)
+    if unit == 'week':
+        return base + datetime.timedelta(weeks=value)
+    if unit == 'month':
+        return base + dateutil.relativedelta.relativedelta(months=value)
+    if unit == 'year':
+        return base + dateutil.relativedelta.relativedelta(years=value)
+    return base
+
+def shift_to_workday(date, calendar):
+    if not calendar:
+        return date
+    dt = datetime.datetime.combine(date, datetime.time(8, 0))
+    next_dt = calendar.plan_days(1, dt, compute_leaves=True)
+    return next_dt.date() if next_dt else date
+
+for punto in records:
+    fval, funit = punto.x_frequency_value, punto.x_frequency_unit
+    if not fval or not funit:
+        continue
+    # Cabezas de serie viva del punto: primera ocurrencia NO cerrada de cada cadena.
+    cabezas = env['x_maintenance_plan'].search([
+        ('location_id', '=', punto.id),
+        ('state', 'in', ('draft', 'scheduled')),
+        ('previous_plan_id.state', 'in', ('done', 'partially_done')),
+    ]) | env['x_maintenance_plan'].search([
+        ('location_id', '=', punto.id),
+        ('state', 'in', ('draft', 'scheduled')),
+        ('previous_plan_id', '=', False),
+    ])
+    for cabeza in cabezas:
+        # La cabeza conserva su fecha (compromiso); se recalcula la cola.
+        prev, cur, guard = cabeza, cabeza.next_plan_id, 0
+        while cur and cur.state in ('draft', 'scheduled') and guard < 60:
+            new_date = shift_to_workday(
+                add_period(prev.scheduled_date, fval, funit),
+                prev.resource_calendar_id)
+            if punto.x_contract_end_date and new_date > punto.x_contract_end_date:
+                # más allá del contrato: fuera de rango (Req 5), no se cancela acá.
+                cur.with_context(x_skip_c04=True).write({
+                    'state': 'out_of_range', 'scheduled_date': new_date})
+            elif cur.scheduled_date != new_date:
+                # AA-03 → SA-06 propaga la fecha nueva a las hijas vivas si las hay.
+                cur.with_context(x_skip_c04=True).write({'scheduled_date': new_date})
+            prev, cur = cur, cur.next_plan_id
+            guard += 1
+    punto.message_post(body=(
+        "Cadencia/tolerancia del punto actualizada (%s %s, slack %s d): "
+        "series pendientes re-fechadas."
+    ) % (fval, funit, punto.x_slack_days))
+```
+
+> **Convive con SA-12 (acortar contrato) y SA-13 (fuera de rango).** Las tres cuelgan de writes del punto/ocurrencia y son idempotentes: si el mismo write cambia cadencia *y* acorta contrato, SA-19 re-fecha y marca `out_of_range` lo que se pasa, y SA-12 elimina/cancela lo que quede en `draft`/`scheduled` más allá del nuevo término. Asigná a **AA-18 un `sequence` mayor que AA-14** (SA-12) para que el corte de contrato se aplique *después* del re-fechado. Las ocurrencias ya `out_of_range` no las toca la cabeza (la búsqueda de cabezas solo mira `draft`/`scheduled`).
+>
+> **Por qué es seguro dispararla en cada write del punto:** un write que no cambia cadencia encuentra las fechas ya correctas (`cur.scheduled_date == new_date`) y no escribe nada — igual que la idempotencia documentada en SA-12. Si te incomoda el disparo automático, montala como **botón "Recadenciar serie"** en el form del punto (patrón SA-04/SA-07) en vez de AA-18.
 
 ---
 
@@ -1368,10 +1500,11 @@ for plan in records.mapped('x_studio_plan_id'):
 
 Los **reportes** y la **auto-programación** (SA-14, SA-15, SA-16) corren por reloj fijo: se montan como **Scheduled Actions** (`ir.cron`) en *Settings → Technical → Automation → Scheduled Actions → New*, cada una apuntando a su Server Action. En el cron, la SA corre **sin `record` específico**: el código consulta vía `env` y no depende de `records`. La **alerta de ocurrencia próxima** (SA-18) es distinta: cuelga de la fecha de cada plan, así que va por una **Automated Action timed** (AA-05), no por cron.
 
-| Cron  | Nombre                                  | Cadencia (`ir.cron`)                                                       | Ejecuta |
-| ----- | --------------------------------------- | ---------------------------------------------------------------------------- | ------- |
+
+| Cron  | Nombre                                  | Cadencia (`ir.cron`)                                                   | Ejecuta |
+| ------- | ----------------------------------------- | ------------------------------------------------------------------------ | --------- |
 | CR-01 | Jueves AM — programar semana siguiente | `interval_type=weeks`, `interval_number=1`, `nextcall`=un jueves 08:00 | SA-15   |
-| CR-02 | Jueves AM — reporte semana siguiente   | `weeks/1`, `nextcall`=jueves 08:15 (después de CR-01)                   | SA-14   |
+| CR-02 | Jueves AM — reporte semana siguiente   | `weeks/1`, `nextcall`=jueves 08:15 (después de CR-01)                 | SA-14   |
 | CR-03 | Día 1 del mes — reporte mensual       | `interval_type=months`, `interval_number=1`, `nextcall`=día 1 08:00   | SA-16   |
 
 > **Orden deliberado:** CR-01 (auto-programación, SA-15) corre **antes** que CR-02 (reporte, SA-14) para que el reporte ya incluya las ocurrencias recién promovidas a `scheduled`. `ir.cron` no expresa "jueves" como tal: se fija `interval_type=weeks` y un `nextcall` que caiga en jueves; el motor mantiene la cadencia semanal.
@@ -1527,26 +1660,28 @@ for plan in records:
 >
 > **Diferencia clave con 17:** en 16 el trigger `On Update` **no tiene "Watched field"** — dispara ante *cualquier* write del registro. Se acota declarativamente con **"Before Update Domain"** (`filter_pre_domain`, evaluado sobre los valores **previos**) + **"Apply on"** (`filter_domain`, valores **nuevos**), ambos presentes en 16. Cuando no alcanza, la propia Server Action filtra (ej. SA-09 compara el último movement).
 
-| ID        | Modelo                     | Trigger (16)             | Before Update Domain / Apply on                                                                                                                 | Acción                                                                                                     |
-| --------- | -------------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| AA-00     | `x_maintenance_plan`     | On Creation              | —                                                                                                                                              | Execute → SA-00                                                                                            |
-| AA-01     | `x_maintenance_plan`     | On Update                | Before Update:`[('state','!=','scheduled')]` · Apply on: `[('state','=','scheduled')]`                                                     | Execute → SA-01                                                                                            |
-| AA-02     | `x_maintenance_plan`     | On Update                | Before Update:`[('state','not in',('done','partially_done'))]` · Apply on: `[('state','in',('done','partially_done'))]`                    | Execute → SA-02 (incluye chequeo de`contract_end_date`)                                                  |
-| AA-03     | `x_maintenance_plan`     | On Update                | Apply on:`[('state','in',('draft','scheduled'))]` (dispara en cada write; SA-06 se autofiltra: solo escribe si la fecha de las hijas difiere) | Execute → SA-06                                                                                            |
-| AA-05     | `x_maintenance_plan`     | Based on Timed Condition | Trigger Date:`x_studio_scheduled_date`. Delay: **-7 días** (corre 7 días antes).                                                      | Execute → SA-18 (alerta de ocurrencia próxima, Req 6)                                                     |
-| AA-06     | `maintenance.equipment`  | On Update                | — (en 16 dispara en cada write; SA-09 compara el último movement y sale si la ubicación no cambió)                                          | Execute → SA-09 (registra la bitácora de movimientos)                                                     |
-| AA-MOV-00 | `x_equipment_movement`   | On Creation              | —                                                                                                                                              | Execute → SA-MOV-00 (autogen name, company)                                                                |
-| AA-07     | `x_maintenance_plan`     | On Creation & Update     | —                                                                                                                                              | Execute → SA-C01 (`frequency_value > 0`)                                                                 |
-| AA-08     | `x_maintenance_plan`     | On Creation & Update     | —                                                                                                                                              | Execute → SA-C02 (`slack_days` < período base)                                                          |
-| AA-09     | `x_maintenance_plan`     | On Creation & Update     | Apply on:`[('state','=','partially_done')]`                                                                                                   | Execute → SA-C03 (`force_close_reason` requerido)                                                        |
-| AA-10     | `x_maintenance_plan`     | On Creation & Update     | Apply on:`[('state','in',('draft','scheduled','in_progress'))]`                                                                               | Execute → SA-C04 (no solapamiento; se salta si el contexto trae`x_skip_c04` — escrituras de la cascada) |
-| AA-11     | `x_maintenance_plan`     | On Update                | Apply on:`[('state','=','done')]`                                                                                                             | Execute → SA-C05 (`done` exige hijas resueltas)                                                          |
-| AA-12     | `x_maintenance_plan`     | On Update                | Apply on:`[('active','=',False)]`                                                                                                             | Execute → SA-C06 (no archivar plan vivo)                                                                   |
-| AA-13     | `maintenance.request`    | On Creation              | Apply on:`[('plan_id','=',False),('maintenance_type','=','preventive')]`                                                                      | Execute → SA-10 (etiqueta las hijas propias del equipo / ciclo nativo)                                     |
-| AA-14     | `x_maintenance_location` | On Update                | — (idempotente: actúa solo si hay ocurrencias`draft`/`scheduled` más allá del nuevo `x_contract_end_date`)                            | Execute → SA-12 (acortar contrato: eliminar/cancelar ocurrencias futuras, Req 1)                           |
-| AA-15     | `x_equipment_movement`   | On Creation              | Apply on:`[('x_studio_reason','=','repair')]`                                                                                                 | Execute → SA-11 (equipo dañado: eliminar solicitudes programadas, Req 3)                                  |
-| AA-16     | `maintenance.request`    | On Update                | Apply on:`[('x_studio_plan_id','!=',False)]`                                                                                                  | Execute → SA-17 (estado del padre según hijas: 100%→done, hija arranca→in_progress, Req 8)              |
-| AA-17     | `x_maintenance_plan`     | On Update                | Apply on:`[('x_studio_state','in',('draft','scheduled','in_progress','out_of_range'))]`                                                       | Execute → SA-13 (marcar/desmarcar fuera de rango al mover la fecha, Req 5)                                 |
+
+| ID        | Modelo                   | Trigger (16)             | Before Update Domain / Apply on                                                                                                                             | Acción                                                                                                   |
+| ----------- | -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| AA-00     | `x_maintenance_plan`     | On Creation              | —                                                                                                                                                          | Execute → SA-00                                                                                          |
+| AA-01     | `x_maintenance_plan`     | On Update                | Before Update:`[('state','!=','scheduled')]` · Apply on: `[('state','=','scheduled')]`                                                                     | Execute → SA-01                                                                                          |
+| AA-02     | `x_maintenance_plan`     | On Update                | Before Update:`[('state','not in',('done','partially_done'))]` · Apply on: `[('state','in',('done','partially_done'))]`                                    | Execute → SA-02 (incluye chequeo de`contract_end_date`)                                                  |
+| AA-03     | `x_maintenance_plan`     | On Update                | Apply on:`[('state','in',('draft','scheduled'))]` (dispara en cada write; SA-06 se autofiltra: solo escribe si la fecha de las hijas difiere)               | Execute → SA-06                                                                                          |
+| AA-05     | `x_maintenance_plan`     | Based on Timed Condition | Trigger Date:`x_studio_scheduled_date`. Delay: **-7 días** (corre 7 días antes).                                                                          | Execute → SA-18 (alerta de ocurrencia próxima, Req 6)                                                   |
+| AA-06     | `maintenance.equipment`  | On Update                | — (en 16 dispara en cada write; SA-09 compara el último movement y sale si la ubicación no cambió)                                                      | Execute → SA-09 (registra la bitácora de movimientos)                                                   |
+| AA-MOV-00 | `x_equipment_movement`   | On Creation              | —                                                                                                                                                          | Execute → SA-MOV-00 (autogen name, company)                                                              |
+| AA-07     | `x_maintenance_location` | On Creation & Update     | —                                                                                                                                                          | Execute → SA-C01 (`x_frequency_value > 0`) — valida la cadencia en el punto                             |
+| AA-08     | `x_maintenance_location` | On Creation & Update     | —                                                                                                                                                          | Execute → SA-C02 (`x_slack_days` < mitad del período base) — valida en el punto                        |
+| AA-09     | `x_maintenance_plan`     | On Creation & Update     | Apply on:`[('state','=','partially_done')]`                                                                                                                 | Execute → SA-C03 (`force_close_reason` requerido)                                                        |
+| AA-10     | `x_maintenance_plan`     | On Creation & Update     | Apply on:`[('state','in',('draft','scheduled','in_progress'))]`                                                                                             | Execute → SA-C04 (no solapamiento; se salta si el contexto trae`x_skip_c04` — escrituras de la cascada) |
+| AA-11     | `x_maintenance_plan`     | On Update                | Apply on:`[('state','=','done')]`                                                                                                                           | Execute → SA-C05 (`done` exige hijas resueltas)                                                          |
+| AA-12     | `x_maintenance_plan`     | On Update                | Apply on:`[('active','=',False)]`                                                                                                                           | Execute → SA-C06 (no archivar plan vivo)                                                                 |
+| AA-13     | `maintenance.request`    | On Creation              | Apply on:`[('plan_id','=',False),('maintenance_type','=','preventive')]`                                                                                    | Execute → SA-10 (etiqueta las hijas propias del equipo / ciclo nativo)                                   |
+| AA-14     | `x_maintenance_location` | On Update                | — (idempotente: actúa solo si hay ocurrencias`draft`/`scheduled` más allá del nuevo `x_contract_end_date`)                                              | Execute → SA-12 (acortar contrato: eliminar/cancelar ocurrencias futuras, Req 1)                         |
+| AA-15     | `x_equipment_movement`   | On Creation              | Apply on:`[('x_studio_reason','=','repair')]`                                                                                                               | Execute → SA-11 (equipo dañado: eliminar solicitudes programadas, Req 3)                                |
+| AA-16     | `maintenance.request`    | On Update                | Apply on:`[('x_studio_plan_id','!=',False)]`                                                                                                                | Execute → SA-17 (estado del padre según hijas: 100%→done, hija arranca→in_progress, Req 8)            |
+| AA-17     | `x_maintenance_plan`     | On Update                | Apply on:`[('x_studio_state','in',('draft','scheduled','in_progress','out_of_range'))]`                                                                     | Execute → SA-13 (marcar/desmarcar fuera de rango al mover la fecha, Req 5)                               |
+| AA-18     | `x_maintenance_location` | On Update                | — (idempotente: solo re-fecha si las fechas no reflejan la cadencia del punto;`sequence` **mayor** que AA-14 para que el corte de contrato corra después) | Execute → SA-19 (recadenciar las series pendientes del punto)                                            |
 
 > **SA-14, SA-15 y SA-16 no están en esta tabla:** son **Scheduled Actions** (`ir.cron`), no Automated Actions; su cadencia está en la tabla de crons (CR-01…CR-03) del Paso 8. AA-05 sí es una AA (Based on Timed Condition): cuelga de la fecha de cada ocurrencia, no de un reloj fijo.
 
@@ -1558,7 +1693,7 @@ for plan in records:
 > - *Apply on*: condición con los valores **nuevos** (aplica a `On Update` y `On Creation & Update`).
 >   Combinarlas evita disparos espurios (ej: para AA-01 solo querés disparar cuando *entra* a `scheduled`, no cuando ya estaba).
 >
-> **AA-07…AA-12 (validaciones).** En 16 reemplazan a los constraints "Before save" inexistentes: ejecutan SA-C01…SA-C06 con `raise UserError(...)`. El raise revierte la transacción, bloqueando el guardado igual que un `@api.constrains`.
+> **AA-07…AA-12 (validaciones).** En 16 reemplazan a los constraints "Before save" inexistentes: ejecutan SA-C01…SA-C06 con `raise UserError(...)`. El raise revierte la transacción, bloqueando el guardado igual que un `@api.constrains`. **Ojo con el modelo:** AA-07/AA-08 (cadencia y slack) disparan sobre **`x_maintenance_location`** — validan en la fuente única (§3.3), donde el usuario edita el ritmo; AA-09…AA-12 siguen sobre `x_maintenance_plan`.
 
 ---
 
@@ -1568,26 +1703,29 @@ for plan in records:
 
 *Settings → Technical → Security → Groups → New*:
 
-| Nombre                         | Hereda de             | Comentario                                                            |
-| ------------------------------ | --------------------- | --------------------------------------------------------------------- |
+
+| Nombre                       | Hereda de             | Comentario                                                        |
+| ------------------------------ | ----------------------- | ------------------------------------------------------------------- |
 | `Maintenance / Plan Manager` | Maintenance / Manager | CRUD completo sobre`x_maintenance_plan` y `x_equipment_movement`. |
-| `Maintenance / Plan User`    | Maintenance / User    | Lectura de planes y movimientos; CRUD sobre sus hijas asignadas.      |
+| `Maintenance / Plan User`    | Maintenance / User    | Lectura de planes y movimientos; CRUD sobre sus hijas asignadas.  |
 
 ### 10.2 Access Rights (`ir.model.access`)
 
 *Settings → Technical → Security → Access Rights → New*. Para `x_maintenance_plan`:
 
+
 | Grupo        | read | write | create | unlink |
-| ------------ | ---- | ----- | ------ | ------ |
+| -------------- | ------ | ------- | -------- | -------- |
 | Plan Manager | Yes  | Yes   | Yes    | Yes    |
 | Plan User    | Yes  | No    | No     | No     |
 
 Para `x_equipment_movement`:
 
-| Grupo                        | read | write | create        | unlink                               |
-| ---------------------------- | ---- | ----- | ------------- | ------------------------------------ |
-| Plan Manager                 | Yes  | Yes   | Yes           | No (auditoría: no borrar bitácora) |
-| Plan User                    | Yes  | No    | Yes           | No                                   |
+
+| Grupo                  | read | write | create  | unlink                               |
+| ------------------------ | ------ | ------- | --------- | -------------------------------------- |
+| Plan Manager           | Yes  | Yes   | Yes     | No (auditoría: no borrar bitácora) |
+| Plan User              | Yes  | No    | Yes     | No                                   |
 | **Maintenance / User** | Yes  | No    | **Yes** | No                                   |
 
 > **Maintenance/User requiere `create` sobre movements.** Las Server Actions disparadas por Automated Actions corren **como el usuario que hizo el write**. AA-06 → SA-09 crea un `x_equipment_movement` cada vez que se cambia `x_studio_location` de un equipo, incluido el write XML-RPC de `pipeline_registro_II`. Sin permiso de create, la AA lanza `AccessError` y revierte el write completo. El usuario API que usa `pipeline_registro_II` debe estar en *Maintenance / User* (o tener el ACL directo). `write`/`unlink` quedan cerrados: la bitácora es append-only salvo para Plan Manager.
@@ -1615,75 +1753,84 @@ Sobre `x_equipment_movement`:(AAl
 
 Probar en este orden, con un punto que tenga 3 equipos:
 
-- [ ] **T-01** Crear plan en draft. → name autogenerado, series_id se completa, original_scheduled_date = scheduled_date.
-- [ ] **T-02** Click "Sync con punto" en draft. → equipment_snapshot_ids se llena con los 3.
-- [ ] **T-03** Cambiar state a `scheduled`. → se crean 3 `maintenance.request` con `plan_id` apuntando al plan, `schedule_date` = plan.scheduled_date.
-- [ ] **T-04** Verificar en cada uno de los 3 equipos: `x_managed_by_plan = True` y que el `period` nativo **sigue intacto** (no se toca). Si el equipo tenía `period > 0`, el cron nativo debe seguir generando sus hijas propias (`plan_id = False`) en paralelo a las del plan.
-- [ ] **T-05** Cerrar 3 hijas en stage "Repaired/Done". → `progress` = 100%.
-- [ ] **T-06** Cerrar el plan dentro del slack (state → `done` con close_date = scheduled_date). → se crea next_plan_id con scheduled_date = scheduled_date + frequency.
-- [ ] **T-07** Cerrar fuera del slack (close_date = scheduled_date + slack + 5 días). → next_plan_id.scheduled_date = close_date + frequency (cadencia deslizada).
-- [ ] **T-08** Cerrar como `partially_done` con 1 hija pendiente y `force_close_reason` lleno. → carryover crea 1 hija extra en next_plan_id con `[CARRYOVER ...]` en el name.
-- [ ] **T-09** Intentar guardar `partially_done` sin `force_close_reason`. → SA-C03 (AA-09) dispara UserError y bloquea el guardado.
-- [ ] **T-09b** Intentar cerrar como `done` con 1 hija pendiente. → SA-C05 (AA-11) dispara UserError: o se completan las hijas o se cierra `partially_done`.
-- [ ] **T-10** Crear segundo plan para el mismo punto con scheduled_date dentro del slack del primero. → SA-C04 (AA-10) dispara UserError.
-- [ ] **T-11** Editar manualmente scheduled_date en un plan `scheduled`. → AA-03 propaga a hijas vivas + log en chatter.
-- [ ] **T-12** Cancelar el plan padre. → state = cancelled, hijas archivadas, cadena puenteada, mensaje en chatter. El `period` nativo de los equipos **no cambia** (sigue corriendo su ciclo propio).
-- [ ] **T-12b** Intentar archivar (`active = False`) un plan `scheduled`. → SA-C06 (AA-12) bloquea con UserError. Tras cancelarlo (T-12), archivar sí funciona.
-- [ ] **T-13** Borrar el punto. → restricción impide borrar si tiene planes (cambiar `ondelete` si no se desea).
-- [ ] **T-14** Agregar un nuevo equipo al punto entre Paso T-03 y T-05. Sync con punto. → se crea 1 hija extra, `last_sync_with_location` se actualiza.
-- [ ] **T-15** scheduled_date que caiga en domingo con `resource_calendar_id` cargado. → SA-02 desplaza al lunes hábil.
+- [ ]  **T-01** Crear plan en draft. → name autogenerado, series_id se completa, original_scheduled_date = scheduled_date.
+- [ ]  **T-02** Click "Sync con punto" en draft. → equipment_snapshot_ids se llena con los 3.
+- [ ]  **T-03** Cambiar state a `scheduled`. → se crean 3 `maintenance.request` con `plan_id` apuntando al plan, `schedule_date` = plan.scheduled_date.
+- [ ]  **T-04** Verificar en cada uno de los 3 equipos: `x_managed_by_plan = True` y que el `period` nativo **sigue intacto** (no se toca). Si el equipo tenía `period > 0`, el cron nativo debe seguir generando sus hijas propias (`plan_id = False`) en paralelo a las del plan.
+- [ ]  **T-05** Cerrar 3 hijas en stage "Repaired/Done". → `progress` = 100%.
+- [ ]  **T-06** Cerrar el plan dentro del slack (state → `done` con close_date = scheduled_date). → se crea next_plan_id con scheduled_date = scheduled_date + frequency.
+- [ ]  **T-07** Cerrar fuera del slack (close_date = scheduled_date + slack + 5 días). → next_plan_id.scheduled_date = close_date + frequency (cadencia deslizada).
+- [ ]  **T-08** Cerrar como `partially_done` con 1 hija pendiente y `force_close_reason` lleno. → carryover crea 1 hija extra en next_plan_id con `[CARRYOVER ...]` en el name.
+- [ ]  **T-09** Intentar guardar `partially_done` sin `force_close_reason`. → SA-C03 (AA-09) dispara UserError y bloquea el guardado.
+- [ ]  **T-09b** Intentar cerrar como `done` con 1 hija pendiente. → SA-C05 (AA-11) dispara UserError: o se completan las hijas o se cierra `partially_done`.
+- [ ]  **T-10** Crear segundo plan para el mismo punto con scheduled_date dentro del slack del primero. → SA-C04 (AA-10) dispara UserError.
+- [ ]  **T-11** Editar manualmente scheduled_date en un plan `scheduled`. → AA-03 propaga a hijas vivas + log en chatter.
+- [ ]  **T-12** Cancelar el plan padre. → state = cancelled, hijas archivadas, cadena puenteada, mensaje en chatter. El `period` nativo de los equipos **no cambia** (sigue corriendo su ciclo propio).
+- [ ]  **T-12b** Intentar archivar (`active = False`) un plan `scheduled`. → SA-C06 (AA-12) bloquea con UserError. Tras cancelarlo (T-12), archivar sí funciona.
+- [ ]  **T-13** Borrar el punto. → restricción impide borrar si tiene planes (cambiar `ondelete` si no se desea).
+- [ ]  **T-14** Agregar un nuevo equipo al punto entre Paso T-03 y T-05. Sync con punto. → se crea 1 hija extra, `last_sync_with_location` se actualiza.
+- [ ]  **T-15** scheduled_date que caiga en domingo con `resource_calendar_id` cargado. → SA-02 desplaza al lunes hábil.
 
 **Tests específicos de `contract_end_date`:**
 
-- [ ] **T-16** Plan con `contract_end_date = scheduled_date + 2 meses`, frequency = 1 mes. Cerrar plan 1. → genera plan 2 (próximo mes). Cerrar plan 2. → genera plan 3 (mes siguiente). Cerrar plan 3. → **NO** genera plan 4; chatter loggea "Serie finalizada por término de contrato".
-- [ ] **T-17** Cambiar `contract_end_date` a una fecha posterior en un plan existente → al copiar el siguiente debería heredar el nuevo valor. Verificar que `plan.copy(default=...)` propagó.
+- [ ]  **T-16** Plan con `contract_end_date = scheduled_date + 2 meses`, frequency = 1 mes. Cerrar plan 1. → genera plan 2 (próximo mes). Cerrar plan 2. → genera plan 3 (mes siguiente). Cerrar plan 3. → **NO** genera plan 4; chatter loggea "Serie finalizada por término de contrato".
+- [ ]  **T-17** Cambiar `contract_end_date` a una fecha posterior en un plan existente → al copiar el siguiente debería heredar el nuevo valor. Verificar que `plan.copy(default=...)` propagó.
 
 **Tests específicos de `x_equipment_movement`:**
 
-- [ ] **T-18** Equipo S1 en punto Norte → cambiar `x_studio_location` a Laboratorio (593). → AA-06/SA-09 crea movement `completed` con `from=Norte`, `to=Lab`, `reason='calibration'`, `date_in=date_out=today`. El `period` del equipo **no cambia**.
-- [ ] **T-19** S1 vuelve del Lab al punto Norte (con plan activo). → movement `reason='return_from_service'`. El `period` del equipo **no cambia**.
-- [ ] **T-20** S1 se mueve de Norte a un punto Sur **sin** plan activo. → movement `reason='reassignment'`. El `period` del equipo **no cambia**.
-- [ ] **T-20b** Equipo con `period > 0` dentro de un plan: el cron nativo genera una hija `plan_id=False`. → AA-13/SA-10 le estampa `x_studio_tipo_de_trabajo='Mantención del Equipo'`; el `progress` del plan **no se altera** y cerrarla no dispara cascada.
-- [ ] **T-21** Quitar `x_studio_location` de un equipo (baja). → movement `reason='decommission'` con `to=NULL`.
-- [ ] **T-22** Cambiar manualmente `x_studio_location` desde el form (como Plan User o Maintenance User). → AA-06 dispara SA-09 sin AccessError (ACL de create verificada) y el reason se infiere según destino.
-- [ ] **T-23** Intentar borrar un movement como Plan Manager o Plan User. → bloqueado por ACL. (El superusuario admin bypasea ACLs — esta protección no aplica para él.)
-- [ ] **T-24** Consulta "todas las sondas que pasaron por Norte en los últimos 90 días" desde la list view filtrada. → resultados consistentes con los movements creados.
-- [ ] **T-25** Equipo con `x_studio_location = Lab (593)` + plan de su punto de origen pasa a `scheduled`. → SA-01 NO le genera hija: ya no está en el punto, queda fuera del snapshot naturalmente.
-- [ ] **T-25b** Equipo recién creado en **Bodega cliente (594)** (default), **sin** seed. Editar cualquier campo NO-ubicación (p. ej. una nota). → SA-09 **NO** crea ningún movement (baseline implícito 594 == 594). No aparece un `594→594 'repair'` espurio.
-- [ ] **T-25c** Ese mismo equipo de 594 se mueve por primera vez a un punto real. → SA-09 crea movement con `from=NULL`, `to=punto`, `reason='installation'` (no `return_from_service`). Confirma que el primer traslado desde stock se etiqueta como instalación.
+- [ ]  **T-18** Equipo S1 en punto Norte → cambiar `x_studio_location` a Laboratorio (593). → AA-06/SA-09 crea movement `completed` con `from=Norte`, `to=Lab`, `reason='calibration'`, `date_in=date_out=today`. El `period` del equipo **no cambia**.
+- [ ]  **T-19** S1 vuelve del Lab al punto Norte (con plan activo). → movement `reason='return_from_service'`. El `period` del equipo **no cambia**.
+- [ ]  **T-20** S1 se mueve de Norte a un punto Sur **sin** plan activo. → movement `reason='reassignment'`. El `period` del equipo **no cambia**.
+- [ ]  **T-20b** Equipo con `period > 0` dentro de un plan: el cron nativo genera una hija `plan_id=False`. → AA-13/SA-10 le estampa `x_studio_tipo_de_trabajo='Mantención del Equipo'`; el `progress` del plan **no se altera** y cerrarla no dispara cascada.
+- [ ]  **T-21** Quitar `x_studio_location` de un equipo (baja). → movement `reason='decommission'` con `to=NULL`.
+- [ ]  **T-22** Cambiar manualmente `x_studio_location` desde el form (como Plan User o Maintenance User). → AA-06 dispara SA-09 sin AccessError (ACL de create verificada) y el reason se infiere según destino.
+- [ ]  **T-23** Intentar borrar un movement como Plan Manager o Plan User. → bloqueado por ACL. (El superusuario admin bypasea ACLs — esta protección no aplica para él.)
+- [ ]  **T-24** Consulta "todas las sondas que pasaron por Norte en los últimos 90 días" desde la list view filtrada. → resultados consistentes con los movements creados.
+- [ ]  **T-25** Equipo con `x_studio_location = Lab (593)` + plan de su punto de origen pasa a `scheduled`. → SA-01 NO le genera hija: ya no está en el punto, queda fuera del snapshot naturalmente.
+- [ ]  **T-25b** Equipo recién creado en **Bodega cliente (594)** (default), **sin** seed. Editar cualquier campo NO-ubicación (p. ej. una nota). → SA-09 **NO** crea ningún movement (baseline implícito 594 == 594). No aparece un `594→594 'repair'` espurio.
+- [ ]  **T-25c** Ese mismo equipo de 594 se mueve por primera vez a un punto real. → SA-09 crea movement con `from=NULL`, `to=punto`, `reason='installation'` (no `return_from_service`). Confirma que el primer traslado desde stock se etiqueta como instalación.
 
 **Tests de proyección de serie (SA-07) y Gantt:**
 
-- [ ] **T-30** Plan 1 `scheduled`, `contract_end_date = +6 meses`, frequency = 1 mes. Click "Proyectar serie". → se crean ~5 ocurrencias `draft` encadenadas (`previous/next_plan_id`, `seq_in_series` correlativo, mismo `series_id`), **sin hijas y sin snapshot**, ninguna después del fin de contrato. La Gantt agrupada por punto muestra la serie completa como barras `±slack`.
-- [ ] **T-31** Re-click en "Proyectar serie" (desde cualquier ocurrencia de la serie). → idempotente: 0 ocurrencias nuevas, mensaje en chatter.
-- [ ] **T-32** Cerrar plan 1 **fuera del slack** (close_date = scheduled + slack + 10). → SA-02 re-fecha n+1 desde `close_date` y el paso 4-bis desliza **toda la cola** en bloque; las ocurrencias empujadas más allá de `contract_end_date` quedan `cancelled` con log en chatter.
-- [ ] **T-33** Cerrar plan 1 **dentro del slack**. → la cola no se mueve (las fechas recalculadas coinciden y el guard `!=` evita writes).
-- [ ] **T-34** Plan sin `contract_end_date`. → "Proyectar serie" genera exactamente 12 ocurrencias.
-- [ ] **T-35** Pasar a `scheduled` una ocurrencia proyectada. → SA-01 toma el snapshot del punto recién ahí y genera las hijas con los equipos presentes en ese momento.
-- [ ] **T-36** Cancelar una ocurrencia **intermedia** de la cadena proyectada (SA-04). → la cadena se puentea (`prev.next_plan_id` salta a la siguiente); al cerrar la ocurrencia anterior, la cascada re-fecha la cola sin trabarse.
+- [ ]  **T-30** Plan 1 `scheduled`, `contract_end_date = +6 meses`, frequency = 1 mes. Click "Proyectar serie". → se crean ~5 ocurrencias `draft` encadenadas (`previous/next_plan_id`, `seq_in_series` correlativo, mismo `series_id`), **sin hijas y sin snapshot**, ninguna después del fin de contrato. La Gantt agrupada por punto muestra la serie completa como barras `±slack`.
+- [ ]  **T-31** Re-click en "Proyectar serie" (desde cualquier ocurrencia de la serie). → idempotente: 0 ocurrencias nuevas, mensaje en chatter.
+- [ ]  **T-32** Cerrar plan 1 **fuera del slack** (close_date = scheduled + slack + 10). → SA-02 re-fecha n+1 desde `close_date` y el paso 4-bis desliza **toda la cola** en bloque; las ocurrencias empujadas más allá de `contract_end_date` quedan `cancelled` con log en chatter.
+- [ ]  **T-33** Cerrar plan 1 **dentro del slack**. → la cola no se mueve (las fechas recalculadas coinciden y el guard `!=` evita writes).
+- [ ]  **T-34** Plan sin `contract_end_date`. → "Proyectar serie" genera exactamente 12 ocurrencias.
+- [ ]  **T-35** Pasar a `scheduled` una ocurrencia proyectada. → SA-01 toma el snapshot del punto recién ahí y genera las hijas con los equipos presentes en ese momento.
+- [ ]  **T-36** Cancelar una ocurrencia **intermedia** de la cadena proyectada (SA-04). → la cadena se puentea (`prev.next_plan_id` salta a la siguiente); al cerrar la ocurrencia anterior, la cascada re-fecha la cola sin trabarse.
 
 **Tests de integración con el pipeline existente (Paso 12):**
 
-- [ ] **T-26** Correr `pipeline_registro_II/main.py` con un form R de calibración (alcance `Ciclo de calibración`, destino `Laboratorio | Metrocal`). Verificar que se creó `x_equipment_movement` con `reason='calibration'`, `to_location_id=593`. La SA del processor ya escribió la `maintenance.request` de Extracción/Calibración; el movement queda con `linked_request_id=NULL` (limitación documentada).
-- [ ] **T-27** Form R de daño con destino `Bodega cliente` → movement con `reason='repair'`, `to_location_id=594`.
-- [ ] **T-28** Form I (Instalación) con equipo nuevo a un punto → movement con `reason='installation'`, `to_location_id=punto`. Si el equipo ya estaba en otro punto, `reason='reassignment'`.
-- [ ] **T-29** Re-ejecutar `main.py` con el mismo form: idempotencia del processor (`form_entries.db`) impide duplicar la request; AA-06 no se redispara porque `x_studio_location` no cambió.
+- [ ]  **T-26** Correr `pipeline_registro_II/main.py` con un form R de calibración (alcance `Ciclo de calibración`, destino `Laboratorio | Metrocal`). Verificar que se creó `x_equipment_movement` con `reason='calibration'`, `to_location_id=593`. La SA del processor ya escribió la `maintenance.request` de Extracción/Calibración; el movement queda con `linked_request_id=NULL` (limitación documentada).
+- [ ]  **T-27** Form R de daño con destino `Bodega cliente` → movement con `reason='repair'`, `to_location_id=594`.
+- [ ]  **T-28** Form I (Instalación) con equipo nuevo a un punto → movement con `reason='installation'`, `to_location_id=punto`. Si el equipo ya estaba en otro punto, `reason='reassignment'`.
+- [ ]  **T-29** Re-ejecutar `main.py` con el mismo form: idempotencia del processor (`form_entries.db`) impide duplicar la request; AA-06 no se redispara porque `x_studio_location` no cambió.
 
 **Tests de las reglas nuevas (Req 1–8):**
 
-- [ ] **T-40 (Req 2)** Crear dos planes seguidos. → `x_name` = `PMP-0001` y `PMP-0002`, **sin año ni punto**. El punto se ve por `x_studio_location_id`. Las hijas nacen como `PMP-0001 - {equipo}`.
-- [ ] **T-41 (Req 1)** Plan con `x_contract_end_date = +6 meses`, frecuencia 1 mes. "Proyectar serie" (≈6 ocurrencias `draft`). Editar `x_contract_end_date` a `+3 meses`. → AA-14/SA-12: las ocurrencias `draft` más allá de +3m se **borran** (`unlink`); si alguna ya estaba `scheduled` con hijas, queda `cancelled` con hijas archivadas; el chatter del punto resume cuántas. La cadena `next_plan_id` queda cortada en la última dentro de rango.
-- [ ] **T-42 (Req 3)** Equipo con plan `scheduled` (tiene hija abierta). Mover `x_studio_location` a Bodega 594 (daño). → SA-09 crea movement `reason='repair'`; AA-15/SA-11 **archiva** la hija abierta del equipo (`kanban_state='blocked'`); el `x_studio_progress` recalcula ignorándola y el plan puede cerrar.
-- [ ] **T-43 (Req 3, negativo)** Mismo equipo movido a Laboratorio 593 (calibración). → movement `reason='calibration'`; la hija **NO** se elimina (queda pendiente para carryover al cerrar parcial).
-- [ ] **T-44 (Req 5)** Plan `scheduled` con `x_contract_end_date` cargado. Editar `x_studio_scheduled_date` a una fecha posterior al término. → AA-17/SA-13 pone `x_studio_state='out_of_range'` (badge **rojo**). Volver la fecha a dentro del término → regresa a `draft`.
-- [ ] **T-45 (Req 5, cascada)** Serie proyectada; cerrar la ocurrencia 1 **fuera de slack** lo suficiente para empujar la cola más allá del contrato. → las ocurrencias deslizadas que superan `x_contract_end_date` quedan `out_of_range` (no `cancelled`), con log en su chatter.
-- [ ] **T-46 (Req 7)** Plan `draft` con fecha en la **semana siguiente**. Ejecutar CR-01/SA-15 ("Run Manually"). → pasa a `scheduled`, se congela snapshot y se crean hijas. Un `draft` cuya fecha NO cae en la semana siguiente no cambia.
-- [ ] **T-47 (Req 6, semanal)** Ejecutar CR-02/SA-14. → se crea un `mail.mail` a responsables + técnicos con la tabla de ocurrencias de la semana siguiente. Sin ocurrencias en la ventana, no envía nada.
-- [ ] **T-48 (Req 6, mensual)** Ejecutar CR-03/SA-16. → `mail.mail` con todas las hijas (`x_studio_plan_id` seteado) del mes en curso.
-- [ ] **T-49 (Req 6, alerta)** Plan `scheduled` a 7 días. AA-05 (timed, −7d). → `message_post` de recordatorio con `partner_ids` = responsable + técnico.
-- [ ] **T-50 (Req 8a)** Completar TODAS las hijas vivas (stage `done`). → AA-16/SA-17 pone el plan en `done` automáticamente, lo que dispara la cascada (genera n+1) y pasa C-05.
-- [ ] **T-51 (Req 8b)** Con el plan `scheduled`, mover **una** hija del stage inicial a "En proceso" (o a `done`). → AA-16/SA-17 pone el plan padre en `in_progress`. Las demás hijas siguen en su stage.
-- [ ] **T-52 (Req 4)** Verificar el **semáforo**: en list/kanban/badge cada `x_studio_state` toma su color (gris/azul/amarillo/verde/naranja/rojo); `out_of_range` en rojo; las ocurrencias con `x_studio_is_approaching=True` se realzan en ámbar sin tapar el rojo de `out_of_range`.
+- [ ]  **T-40 (Req 2)** Crear dos planes seguidos. → `x_name` = `PMP-0001` y `PMP-0002`, **sin año ni punto**. El punto se ve por `x_studio_location_id`. Las hijas nacen como `PMP-0001 - {equipo}`.
+- [ ]  **T-41 (Req 1)** Plan con `x_contract_end_date = +6 meses`, frecuencia 1 mes. "Proyectar serie" (≈6 ocurrencias `draft`). Editar `x_contract_end_date` a `+3 meses`. → AA-14/SA-12: las ocurrencias `draft` más allá de +3m se **borran** (`unlink`); si alguna ya estaba `scheduled` con hijas, queda `cancelled` con hijas archivadas; el chatter del punto resume cuántas. La cadena `next_plan_id` queda cortada en la última dentro de rango.
+- [ ]  **T-42 (Req 3)** Equipo con plan `scheduled` (tiene hija abierta). Mover `x_studio_location` a Bodega 594 (daño). → SA-09 crea movement `reason='repair'`; AA-15/SA-11 **archiva** la hija abierta del equipo (`kanban_state='blocked'`); el `x_studio_progress` recalcula ignorándola y el plan puede cerrar.
+- [ ]  **T-43 (Req 3, negativo)** Mismo equipo movido a Laboratorio 593 (calibración). → movement `reason='calibration'`; la hija **NO** se elimina (queda pendiente para carryover al cerrar parcial).
+- [ ]  **T-44 (Req 5)** Plan `scheduled` con `x_contract_end_date` cargado. Editar `x_studio_scheduled_date` a una fecha posterior al término. → AA-17/SA-13 pone `x_studio_state='out_of_range'` (badge **rojo**). Volver la fecha a dentro del término → regresa a `draft`.
+- [ ]  **T-45 (Req 5, cascada)** Serie proyectada; cerrar la ocurrencia 1 **fuera de slack** lo suficiente para empujar la cola más allá del contrato. → las ocurrencias deslizadas que superan `x_contract_end_date` quedan `out_of_range` (no `cancelled`), con log en su chatter.
+- [ ]  **T-46 (Req 7)** Plan `draft` con fecha en la **semana siguiente**. Ejecutar CR-01/SA-15 ("Run Manually"). → pasa a `scheduled`, se congela snapshot y se crean hijas. Un `draft` cuya fecha NO cae en la semana siguiente no cambia.
+- [ ]  **T-47 (Req 6, semanal)** Ejecutar CR-02/SA-14. → se crea un `mail.mail` a responsables + técnicos con la tabla de ocurrencias de la semana siguiente. Sin ocurrencias en la ventana, no envía nada.
+- [ ]  **T-48 (Req 6, mensual)** Ejecutar CR-03/SA-16. → `mail.mail` con todas las hijas (`x_studio_plan_id` seteado) del mes en curso.
+- [ ]  **T-49 (Req 6, alerta)** Plan `scheduled` a 7 días. AA-05 (timed, −7d). → `message_post` de recordatorio con `partner_ids` = responsable + técnico.
+- [ ]  **T-50 (Req 8a)** Completar TODAS las hijas vivas (stage `done`). → AA-16/SA-17 pone el plan en `done` automáticamente, lo que dispara la cascada (genera n+1) y pasa C-05.
+- [ ]  **T-51 (Req 8b)** Con el plan `scheduled`, mover **una** hija del stage inicial a "En proceso" (o a `done`). → AA-16/SA-17 pone el plan padre en `in_progress`. Las demás hijas siguen en su stage.
+- [ ]  **T-52 (Req 4)** Verificar el **semáforo**: en list/kanban/badge cada `x_studio_state` toma su color (gris/azul/amarillo/verde/naranja/rojo); `out_of_range` en rojo; las ocurrencias con `x_studio_is_approaching=True` se realzan en ámbar sin tapar el rojo de `out_of_range`.
+
+**Tests de cadencia/slack a nivel de punto (fuente única, §3.3):**
+
+- [ ]  **T-53 (fuente única)** Editar `x_frequency_value` de 1 a 2 meses en un **punto**. → todas las ocurrencias del punto muestran `frequency_value=2` (related recomputa) sin editarlas una por una.
+- [ ]  **T-54 (recadenciado)** Punto con serie proyectada (5 ocurrencias `draft`, 1 mes). Cambiar la cadencia del punto a 2 meses. → AA-18/SA-19 **re-fecha la cola pendiente**: la primera no cerrada conserva su fecha, las siguientes quedan a +2m encadenadas; chatter del punto lo resume. Las hijas vivas se re-fechan por AA-03/SA-06.
+- [ ]  **T-55 (recadenciado + contrato)** Igual a T-54 pero el nuevo ritmo empuja ocurrencias más allá de `x_contract_end_date`. → las que se pasan quedan `out_of_range`; si además se acorta el contrato en el mismo write, SA-12 (AA-14) elimina/cancela las `draft`/`scheduled` restantes (AA-18 con `sequence` mayor corre después).
+- [ ]  **T-56 (idempotencia)** Editar un campo cualquiera del punto **sin** tocar cadencia (p. ej. una nota). → SA-19 encuentra las fechas ya correctas y **no** re-fecha ni postea nada.
+- [ ]  **T-57 (C-01/C-02 en el punto)** Poner `x_frequency_value=0` o `x_slack_days` ≥ mitad del período en el **punto** → `UserError` bloquea el guardado del punto (AA-07/AA-08).
+- [ ]  **T-58 (auto_replan propio)** Desactivar `auto_replan` en **una** ocurrencia. → no afecta a las demás del punto (sigue siendo campo propio del plan, no related).
 
 ---
 
@@ -1707,14 +1854,15 @@ El módulo R (Reemplazo/Extracción) de `pipeline_registro_II/processor.py` (lí
 
 **AA-06 (Paso 9)** escucha cambios en `maintenance.equipment.x_studio_location`. **SA-09 (Paso 8)** crea automáticamente el registro `x_equipment_movement` con el `reason` inferido según el destino:
 
-| Origen del cambio en`x_studio_location`                                | Destino           | `reason` inferido por SA-09                                                   |
-| ------------------------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------- |
-| `processor.py` módulo R · t=E · alcance=Calibración · destino Lab | `id 593`        | `calibration`                                                                 |
-| `processor.py` módulo R · t=E · alcance=Otro · destino Bodega      | `id 594`        | `repair`                                                                      |
+
+| Origen del cambio en`x_studio_location`                                | Destino           | `reason` inferido por SA-09                                                 |
+| ------------------------------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------- |
+| `processor.py` módulo R · t=E · alcance=Calibración · destino Lab | `id 593`          | `calibration`                                                               |
+| `processor.py` módulo R · t=E · alcance=Otro · destino Bodega      | `id 594`          | `repair`                                                                    |
 | `processor.py` módulo R · t=I (equipo que entra)                     | punto del trabajo | `reassignment` (si tenía ubicación previa) o `installation` (primera vez) |
-| `processor.py` módulo I · primera asignación                        | punto             | `installation`                                                                |
-| `processor.py` módulo I · cambio de punto                            | punto             | `reassignment`                                                                |
-| Edición manual en Odoo (Studio o admin)                                 | cualquiera        | inferido por las mismas reglas                                                  |
+| `processor.py` módulo I · primera asignación                        | punto             | `installation`                                                              |
+| `processor.py` módulo I · cambio de punto                            | punto             | `reassignment`                                                              |
+| Edición manual en Odoo (Studio o admin)                               | cualquiera        | inferido por las mismas reglas                                              |
 
 Odoo lleva la bitácora `x_equipment_movement` en paralelo al pipeline, sin cambios en `pipeline_registro_II`.
 
@@ -1760,51 +1908,55 @@ Ver **SA-07** en el Paso 8 (botón "Proyectar serie"). El re-fechado de la cola 
 
 ## 14. Apéndice B — Mapping rápido de campos
 
-| Modelo                                            | Campo                                                                    | Tipo                                | Origen                 | Nota                                                                               |
-| ------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------- | ---------------------- | ---------------------------------------------------------------------------------- |
-| `x_maintenance_plan`                            | `name`                                                                 | char                                | nativo                 | autogenerado por SA-00                                                             |
-| ↑                                                | `location_id`                                                          | m2o → x_maintenance_location       | nuevo                  | requerido                                                                          |
-| ↑                                                | `scheduled_date`                                                       | date                                | nuevo                  | requerido                                                                          |
-| ↑                                                | `original_scheduled_date`                                              | date                                | nuevo                  | seteado por SA-00                                                                  |
-| ↑                                                | `close_date`                                                           | date                                | nuevo                  | seteado por SA-02                                                                  |
-| ↑                                                | `state`                                                                | selection                           | nuevo                  | 7 valores (incl.`out_of_range`, Req 5)                                           |
-| ↑                                                | `frequency_value` / `frequency_unit`                                 | int / sel                           | nuevo                  | —                                                                                 |
-| ↑                                                | `slack_days`                                                           | int                                 | nuevo                  | default 3                                                                          |
-| ↑                                                | `auto_replan`                                                          | bool                                | nuevo                  | default True                                                                       |
-| ↑                                                | `series_id`                                                            | char                                | nuevo                  | uuid hex                                                                           |
-| ↑                                                | `previous_plan_id` / `next_plan_id`                                  | m2o → self                         | nuevo                  | self-ref                                                                           |
-| ↑                                                | `seq_in_series`                                                        | int                                 | nuevo                  | 1, 2, …                                                                           |
-| ↑                                                | `user_id` / `technician_user_id` / `maintenance_team_id`           | m2o                                 | nuevo (user_id nativo) | herencia a hijas                                                                   |
-| ↑                                                | `maintenance_type`                                                     | sel                                 | nuevo                  | preventive/corrective                                                              |
-| ↑                                                | `resource_calendar_id`                                                 | m2o → resource.calendar            | nuevo                  | calendario laboral                                                                 |
-| ↑                                                | `equipment_snapshot_ids`                                               | m2m → maintenance.equipment        | nuevo                  | snapshot                                                                           |
-| ↑                                                | `last_sync_with_location`                                              | datetime                            | nuevo                  | timestamp                                                                          |
-| ↑                                                | `progress` / `delta_days_from_planned` / `adjusted_from_scheduled` | computed                            | nuevo                  | read-only                                                                          |
-| ↑                                                | `gantt_start` / `gantt_stop`                                         | date (computed, stored)             | nuevo                  | ventana`scheduled_date ± slack_days` para la vista Gantt                        |
-| ↑                                                | `is_approaching`                                                       | bool (computed,**no stored**) | nuevo                  | realce ámbar "ocurrencia próxima" en el semáforo (Req 4/6)                      |
-| ↑                                                | `force_close_reason`                                                   | text                                | nuevo                  | requerido si partially_done                                                        |
-| ↑                                                | `notes`                                                                | text                                | nuevo                  | libre                                                                              |
-| ↑                                                | `contract_start_date`                                                  | date                                | nuevo                  | informativo                                                                        |
-| ↑                                                | `contract_end_date`                                                    | date                                | nuevo                  | **límite duro de la cascada**: corta la generación de ocurrencias          |
-| ↑                                                | `request_ids`                                                          | o2m → maintenance.request          | nuevo                  | inverso plan_id                                                                    |
-| ↑                                                | `movement_ids`                                                         | o2m → x_equipment_movement         | nuevo                  | inverso linked_plan_id                                                             |
-| ↑                                                | `active` / `company_id` / chatter                                    | varios                              | nativos features       | —                                                                                 |
-| `maintenance.equipment`                         | `x_managed_by_plan`                                                    | bool (computed, stored)             | nuevo                  | solo informativo (badge/filtros)                                                   |
-| ↑                                                | `movement_ids`                                                         | o2m → x_equipment_movement         | nuevo                  | inverso equipment_id                                                               |
-| `maintenance.request`                           | `plan_id`                                                              | m2o → x_maintenance_plan           | nuevo                  | indexed, ondelete=set null, tracked                                                |
-| `x_maintenance_location`                        | `plan_ids`                                                             | o2m → x_maintenance_plan           | nuevo                  | inverso location_id                                                                |
-| ↑                                                | `movement_out_ids`                                                     | o2m → x_equipment_movement         | nuevo                  | inverso from_location_id                                                           |
-| ↑                                                | `movement_in_ids`                                                      | o2m → x_equipment_movement         | nuevo                  | inverso to_location_id                                                             |
-| **`x_equipment_movement`** (NUEVO modelo) | `name`                                                                 | char                                | nuevo                  | autogenerado`MOV-{YYYY}-{seq:04d} / {eq}`                                        |
-| ↑                                                | `equipment_id`                                                         | m2o → maintenance.equipment        | nuevo                  | requerido, indexed, ondelete=restrict                                              |
-| ↑                                                | `from_location_id` / `to_location_id`                                | m2o → x_maintenance_location       | nuevo                  | NULL admitido (stock/servicio)                                                     |
-| ↑                                                | `reason`                                                               | selection                           | nuevo                  | installation·calibration·repair·reassignment·return_from_service·decommission |
-| ↑                                                | `date_out` / `date_in`                                               | date                                | nuevo                  | SA-09 setea ambas al día del cambio (hecho consumado)                             |
-| ↑                                                | `state`                                                                | selection                           | nuevo                  | completed·cancelled                                                               |
-| ↑                                                | `replaced_by_id`                                                       | m2o → maintenance.equipment        | nuevo                  | opcional (anotación manual)                                                       |
-| ↑                                                | `linked_request_id`                                                    | m2o → maintenance.request          | nuevo                  | orden corrective asociada                                                          |
-| ↑                                                | `linked_plan_id`                                                       | m2o → x_maintenance_plan           | nuevo                  | plan de origen (ref débil)                                                        |
-| ↑                                                | `notes` / `company_id`                                               | varios                              | nuevo                  | —                                                                                 |
+
+| Modelo                                    | Campo                                                              | Tipo                          | Origen                 | Nota                                                                                |
+| ------------------------------------------- | -------------------------------------------------------------------- | ------------------------------- | ------------------------ | ------------------------------------------------------------------------------------- |
+| `x_maintenance_plan`                      | `name`                                                             | char                          | nativo                 | autogenerado por SA-00                                                              |
+| ↑                                        | `location_id`                                                      | m2o → x_maintenance_location | nuevo                  | requerido                                                                           |
+| ↑                                        | `scheduled_date`                                                   | date                          | nuevo                  | requerido                                                                           |
+| ↑                                        | `original_scheduled_date`                                          | date                          | nuevo                  | seteado por SA-00                                                                   |
+| ↑                                        | `close_date`                                                       | date                          | nuevo                  | seteado por SA-02                                                                   |
+| ↑                                        | `state`                                                            | selection                     | nuevo                  | 7 valores (incl.`out_of_range`, Req 5)                                              |
+| ↑                                        | `frequency_value` / `frequency_unit`                               | int / sel (related store)     | nuevo                  | related de`location_id.x_frequency_value/unit` — fuente única en el punto (§3.3) |
+| ↑                                        | `slack_days`                                                       | int (related store)           | nuevo                  | related de`location_id.x_slack_days` — default 3, readonly en el plan              |
+| ↑                                        | `auto_replan`                                                      | bool                          | nuevo                  | default True                                                                        |
+| ↑                                        | `series_id`                                                        | char                          | nuevo                  | uuid hex                                                                            |
+| ↑                                        | `previous_plan_id` / `next_plan_id`                                | m2o → self                   | nuevo                  | self-ref                                                                            |
+| ↑                                        | `seq_in_series`                                                    | int                           | nuevo                  | 1, 2, …                                                                            |
+| ↑                                        | `user_id` / `technician_user_id` / `maintenance_team_id`           | m2o                           | nuevo (user_id nativo) | herencia a hijas                                                                    |
+| ↑                                        | `maintenance_type`                                                 | sel                           | nuevo                  | preventive/corrective                                                               |
+| ↑                                        | `resource_calendar_id`                                             | m2o → resource.calendar      | nuevo                  | calendario laboral                                                                  |
+| ↑                                        | `equipment_snapshot_ids`                                           | m2m → maintenance.equipment  | nuevo                  | snapshot                                                                            |
+| ↑                                        | `last_sync_with_location`                                          | datetime                      | nuevo                  | timestamp                                                                           |
+| ↑                                        | `progress` / `delta_days_from_planned` / `adjusted_from_scheduled` | computed                      | nuevo                  | read-only                                                                           |
+| ↑                                        | `gantt_start` / `gantt_stop`                                       | date (computed, stored)       | nuevo                  | ventana`scheduled_date ± slack_days` para la vista Gantt                           |
+| ↑                                        | `is_approaching`                                                   | bool (computed,**no stored**) | nuevo                  | realce ámbar "ocurrencia próxima" en el semáforo (Req 4/6)                       |
+| ↑                                        | `force_close_reason`                                               | text                          | nuevo                  | requerido si partially_done                                                         |
+| ↑                                        | `notes`                                                            | text                          | nuevo                  | libre                                                                               |
+| ↑                                        | `contract_start_date`                                              | date                          | nuevo                  | informativo                                                                         |
+| ↑                                        | `contract_end_date`                                                | date                          | nuevo                  | **límite duro de la cascada**: corta la generación de ocurrencias                 |
+| ↑                                        | `request_ids`                                                      | o2m → maintenance.request    | nuevo                  | inverso plan_id                                                                     |
+| ↑                                        | `movement_ids`                                                     | o2m → x_equipment_movement   | nuevo                  | inverso linked_plan_id                                                              |
+| ↑                                        | `active` / `company_id` / chatter                                  | varios                        | nativos features       | —                                                                                  |
+| `maintenance.equipment`                   | `x_managed_by_plan`                                                | bool (computed, stored)       | nuevo                  | solo informativo (badge/filtros)                                                    |
+| ↑                                        | `movement_ids`                                                     | o2m → x_equipment_movement   | nuevo                  | inverso equipment_id                                                                |
+| `maintenance.request`                     | `plan_id`                                                          | m2o → x_maintenance_plan     | nuevo                  | indexed, ondelete=set null, tracked                                                 |
+| `x_maintenance_location`                  | `x_contract_start_date` / `x_contract_end_date`                    | date                          | nuevo                  | contrato del punto;`x_contract_end_date` corta la cascada (tracking)                |
+| ↑                                        | `x_frequency_value` / `x_frequency_unit`                           | int / sel                     | nuevo                  | **cadencia del punto — fuente única** (§3.3); tracking; validada por C-01/C-02   |
+| ↑                                        | `x_slack_days`                                                     | int                           | nuevo                  | **tolerancia del punto — fuente única**; default 3; tracking                      |
+| ↑                                        | `plan_ids`                                                         | o2m → x_maintenance_plan     | nuevo                  | inverso location_id                                                                 |
+| ↑                                        | `movement_out_ids`                                                 | o2m → x_equipment_movement   | nuevo                  | inverso from_location_id                                                            |
+| ↑                                        | `movement_in_ids`                                                  | o2m → x_equipment_movement   | nuevo                  | inverso to_location_id                                                              |
+| **`x_equipment_movement`** (NUEVO modelo) | `name`                                                             | char                          | nuevo                  | autogenerado`MOV-{YYYY}-{seq:04d} / {eq}`                                           |
+| ↑                                        | `equipment_id`                                                     | m2o → maintenance.equipment  | nuevo                  | requerido, indexed, ondelete=restrict                                               |
+| ↑                                        | `from_location_id` / `to_location_id`                              | m2o → x_maintenance_location | nuevo                  | NULL admitido (stock/servicio)                                                      |
+| ↑                                        | `reason`                                                           | selection                     | nuevo                  | installation·calibration·repair·reassignment·return_from_service·decommission  |
+| ↑                                        | `date_out` / `date_in`                                             | date                          | nuevo                  | SA-09 setea ambas al día del cambio (hecho consumado)                              |
+| ↑                                        | `state`                                                            | selection                     | nuevo                  | completed·cancelled                                                                |
+| ↑                                        | `replaced_by_id`                                                   | m2o → maintenance.equipment  | nuevo                  | opcional (anotación manual)                                                        |
+| ↑                                        | `linked_request_id`                                                | m2o → maintenance.request    | nuevo                  | orden corrective asociada                                                           |
+| ↑                                        | `linked_plan_id`                                                   | m2o → x_maintenance_plan     | nuevo                  | plan de origen (ref débil)                                                         |
+| ↑                                        | `notes` / `company_id`                                             | varios                        | nuevo                  | —                                                                                  |
 
 ---
 
@@ -1824,29 +1976,31 @@ Ver **SA-07** en el Paso 8 (botón "Proyectar serie"). El re-fechado de la cola 
 
 ## 16. Apéndice D — Riesgos y mitigaciones
 
-| Riesgo                                                                   | Mitigación                                                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cascadas recursivas infinitas.                                           | La cascada no se re-ejecuta sobre planes futuros: cada ocurrencia dispara la suya al cerrar (AA-02).                                                                                                                                                                   |
-| Studio compute sandbox bloquea`record.x_field = …`.                   | Usar`record['x_field'] = …` siempre (ya aplicado en snippets).                                                                                                                                                                                                      |
-| `equipment_snapshot_ids` puede divergir del punto si nadie sincroniza. | UI: badge "Snapshot desactualizado" si`last_sync_with_location < write_date` del punto.                                                                                                                                                                              |
-| Cancelación masiva archiva hijas; perdés métricas.                    | No usar`active=False`; mejor estado `cancelled` en hijas (requiere kanban_state custom).                                                                                                                                                                           |
-| Hijas duplicadas: plan vs ciclo propio del equipo.                       | Conviven dos corrientes (plan_id seteado vs`plan_id=False`). `progress`/cascada/C-05 filtran por `request_ids`, así que las nativas se ignoran; AA-13/SA-10 las etiqueta para distinguirlas en la UI. Aplica solo si ambas corrientes modelan el mismo trabajo. |
-| Solapamiento C-04 bloquea la cascada legítima.                          | SA-02 escribe/copia con`with_context(x_skip_c04=True)` y SA-C04 omite esas escrituras. Las ediciones manuales se validan.                                                                                                                                            |
-| Cambios concurrentes en el padre y una hija.                             | Activar tracking en`plan_id` y `state` para tener el log; considerar lock pesimista vía `for_update()` solo si aparece en producción.                                                                                                                          |
+
+| Riesgo                                                                 | Mitigación                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cascadas recursivas infinitas.                                         | La cascada no se re-ejecuta sobre planes futuros: cada ocurrencia dispara la suya al cerrar (AA-02).                                                                                                                                                             |
+| Studio compute sandbox bloquea`record.x_field = …`.                   | Usar`record['x_field'] = …` siempre (ya aplicado en snippets).                                                                                                                                                                                                  |
+| `equipment_snapshot_ids` puede divergir del punto si nadie sincroniza. | UI: badge "Snapshot desactualizado" si`last_sync_with_location < write_date` del punto.                                                                                                                                                                          |
+| Cancelación masiva archiva hijas; perdés métricas.                  | No usar`active=False`; mejor estado `cancelled` en hijas (requiere kanban_state custom).                                                                                                                                                                         |
+| Hijas duplicadas: plan vs ciclo propio del equipo.                     | Conviven dos corrientes (plan_id seteado vs`plan_id=False`). `progress`/cascada/C-05 filtran por `request_ids`, así que las nativas se ignoran; AA-13/SA-10 las etiqueta para distinguirlas en la UI. Aplica solo si ambas corrientes modelan el mismo trabajo. |
+| Solapamiento C-04 bloquea la cascada legítima.                        | SA-02 escribe/copia con`with_context(x_skip_c04=True)` y SA-C04 omite esas escrituras. Las ediciones manuales se validan.                                                                                                                                        |
+| Cambios concurrentes en el padre y una hija.                           | Activar tracking en`plan_id` y `state` para tener el log; considerar lock pesimista vía `for_update()` solo si aparece en producción.                                                                                                                          |
 
 ---
 
 ## 17. Apéndice E — Riesgos de las reglas nuevas (Req 1–8)
 
-| Riesgo                                                                             | Mitigación                                                                                                                                                                                             |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
+| Riesgo                                                                       | Mitigación                                                                                                                                                                         |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Acortar contrato borra trabajo real** (Req 1).                             | SA-12 solo hace`unlink` de ocurrencias `draft` sin hijas (proyecciones de Gantt); las `scheduled` con hijas se **cancelan** y sus hijas se **archivan**. `out_of_range` se excluye. |
-| **AA-14 dispara en cada write del punto.**                                   | SA-12 es idempotente: si no hay ocurrencias`draft`/`scheduled` más allá del término, no hace nada. Alternativa: montarla como botón.                                                            |
-| **Equipo dañado borra hijas que se querían conservar** (Req 3).            | SA-11 solo dispara con`reason='repair'` (Bodega 594); calibración (593) no borra. Archiva (no `unlink`): la trazabilidad queda en el plan.                                                         |
-| **SA-15 programa de más los jueves** (Req 7).                               | Filtra estrictamente por la**semana siguiente** y `state='draft'`; `out_of_range` queda fuera. El paso a `scheduled` corre la cadena normal (C-04 incluida).                                |
-| **SA-17 cierra el plan en `done`** con hijas nativas presentes (Req 8).    | El 100% se mide solo sobre`x_studio_request_ids` (hijas con `plan_id`); las nativas (`plan_id=False`) no cuentan. C-05 revalida.                                                                  |
-| **`out_of_range` oscila** en cada edición de fecha (Req 5).               | SA-13 se autofiltra: el segundo write no ocurre (estado ya en destino), no hay bucle. Cada transición queda en el chatter.                                                                             |
-| **Reportes cron envían correo vacío o a destinatarios erróneos** (Req 6). | SA-14/SA-16 no envían si no hay registros ni`partners`. La lista de actores se parametriza (responsable, técnico, líder de team, followers).                                                       |
+| **AA-14 dispara en cada write del punto.**                                   | SA-12 es idempotente: si no hay ocurrencias`draft`/`scheduled` más allá del término, no hace nada. Alternativa: montarla como botón.                                            |
+| **Equipo dañado borra hijas que se querían conservar** (Req 3).            | SA-11 solo dispara con`reason='repair'` (Bodega 594); calibración (593) no borra. Archiva (no `unlink`): la trazabilidad queda en el plan.                                         |
+| **SA-15 programa de más los jueves** (Req 7).                               | Filtra estrictamente por la**semana siguiente** y `state='draft'`; `out_of_range` queda fuera. El paso a `scheduled` corre la cadena normal (C-04 incluida).                        |
+| **SA-17 cierra el plan en `done`** con hijas nativas presentes (Req 8).      | El 100% se mide solo sobre`x_studio_request_ids` (hijas con `plan_id`); las nativas (`plan_id=False`) no cuentan. C-05 revalida.                                                    |
+| **`out_of_range` oscila** en cada edición de fecha (Req 5).                 | SA-13 se autofiltra: el segundo write no ocurre (estado ya en destino), no hay bucle. Cada transición queda en el chatter.                                                         |
+| **Reportes cron envían correo vacío o a destinatarios erróneos** (Req 6). | SA-14/SA-16 no envían si no hay registros ni`partners`. La lista de actores se parametriza (responsable, técnico, líder de team, followers).                                     |
 
 ---
 
