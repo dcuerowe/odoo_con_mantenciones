@@ -40,7 +40,7 @@ flowchart LR
     classDef dec fill:#f1f5f9,stroke:#475569,color:#0f172a;
 ```
 
-> **Nombres:** este documento usa nombres lógicos (`plan`, `state`, `scheduled_date`, `hija`) por legibilidad. En la instancia real llevan prefijo (`x_studio_state`, `x_studio_scheduled_date`, modelo `x_plan_de_mantencion_p`, bitácora `x_bitacora_de_movimien`). La tabla de transposición está en `PLAN_IMPLEMENTACION.md`.
+> **Nombres:** este documento usa nombres lógicos (`plan`, `state`, `scheduled_date`, `hija`) por legibilidad. En la instancia real llevan prefijo (`x_studio_state`, `x_studio_scheduled_date`, modelo `x_maintenance_plan`, bitácora `x_equipment_movement`). La tabla de transposición está en `PLAN_IMPLEMENTACION.md`.
 
 ### Semáforo de estados
 
@@ -722,8 +722,8 @@ Tres trabajos periódicos avisan a los actores relevantes. Dos son por reloj fij
 
 | Momento                        | Qué informa                                  | Mecanismo            |
 | ------------------------------ | -------------------------------------------- | -------------------- |
-| Jueves AM                      | Ocurrencias de la **semana siguiente**       | Cron CR-02 → SA-14   |
-| Primer día del mes             | **Solicitudes del mes** en curso             | Cron CR-03 → SA-16   |
+| Jueves AM                      | **Calendario laboral (Lun–Vie)** de la semana siguiente       | Cron CR-02 → SA-14   |
+| Primer día del mes             | **Carta Gantt** de las solicitudes del mes             | Cron CR-03 → SA-16   |
 | 7 días antes de una ocurrencia | Recordatorio de esa ocurrencia próxima       | AA-05 timed → SA-18  |
 
 ### 18.1 Reporte semanal (jueves AM)
@@ -736,8 +736,10 @@ sequenceDiagram
     participant M as Correo
     C->>SA: ejecutar (después de la auto-programación, §19)
     SA->>P: buscar ocurrencias lun-dom de la semana siguiente
-    SA->>M: armar la tabla y enviar a responsables y técnicos
+    SA->>M: armar el calendario laboral (Lun–Vie) y enviar a responsables y técnicos
 ```
+
+> **Formato del correo (calendario semanal).** Una **columna por día laboral (Lun–Vie)**; sábado y domingo solo aparecen si tienen ocurrencias. Dentro de cada día, una **tarjeta por solicitud** con **punto de monitoreo**, **estado** (pill + borde superior de color: naranja = programada · teal = en progreso · gris = borrador) y los **equipos a intervenir** (`nombre | N.º de serie`, tomados del snapshot). Lleva cabecera de marca WE TECHS y un chip con totales (ocurrencias · puntos · equipos). La **ventana de búsqueda** sigue siendo lun-dom; lo que cambia es la **presentación** (calendario laboral, ver SA-14 en `PLAN_IMPLEMENTACION.md`).
 
 ### 18.2 Reporte mensual (primer día del mes)
 
@@ -749,8 +751,10 @@ sequenceDiagram
     participant M as Correo
     C->>SA: ejecutar
     SA->>R: buscar hijas con fecha dentro del mes en curso
-    SA->>M: armar la tabla y enviar a los actores
+    SA->>M: armar la carta Gantt (puntos × días) y enviar a los actores
 ```
+
+> **Formato del correo (carta Gantt).** **Filas = puntos de monitoreo**, **columnas = días del mes**. Cada celda con carga muestra una **barra naranja** con el **nº de solicitudes** de ese día en el punto; hay una columna **TOT** por punto y una fila de **carga diaria** al pie. Fin de semana sombreado. Lleva cabecera de marca WE TECHS y un chip con totales (puntos · solicitudes · días activos). Ver SA-16 en `PLAN_IMPLEMENTACION.md`.
 
 ### 18.3 Alerta de ocurrencia próxima
 

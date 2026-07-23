@@ -643,7 +643,7 @@ for record in records:
             "Para cerrar como ‘partially_done’ debe registrar el motivo en force_close_reason.")
 ```
 
-### C-04 (SA-C04) — No solapamiento de planes activos en el mismo punto **(listo)**
+#### C-04 (SA-C04) — No solapamiento de planes activos en el mismo punto **(listo)**
 
 ```python
 # Las escrituras de la cascada (SA-02) viajan con x_skip_c04=True en el
@@ -725,7 +725,7 @@ for record in records:
 
 ---
 
-### SA-00 — Inicialización en `create()` (series_id, original_scheduled_date, name)
+### SA-00 — Inicialización en `create()` (series_id, original_scheduled_date, name) (listo)
 
 **Trigger:** se invoca desde la AA-00 (On creation).
 
@@ -738,7 +738,7 @@ for plan in records:
     # 1) Identificador de serie (reemplaza al uuid, no importable en el sandbox 16).
     if not plan.x_studio_series_id:
         vals['x_studio_series_id'] = env['ir.sequence'].next_by_code(
-            'x_maintenance_plan_series') or '000001'
+            'maintenance.plan_serie') or '000001'
     # 2) Primer eslabón de la cadena.
     if not plan.x_studio_seq_in_series:
         vals['x_studio_seq_in_series'] = 1
@@ -748,33 +748,32 @@ for plan in records:
     # 4) Nombre: SOLO 'PMP-{nnnn}', SIN año ni punto (Req 2). El punto se
     #    identifica por x_studio_location_id, no se embebe en el name.
     if not plan.x_name or plan.x_name == 'New':
-        seq = env['ir.sequence'].next_by_code('x_maintenance_plan') or '0001'
+        seq = env['ir.sequence'].next_by_code('maintenance.plan') or '0001'
         vals['x_name'] = f"PMP-{seq}"
     if vals:
         plan.write(vals)   # .write(): el sandbox prohíbe STORE_ATTR
 ```
 
-> Cargá **dos** secuencias en *Settings → Technical → Sequences → New*: (1) code `x_maintenance_plan`, **sin prefijo** (solo padding 4) — el `PMP-` lo agrega SA-00 en el formato del name (`f"PMP-{seq}"`, **sin año**, Req 2); si la secuencia **también** lleva prefix `PMP-`, el nombre sale duplicado: `PMP-PMP-0003`; (2) code `x_maintenance_plan_series`, sin prefijo, padding 6 (identificador de serie — reemplaza al `uuid` que el sandbox de 16 no permite importar).
+> Cargá **dos** secuencias en *Settings → Technical → Sequences → New*: (1) code `maintenance.plan`, **sin prefijo** (solo padding 4) — el `PMP-` lo agrega SA-00 en el formato del name (`f"PMP-{seq}"`, **sin año**, Req 2); si la secuencia **también** lleva prefix `PMP-`, el nombre sale duplicado: `PMP-PMP-0003`; (2) code `maintenance.plan_serie`, sin prefijo, padding 6 (identificador de serie — reemplaza al `uuid` que el sandbox de 16 no permite importar).
 
 ---
 
-### SA-01 — Generar hijas al pasar a `scheduled`
+### SA-01 — Generar hijas al pasar a `scheduled` (listo)
 
 **Trigger:** AA-01 (state cambia a `scheduled`).
 
 ```python
-for plan in records:
+  for plan in records:
     # 1) Snapshot del punto si todavía está vacío.
     #    Los equipos en servicio externo (Lab 593 / Bodega 594) quedan fuera
     #    solos: su x_studio_location ya no es el punto.
     #    company 'in (False, id)': no excluir equipos compartidos sin company.
-    if not plan.equipment_snapshot_ids:
+    if not plan.x_studio_equipment_snapshot_ids:
         equipos = env['maintenance.equipment'].search([
-            ('x_studio_location', '=', plan.location_id.id),
+            ('x_studio_location', '=', plan.x_studio_location_id.id),
             ('active', '=', True),
-            ('company_id', 'in', (False, plan.company_id.id)),
         ])
-        # .write() en vez de asignación directa: el sandbox prohíbe STORE_ATTR
+  
         plan.write({
             'equipment_snapshot_ids': [Command.set(equipos.ids)],
             'last_sync_with_location': datetime.datetime.now(),
@@ -783,28 +782,26 @@ for plan in records:
     # schedule_date de la hija es DATETIME: anclar a las 12:00 UTC.
     # Medianoche UTC se mostraría como el día ANTERIOR a las 20:00/21:00
     # en America/Santiago — el plan entero parecería corrido un día.
-    sched_dt = datetime.datetime.combine(plan.scheduled_date, datetime.time(12, 0))
+    sched_dt = datetime.datetime.combine(plan.x_studio_scheduled_date, datetime.time(12, 0))
 
     # 2) Crear una maintenance.request por cada equipo del snapshot que aún no tenga hija
-    existentes = plan.request_ids.mapped('equipment_id')
-    nuevos = plan.equipment_snapshot_ids - existentes
+    existentes = plan.x_studio_request_ids.mapped('equipment_id')
+    nuevos = plan.x_studio_equipment_snapshot_ids - existentes
     for equipo in nuevos:
         env['maintenance.request'].create({
-            'name': f"{plan.name} - {equipo.name}",
+            'name': f"{plan.name} | {equipo.name}",
             'equipment_id': equipo.id,
             'plan_id': plan.id,
             'stage_id': 1,
             'schedule_date': sched_dt,
-            'maintenance_type': plan.maintenance_type or 'preventive',
-            'user_id': (plan.technician_user_id or plan.user_id).id or False,
-            'maintenance_team_id': plan.maintenance_team_id.id or False,
+            'maintenance_type': plan.x_studio_maintenance_type or 'preventive',
+            'user_id': plan.x_studio_user_id.id or False,
+            #De habilitarse a los técnicos como usuaros se podrri incluir al técnico que realizará el trabjo desde acá
+            'maintenance_team_id': plan.x_studio_maintenance_team_id.id or False,
             'x_studio_tipo_de_trabajo': 'Mantención Preventiva',
         })
 
-    # NOTA: el period nativo NO se toca. El equipo conserva su ciclo propio
-    # (cron nativo → hijas con plan_id=False), que coexiste con las hijas del
-    # plan (plan_id seteado). Son dos trabajos distintos; ver Paso 4.
-
+  
     plan.message_post(
         body="Generadas %s solicitudes hijas a partir del snapshot del punto." % len(nuevos),
     )
@@ -812,7 +809,7 @@ for plan in records:
 
 ---
 
-### SA-02 — Cascada al cerrar (`done` / `partially_done`)
+### SA-02 — Cascada al cerrar (`done` / `partially_done`) (listo)
 
 **Trigger:** AA-02 (state pasa a `done` o `partially_done`).
 
@@ -839,41 +836,41 @@ def shift_to_workday(date, calendar):
     return next_dt.date() if next_dt else date
 
 for plan in records:
-    if not plan.close_date:
-        plan.write({'close_date': datetime.date.today()})   # .write(): el sandbox prohíbe STORE_ATTR
+    if not plan.x_studio_close_date:
+        plan.write({'x_studio_close_date': datetime.date.today()})  
 
     # 1) Calcular próxima fecha base
-    delta_days = (plan.close_date - plan.scheduled_date).days
-    within_slack = abs(delta_days) <= plan.slack_days
-    base_for_next = plan.scheduled_date if within_slack else plan.close_date
-    next_date = add_period(base_for_next, plan.frequency_value, plan.frequency_unit)
+    delta_days = (plan.x_studio_close_date - plan.x_studio_scheduled_date).days
+    within_slack = abs(delta_days) <= plan.x_studio_slack_days
+    base_for_next = plan.x_studio_scheduled_date if within_slack else plan.x_studio_close_date
+    next_date = add_period(base_for_next, plan.x_studio_frequency_value, plan.x_studio_frequency_unit)
 
     # 2) Ajuste por calendario laboral
-    next_date = shift_to_workday(next_date, plan.resource_calendar_id)
+    next_date = shift_to_workday(next_date, plan.x_studio_resource_calendar_id)
 
-    # 3) LÍMITE DURO POR TÉRMINO DE CONTRATO
-    if plan.contract_end_date and next_date > plan.contract_end_date:
+    # 3) Límite duro por termino de contrato
+    if plan.x_studio_contract_end_date and next_date > plan.x_studio_contract_end_date:
         # La serie muere: no se genera la próxima ocurrencia. El period nativo
         # del equipo NO se toca (su ciclo propio sigue corriendo, ver Paso 4).
         plan.message_post(body=(
             "Serie %s finalizada por término de contrato (%s). "
             "No se generará la próxima ocurrencia (next_date hubiera sido %s)."
-        ) % (plan.series_id, plan.contract_end_date, next_date))
+        ) % (plan.x_studio_series_id, plan.x_studio_contract_end_date, next_date))
         continue   # salta a la próxima iteración del for plan in records
 
     # 4) Aplicar a la siguiente ocurrencia (recursivo)
     if plan.auto_replan:
-        nxt = plan.next_plan_id
-        if nxt and nxt.state in ('draft', 'scheduled'):
-            old = nxt.scheduled_date
+        nxt = plan.x_studio_next_plan_id
+        if nxt and nxt.x_studio_state in ('draft', 'scheduled'):
+            old = nxt.x_studio_scheduled_date
             # x_skip_c04: las escrituras de la cascada viajan con este flag de
             # contexto para que SA-C04 (no solapamiento) no bloquee el cierre.
             # La propagación a las hijas vivas de nxt NO se hace acá: el write
             # dispara AA-03 → SA-06, que la hace de forma autofiltrada.
-            nxt.with_context(x_skip_c04=True).write({'scheduled_date': next_date})
+            nxt.with_context(x_skip_c04=True).write({'x_studio_scheduled_date': next_date})
             nxt.message_post(body=(
                 "Fecha reprogramada por cascada desde %s: %s → %s"
-            ) % (plan.name, old, next_date))
+            ) % (plan.x_name, old, next_date))
             # NO se re-ejecuta la cascada sobre nxt: cuando nxt cierre, AA-02
             # disparará SA-02 sobre él de forma natural. (La re-entrada vía
             # env.ref se eliminó: además habría fallado — las SAs creadas a
@@ -888,60 +885,57 @@ for plan in records:
             # todos los eslabones usan el MISMO ritmo — no hay divergencia de
             # cadencia entre saltos. Recadenciar la serie entera es de SA-19.
             prev = nxt
-            cur = nxt.next_plan_id
+            cur = nxt.x_studio_next_plan_id
             guard = 0
-            while cur and cur.state in ('draft', 'scheduled') and guard < 60:
-                new_date = add_period(prev.scheduled_date,
-                                      prev.frequency_value, prev.frequency_unit)
-                new_date = shift_to_workday(new_date, prev.resource_calendar_id)
-                if plan.contract_end_date and new_date > plan.contract_end_date:
-                    # Req 5: la ocurrencia NO se cancela, se marca FUERA DE RANGO
-                    # (x_studio_state='out_of_range') para que quede visible que el
-                    # deslizamiento la empujó más allá del término de contrato.
-                    # IMPORTANTE: se escribe TAMBIÉN scheduled_date=new_date (la
-                    # fecha deslizada, ya fuera de contrato). Sin esto, SA-13 vería
-                    # la fecha vieja (aún dentro de rango) y revertiría el flag a
-                    # draft. Con la fecha movida, SA-13 confirma 'fuera' y respeta.
-                    # Si después el contrato se acorta de verdad, SA-12 la elimina.
+            while cur and cur.x_studio_state in ('draft', 'scheduled') and guard < 60:
+                new_date = add_period(prev.x_studio_scheduled_date,
+                                      prev.x_studio_frequency_value, prev.x_studio_frequency_unit)
+                new_date = shift_to_workday(new_date, prev.x_studio_resource_calendar_id)
+                if plan.x_studio_contract_end_date and new_date > plan.x_studio_contract_end_date:
+
                     cur.with_context(x_skip_c04=True).write({
-                        'state': 'out_of_range',
-                        'scheduled_date': new_date,
+                        'x_studio_state': 'out_of_range',
+                        'x_studio_scheduled_date': new_date,
                     })
                     cur.message_post(body=(
                         "Ocurrencia marcada fuera de rango: el deslizamiento de la "
                         "serie superó el fin de contrato (%s)."
-                    ) % plan.contract_end_date)
-                elif cur.scheduled_date != new_date:
+                    ) % plan.x_studio_contract_end_date)
+                elif cur.x_studio_scheduled_date != new_date:
                     # AA-03 → SA-06 propaga a hijas vivas si las hubiera
-                    cur.with_context(x_skip_c04=True).write({'scheduled_date': new_date})
+                    cur.with_context(x_skip_c04=True).write({'x_studio_scheduled_date': new_date})
                 prev = cur
-                cur = cur.next_plan_id
+                cur = cur.x_studio_next_plan_id
                 guard += 1
         elif not nxt:
             # 5) Generar la siguiente ocurrencia (hereda contract_start/end)
             new_plan = plan.with_context(x_skip_c04=True).copy(default={
-                'name': False,                     # SA-00 le pondrá uno nuevo
-                'scheduled_date': next_date,
-                'state': 'draft',
-                'close_date': False,
-                'previous_plan_id': plan.id,
-                'next_plan_id': False,
-                'series_id': plan.series_id,
-                'seq_in_series': plan.seq_in_series + 1,
-                'original_scheduled_date': next_date,
-                'equipment_snapshot_ids': [Command.clear()],
-                'force_close_reason': False,
+                'x_name': False,            
+                'x_studio_scheduled_date': next_date,
+                'x_studio_state': 'draft',
+                'x_studio_close_date': False,
+                'x_studio_previous_plan_id': plan.id,
+                'x_studio_next_plan_id': False,
+                'x_studio_series_id': plan.x_studio_series_id,
+                'x_studio_seq_in_series': plan.x_studio_seq_in_series + 1,
+                'x_studio_original_scheduled_date': next_date,
+                'x_studio_equipment_snapshot_ids': [Command.clear()],
+                'x_studio_user_id': plan.x_studio_user_id,
+                'x_studio_maintenance_team_id': plan.x_studio_maintenance_team_id,
+                'x_studio_maintenance_type': plan.x_studio_maintenance_type,
+                'x_studio_resource_calendar_id': plan.x_studio_resource_calendar_id,
+                'x_studio_auto_plan': plan.x_studio_auto_plan,
                 # 'contract_start_date' y 'contract_end_date' viajan tal cual via copy()
             })
-            plan.write({'next_plan_id': new_plan.id})   # .write(): el sandbox prohíbe STORE_ATTR
+            plan.write({'x_studio_next_plan_id': new_plan.id})  
 
     # 6) Carryover si cerró parcial
-    if plan.state == 'partially_done' and plan.next_plan_id:
-        pendientes = plan.request_ids.filtered(lambda r: not r.stage_id.done and not r.archive)
-        carry_dt = datetime.datetime.combine(plan.next_plan_id.scheduled_date, datetime.time(12, 0))
+    if plan.x_studio_state == 'partially_done' and plan.x_studio_next_plan_id:
+        pendientes = plan.x_studio_request_ids.filtered(lambda r: not r.stage_id.done and not r.archive)
+        carry_dt = datetime.datetime.combine(plan.x_studio_next_plan_id.x_studio_scheduled_date, datetime.time(12, 0))
         for hija in pendientes:
             env['maintenance.request'].create({
-                'name': f"[CARRYOVER] {hija.name}",   # hija.name ya incluye el nombre del plan; no repetirlo
+                'name': f"[Arrastrada] {hija.name}",   # hija.name ya incluye el nombre del plan; no repetirlo
                 'equipment_id': hija.equipment_id.id,
                 'plan_id': plan.next_plan_id.id,
                 'schedule_date': carry_dt,
@@ -963,22 +957,21 @@ for plan in records:
 
 ---
 
-### SA-03 — Wizard "Sync con punto"
+### SA-03 — Wizard "Sync con punto" (listo)
 
 **Trigger:** botón en el form view del plan (botón hecho desde Studio → "Add Button" → "Trigger Server Action" → SA-03).
 
 ```python
 for plan in records:
-    if plan.state not in ('draft', 'scheduled'):
+    if plan.x_studio_state not in ('draft', 'scheduled'):
         raise UserError("Solo se puede sincronizar planes en draft o scheduled.")
 
     equipos_punto = env['maintenance.equipment'].search([
-        ('x_studio_location', '=', plan.location_id.id),
+        ('x_studio_location', '=', plan.x_studio_location_id.id),
         ('active', '=', True),
-        ('company_id', 'in', (False, plan.company_id.id)),
     ])
 
-    en_snapshot = plan.equipment_snapshot_ids
+    en_snapshot = plan.x_studio_equipment_snapshot_ids
     faltantes = equipos_punto - en_snapshot
     sobrantes = en_snapshot - equipos_punto
 
@@ -991,18 +984,18 @@ for plan in records:
     # Crear hijas para los faltantes si el plan ya está scheduled.
     # Misma receta que SA-01: datetime anclado 12:00 UTC + herencia de
     # responsables/equipo/tipo.
-    if plan.state == 'scheduled':
-        sched_dt = datetime.datetime.combine(plan.scheduled_date, datetime.time(12, 0))
+    if plan.x_studio_state == 'scheduled':
+        sched_dt = datetime.datetime.combine(plan.x_studio_scheduled_date, datetime.time(12, 0))
         for equipo in faltantes:
             env['maintenance.request'].create({
                 'name': f"{plan.name} - {equipo.name}",
                 'equipment_id': equipo.id,
                 'plan_id': plan.id,
                 'schedule_date': sched_dt,
-                'maintenance_type': plan.maintenance_type or 'preventive',
-                'user_id': (plan.technician_user_id or plan.user_id).id or False,
-                'maintenance_team_id': plan.maintenance_team_id.id or False,
-                'company_id': plan.company_id.id,
+                'maintenance_type': plan.x_studio_maintenance_type or 'preventive',
+                'user_id': plan.x_studio_user_id.id or False,
+                'maintenance_team_id': plan.x_studio_maintenance_team_id.id or False,
+                'x_studio_tipo_de_trabajo': 'Mantención Preventiva',
             })
 
     # Las hijas de los sobrantes no se borran: se loggean
@@ -1013,27 +1006,28 @@ for plan in records:
 
 ---
 
-### SA-04 — Cancelar plan + hijas (con confirmación)
+### SA-04 — Cancelar plan + hijas (con confirmación) (listo)
 
 **Trigger:** botón "Cancelar" en el form (visible solo si state ≠ cancelled/done).
 
 ```python
 for plan in records:
-    hijas_vivas = plan.request_ids.filtered(
+    hijas_vivas = plan.x_studio_request_ids.filtered(
         lambda r: r.stage_id.id not in env['maintenance.stage'].search([('done','=',True)]).ids
     )
     hijas_vivas.write({'archive': True, 'kanban_state': 'blocked'})
-    plan.write({'state': 'cancelled'})
+    plan.write({'x_studio_state': 'cancelled'})
 
     # Puentear la cadena si se cancela una ocurrencia INTERMEDIA de una serie
     # proyectada (SA-07): sin esto, la cascada del anterior encontraría un
     # next_plan_id cancelado y la serie quedaría trabada.
-    if plan.previous_plan_id and plan.next_plan_id:
-        plan.previous_plan_id.write({'next_plan_id': plan.next_plan_id.id})
-        plan.next_plan_id.write({'previous_plan_id': plan.previous_plan_id.id})
+  
+    if plan.x_studio_previous_plan_id and plan.x_studio_next_plan_id:
+        plan.x_studio_previous_plan_id.write({'x_studio_next_plan_id': plan.x_studio_next_plan_id.id})
+        plan.x_studio_next_plan_id.write({'x_studio_previous_plan_id': plan.x_studio_previous_plan_id.id})
         plan.message_post(body=(
             "Cadena puenteada: %s → %s (esta ocurrencia queda fuera de la serie activa)."
-        ) % (plan.previous_plan_id.name, plan.next_plan_id.name))
+        ) % (plan.x_studio_previous_plan_id.x_name, plan.x_studio_next_plan_id.x_name))
 
     # El period nativo del equipo NO se toca: su ciclo propio sigue corriendo
     # independientemente de que el plan del punto se cancele (ver Paso 4).
@@ -1048,7 +1042,7 @@ for plan in records:
 
 ---
 
-### SA-06 — Propagación de `scheduled_date` a las hijas (autofiltrada)
+### SA-06 — Propagación de `scheduled_date` a las hijas (autofiltrada) (listo)
 
 **Trigger:** AA-03 (On Update sobre el plan). En 16 dispara ante **cualquier** write de un plan en draft/scheduled (no hay watched fields), por eso el guard: solo actúa sobre hijas cuya fecha difiere de la del plan. Esto también la convierte en el único punto de propagación — la cascada (SA-02) escribe `scheduled_date` en n+1 y deja que esta SA haga el resto.
 
@@ -1074,7 +1068,7 @@ for plan in records:
 
 ---
 
-### SA-07 — Proyectar serie (pre-generar ocurrencias futuras para la Gantt)
+### SA-07 — Proyectar serie (pre-generar ocurrencias futuras para la Gantt) (listo)
 
 **Trigger:** botón "Proyectar serie" en el form del plan (Studio → "Add Button" → "Trigger Server Action" → SA-07). No lleva AA: es una acción deliberada del gestor.
 
@@ -1156,7 +1150,7 @@ for plan in records:
 
 ---
 
-### SA-19 — Recadenciar las series del punto al cambiar cadencia/slack
+### SA-19 — Recadenciar las series del punto al cambiar cadencia/slack (listo
 
 **Modelo:** `x_maintenance_location`. **Trigger:** AA-18 (On Update del punto).
 
@@ -1165,9 +1159,7 @@ for plan in records:
 > **Regla de anclaje:** la primera ocurrencia no cerrada de cada serie **conserva su `scheduled_date`** (es un compromiso ya tomado / a punto de tomarse); a partir de ella se recalcula el resto encadenando `anterior + período`. Cambiar el slack **no mueve ninguna fecha** — solo se recalculan `gantt_start`/`gantt_stop`, que son computed y se ajustan solos; por eso el bucle no reacciona al slack, únicamente a la cadencia.
 
 ```python
-# Modelo: x_maintenance_location. Idempotente (como SA-12): en 16 no hay
-# watched fields → dispara en cualquier write del punto, pero el guard
-# 'cur.scheduled_date != new_date' no escribe si las fechas ya reflejan el ritmo.
+
 def add_period(base, value, unit):
     if unit == 'day':
         return base + datetime.timedelta(days=value)
@@ -1187,39 +1179,39 @@ def shift_to_workday(date, calendar):
     return next_dt.date() if next_dt else date
 
 for punto in records:
-    fval, funit = punto.x_frequency_value, punto.x_frequency_unit
+    fval, funit = punto.x_studio_frequency_value, punto.x_studio_frequency_unit
     if not fval or not funit:
         continue
     # Cabezas de serie viva del punto: primera ocurrencia NO cerrada de cada cadena.
     cabezas = env['x_maintenance_plan'].search([
-        ('location_id', '=', punto.id),
-        ('state', 'in', ('draft', 'scheduled')),
-        ('previous_plan_id.state', 'in', ('done', 'partially_done')),
+        ('x_studio_location_id', '=', punto.id),
+        ('x_studio_state', 'in', ('draft', 'scheduled')),
+        ('x_studio_previous_plan_id.x_studio_state', 'in', ('done', 'partially_done')),
     ]) | env['x_maintenance_plan'].search([
-        ('location_id', '=', punto.id),
-        ('state', 'in', ('draft', 'scheduled')),
-        ('previous_plan_id', '=', False),
+        ('x_studio_location_id', '=', punto.id),
+        ('x_studio_state', 'in', ('draft', 'scheduled')),
+        ('x_studio_previous_plan_id', '=', False),
     ])
     for cabeza in cabezas:
         # La cabeza conserva su fecha (compromiso); se recalcula la cola.
-        prev, cur, guard = cabeza, cabeza.next_plan_id, 0
-        while cur and cur.state in ('draft', 'scheduled') and guard < 60:
+        prev, cur, guard = cabeza, cabeza.x_studio_next_plan_id, 0
+        while cur and cur.x_studio_state in ('draft', 'scheduled') and guard < 60:
             new_date = shift_to_workday(
-                add_period(prev.scheduled_date, fval, funit),
-                prev.resource_calendar_id)
+                add_period(prev.x_studio_scheduled_date, fval, funit),
+                prev.x_studio_resource_calendar_id)
             if punto.x_contract_end_date and new_date > punto.x_contract_end_date:
                 # más allá del contrato: fuera de rango (Req 5), no se cancela acá.
                 cur.with_context(x_skip_c04=True).write({
-                    'state': 'out_of_range', 'scheduled_date': new_date})
-            elif cur.scheduled_date != new_date:
+                    'x_studio_state': 'out_of_range', 'x_studio_scheduled_date': new_date})
+            elif cur.x_studio_scheduled_date != new_date:
                 # AA-03 → SA-06 propaga la fecha nueva a las hijas vivas si las hay.
-                cur.with_context(x_skip_c04=True).write({'scheduled_date': new_date})
-            prev, cur = cur, cur.next_plan_id
+                cur.with_context(x_skip_c04=True).write({'x_studio_scheduled_date': new_date})
+            prev, cur = cur, cur.x_studio_next_plan_id
             guard += 1
     punto.message_post(body=(
         "Cadencia/tolerancia del punto actualizada (%s %s, slack %s d): "
         "series pendientes re-fechadas."
-    ) % (fval, funit, punto.x_slack_days))
+    ) % (fval, funit, punto.x_studio_slack_days))
 ```
 
 > **Convive con SA-12 (acortar contrato) y SA-13 (fuera de rango).** Las tres cuelgan de writes del punto/ocurrencia y son idempotentes: si el mismo write cambia cadencia *y* acorta contrato, SA-19 re-fecha y marca `out_of_range` lo que se pasa, y SA-12 elimina/cancela lo que quede en `draft`/`scheduled` más allá del nuevo término. Asigná a **AA-18 un `sequence` mayor que AA-14** (SA-12) para que el corte de contrato se aplique *después* del re-fechado. Las ocurrencias ya `out_of_range` no las toca la cabeza (la búsqueda de cabezas solo mira `draft`/`scheduled`).
@@ -1228,20 +1220,19 @@ for punto in records:
 
 ---
 
-### SA-MOV-00 — Inicialización de `x_equipment_movement` (name + company_id)
+### SA-MOV-00 — Inicialización de `x_equipment_movement` (name + company_id) (listo)
 
 **Modelo:** `x_equipment_movement`. **Trigger:** AA-MOV-00 (On Creation).
 
 ```python
 for mov in records:
     vals = {}
-    if not mov.name:
+    if not mov.x_name:
         seq = env['ir.sequence'].next_by_code('x_equipment_movement') or '0001'
-        eq_name = mov.equipment_id.name or '?'
-        year = mov.date_out.year if mov.date_out else datetime.date.today().year
-        vals['name'] = f"MOV-{year}-{seq} / {eq_name}"
-    if not mov.company_id and mov.equipment_id:
-        vals['company_id'] = mov.equipment_id.company_id.id
+        eq_name = mov.x_studio_equipment_id.name or '?'
+        year = mov.x_studio_date_out.year if mov.x_studio_date_out else datetime.date.today().year
+        vals['x_name'] = f"MOV-{year}{seq}/{eq_name}"
+  
     if vals:
         mov.write(vals)
 ```
@@ -1250,7 +1241,7 @@ for mov in records:
 
 ---
 
-### SA-09 — Auto-crear `x_equipment_movement` al cambiar `x_studio_location`
+### SA-09 — Auto-crear `x_equipment_movement` al cambiar `x_studio_location` (listo)
 
 **Modelo:** `maintenance.equipment`. **Trigger:** AA-06 (On Update — en 16 dispara ante cualquier write; la SA filtra comparando el último movement, ver nota de AA-06 en el Paso 9).
 
@@ -1272,8 +1263,8 @@ for eq in records:
     # es granularidad DÍA y casi todos nacen con date_out=hoy, así que a igualdad
     # de fecha hay que desempatar por id (monótono) o el [:1] toma el más viejo
     # del día y el guard / from_location_id quedan mal.
-    last = eq.movement_ids.sorted(key=lambda m: (m.date_out, m.id), reverse=True)[:1]
-    last_to = last.to_location_id if last else False
+    last = eq.x_studio_movement_ids.sorted(key=lambda m: (m.x_studio_date_out, m.id), reverse=True)[:1]
+    last_to = last.x_studio_to_location_id if last else False
 
     # Baseline implícito: los equipos sin seed son los que están en Bodega
     # cliente (594), la ubicación default = "stock" (sección 3.bis.5-bis). Sin
@@ -1295,7 +1286,7 @@ for eq in records:
     elif new_loc.id == LAB_LOC_ID:
         reason = 'calibration'               # destino laboratorio Metrocal
     elif new_loc.id == STOCK_LOC_ID:
-        reason = 'repair'                    # destino bodega (servicio/daño)
+        reason = 'out_of _service'            # destino bodega (servicio/daño)
     elif last_to and last_to.id in (LAB_LOC_ID, STOCK_LOC_ID):
         reason = 'return_from_service'       # vuelve de Lab/Bodega a un punto
     elif last_to:
@@ -1304,14 +1295,14 @@ for eq in records:
         reason = 'installation'              # primera asignación
 
     env['x_equipment_movement'].create({
-        'equipment_id': eq.id,
-        'from_location_id': last_to.id if last_to else False,
-        'to_location_id': new_loc.id if new_loc else False,
-        'reason': reason,
-        'date_out': datetime.date.today(),
-        'date_in': datetime.date.today(),
-        'state': 'completed',
-        'notes': "Movement auto-generado por AA-06 (cambio de x_studio_location).",
+        'x_studio_equipment_id': eq.id,
+        'x_studio_from_location_id': last_to.id if last_to else False,
+        'x_studio_to_location_id': new_loc.id if new_loc else False,
+        'x_studio_reason': reason,
+        'x_studio_date_out': datetime.date.today(),
+        'x_studio_date_in': datetime.date.today(),
+        'x_studio_state': 'completed',
+        'x_studio_notes': "Movimiento auto-generado",
     })
 
     # El period nativo del equipo NO se toca al reubicar: su ciclo propio sigue
@@ -1342,7 +1333,7 @@ for req in records:
 
 ---
 
-### SA-11 — Eliminar solicitudes de un equipo dañado (Req 3)
+### SA-11 — Eliminar solicitudes de un equipo dañado (Req 3) (listo)
 
 **Modelo:** `x_equipment_movement`. **Trigger:** AA-15 (On Creation, `Apply on [('x_studio_reason','=','repair')]`).
 
@@ -1374,7 +1365,7 @@ for mov in records:
 
 ---
 
-### SA-12 — Recalcular la serie al acortar el contrato (Req 1)
+### SA-12 — Recalcular la serie al acortar el contrato (Req 1) (listo)
 
 **Modelo:** `x_maintenance_location`. **Trigger:** AA-14 (On Update — en 16 dispara en cada write; la SA es idempotente y segura ante writes que no acorten).
 
@@ -1421,7 +1412,7 @@ for loc in records:
 
 ---
 
-### SA-13 — Marcar / desmarcar "fuera de rango" (Req 5)
+### SA-13 — Marcar / desmarcar "fuera de rango" (Req 5) (listo)
 
 **Modelo:** `x_maintenance_plan`. **Trigger:** AA-17 (On Update — `Apply on [('x_studio_state','in',('draft','scheduled','in_progress','out_of_range'))]`).
 
@@ -1511,7 +1502,7 @@ Los **reportes** y la **auto-programación** (SA-14, SA-15, SA-16) corren por re
 
 ---
 
-### SA-15 — Jueves AM: promover `draft → scheduled` de la semana siguiente (Req 7)
+### SA-15 — Jueves AM: promover `draft → scheduled` de la semana siguiente (Req 7) (listo)
 
 **Modelo:** `x_maintenance_plan`. **Disparo:** CR-01.
 
@@ -1540,9 +1531,11 @@ for plan in plans:
 
 ---
 
-### SA-14 — Reporte semanal (jueves AM, semana siguiente) (Req 6)
+### SA-14 — Reporte semanal (jueves AM, semana siguiente) (Req 6) (listo)
 
 **Modelo:** `x_maintenance_plan`. **Disparo:** CR-02.
+
+El correo se maqueta con la **identidad WE TECHS adaptada a email** (paleta oficial, jerarquía eyebrow → título → subtítulo → chip, regla de marca de doble trazo) y presenta la semana como un **calendario laboral (Lun–Vie)**: una columna por día y, dentro de cada día, una **tarjeta por solicitud** con **punto de monitoreo**, **estado** (pill + borde superior de color) y **equipos a intervenir** (`nombre | Nº de serie`, del snapshot). Sábado/domingo solo aparecen si tienen ocurrencias. Todo va con **estilos inline** y layout con `<table>`; el calendario va dentro de `overflow-x:auto` para móvil.
 
 ```python
 today = datetime.date.today()
@@ -1554,19 +1547,104 @@ plans = env['x_maintenance_plan'].search([
     ('x_studio_scheduled_date', '>=', next_mon),
     ('x_studio_scheduled_date', '<=', next_sun),
     ('x_studio_state', 'in', ('draft', 'scheduled', 'in_progress')),
-], order='x_studio_location_id, x_studio_scheduled_date')
+], order='x_studio_scheduled_date, x_studio_location_id')
 
 if plans:
-    filas = "".join(
-        "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-            p.x_name, p.x_studio_location_id.x_name or '',
-            p.x_studio_scheduled_date, p.x_studio_state)
-        for p in plans)
-    body = ("<p>Ocurrencias de mantención preventiva para la semana del %s al %s "
-            "(%s en total):</p>"
-            "<table border='1' cellpadding='4' style='border-collapse:collapse'>"
-            "<tr><th>Plan</th><th>Punto</th><th>Fecha</th><th>Estado</th></tr>"
-            "%s</table>") % (next_mon, next_sun, len(plans), filas)
+    # --- Identidad WE TECHS adaptada a email (paleta oficial, estilos inline) ---
+    ORANGE, ORANGE2, INK, GREY = '#F26522', '#F47F47', '#2B2B2D', '#5A5B5D'
+    GMED, LINE, BG, PEACH, WHITE = '#939598', '#E4E5E6', '#F6F7F8', '#FDE5DA', '#FFFFFF'
+    FONT = "'Lexend Deca',Arial,Helvetica,sans-serif"
+    DIA_AB = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
+    MESES = ['', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+             'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    EST = {'draft': ('Borrador', GMED), 'scheduled': ('Programada', ORANGE),
+           'in_progress': ('En progreso', '#0097A7')}
+
+    # Agrupar las ocurrencias de la semana por día.
+    por_dia = {}
+    for p in plans:
+        por_dia.setdefault(p.x_studio_scheduled_date, []).append(p)
+
+    # Semana laboral: Lun-Vie; sábado/domingo solo si tienen ocurrencias.
+    dias = [next_mon + datetime.timedelta(days=i) for i in range(5)]
+    for extra in (5, 6):
+        d = next_mon + datetime.timedelta(days=extra)
+        if por_dia.get(d):
+            dias.append(d)
+
+    # --- Calendario: una columna por día laboral, tarjetas por solicitud ---
+    total_eq, puntos_set, cols = 0, set(), ""
+    for d in dias:
+        head_bg = PEACH if d.weekday() >= 5 else BG   # fin de semana sombreado
+        ocs = por_dia.get(d, [])
+        cuerpo = ""
+        for p in ocs:
+            puntos_set.add(p.x_studio_location_id.id)
+            # Equipos a intervenir: snapshot; fallback = equipos vivos del punto.
+            equipos = p.x_studio_equipment_snapshot_ids or env['maintenance.equipment'].search([
+                ('x_studio_location', '=', p.x_studio_location_id.id), ('active', '=', True)])
+            total_eq += len(equipos)
+            est_lbl, est_col = EST.get(p.x_studio_state, (p.x_studio_state, GMED))
+            eq_html = "".join(
+                f'<div style="font:400 9px {FONT};color:{GREY};line-height:12.5px;padding:1.5px 0;">'
+                f'<span style="color:{ORANGE};font-weight:700;">·</span> {e.name}{" | " + e.serial_no if e.serial_no else ""}</div>'
+                for e in equipos) or (
+                f'<div style="font:italic 400 9px {FONT};color:{GMED};">Sin equipos</div>')
+            cuerpo += (
+                f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation" '
+                f'style="border:1px solid {LINE};border-top:3px solid {est_col};background:{WHITE};margin:0 0 7px;">'
+                f'<tr><td style="padding:7px 8px 8px;">'
+                f'<div style="font:700 10px {FONT};color:{INK};line-height:13px;">{p.x_studio_location_id.x_name or "Punto sin nombre"}</div>'
+                f'<div style="padding:5px 0 0;"><span style="display:inline-block;padding:2px 7px;border-radius:9px;'
+                f'background:{est_col};color:{WHITE};font:700 8px {FONT};letter-spacing:.3px;">{est_lbl.upper()}</span></div>'
+                f'<div style="padding:7px 0 3px;font:700 8px {FONT};color:{ORANGE};letter-spacing:.4px;">EQUIPOS ({len(equipos)})</div>'
+                f'{eq_html}</td></tr></table>')
+        if not ocs:
+            cuerpo = (f'<div style="padding:16px 4px;text-align:center;font:400 9px {FONT};'
+                      f'color:{GMED};">Sin trabajo</div>')
+        cols += (
+            f'<td width="126" style="width:126px;padding:0 3px;vertical-align:top;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid {LINE};background:{WHITE};">'
+            f'<tr><td style="background:{head_bg};padding:6px 8px;border-bottom:1px solid {LINE};white-space:nowrap;">'
+            f'<span style="font:700 9px {FONT};color:{GMED};letter-spacing:.5px;">{DIA_AB[d.weekday()]}</span>'
+            f' <span style="font:700 13px {FONT};color:{INK};">{d.day}</span></td></tr>'
+            f'<tr><td style="padding:7px 5px;vertical-align:top;">{cuerpo}</td></tr>'
+            f'</table></td>')
+
+    calendario = (f'<table cellpadding="0" cellspacing="0" role="presentation" '
+                  f'style="table-layout:fixed;width:{len(dias) * 132}px;border-collapse:collapse;"><tr>{cols}</tr></table>')
+
+    rango = (f'Semana del {next_mon.day} de {MESES[next_mon.month]} al '
+             f'{next_sun.day} de {MESES[next_sun.month]} de {next_sun.year}')
+    chip = (
+        f'<table cellpadding="0" cellspacing="0" role="presentation" style="background:{ORANGE};border-radius:6px;"><tr>'
+        f'<td style="padding:9px 18px;font:400 9px {FONT};color:{PEACH};letter-spacing:.6px;">OCURRENCIAS<br>'
+        f'<span style="font:700 16px {FONT};color:{WHITE};">{len(plans)}</span></td>'
+        f'<td style="border-left:1px solid {ORANGE2};padding:9px 18px;font:400 9px {FONT};color:{PEACH};letter-spacing:.6px;">PUNTOS<br>'
+        f'<span style="font:700 16px {FONT};color:{WHITE};">{len(puntos_set)}</span></td>'
+        f'<td style="border-left:1px solid {ORANGE2};padding:9px 18px;font:400 9px {FONT};color:{PEACH};letter-spacing:.6px;">EQUIPOS<br>'
+        f'<span style="font:700 16px {FONT};color:{WHITE};">{total_eq}</span></td>'
+        f'</tr></table>')
+
+    body = f'''<div style="margin:0;padding:24px 12px;background:{BG};">
+<table align="center" width="700" cellpadding="0" cellspacing="0" role="presentation" style="width:700px;max-width:700px;margin:0 auto;background:{WHITE};">
+<tr><td style="padding:26px 20px 30px;">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation"><tr>
+<td style="font:700 18px {FONT};color:{INK};letter-spacing:2px;">WE TECHS</td>
+<td align="right" style="font:700 9px {FONT};color:{ORANGE};letter-spacing:1px;text-transform:uppercase;line-height:14px;">Reporte semanal<br>
+<span style="font-weight:400;color:{GMED};">Programa de Mantención Preventiva</span></td>
+</tr></table>
+<div style="height:3px;width:118px;background:{ORANGE};font-size:0;line-height:0;"> </div>
+<div style="height:2px;background:{INK};font-size:0;line-height:0;"> </div>
+<div style="font:700 9px {FONT};color:{ORANGE};letter-spacing:1.5px;text-transform:uppercase;padding:20px 0 0;">Calendario semanal</div>
+<div style="font:700 24px {FONT};color:{INK};padding:5px 0 0;">Mantención de la próxima semana</div>
+<div style="font:400 13px {FONT};color:{GREY};padding:6px 0 0;">{rango}</div>
+<div style="padding:16px 0 2px;">{chip}</div>
+<div style="overflow-x:auto;padding:20px 0 2px;">{calendario}</div>
+<div style="border-top:1px solid {LINE};margin:22px 0 0;padding:12px 0 0;font:400 10px {FONT};color:{GMED};line-height:15px;">
+Programa de Mantención Preventiva — WE TECHS · Generado automáticamente el {today.day}/{today.month}/{today.year}. Correo automático, no responder.</div>
+</td></tr></table></div>'''
+
     # Actores relevantes: responsable + técnico de cada ocurrencia.
     partners = env['res.partner']
     for p in plans:
@@ -1576,19 +1654,21 @@ if plans:
             partners |= p.x_studio_technician_user_id.partner_id
     if partners:
         env['mail.mail'].create({
-            'subject': "PMP - ocurrencias de la semana %s/%s" % (next_mon.day, next_mon.month),
+            'subject': "PMP · Reporte semanal — semana del %s/%s" % (next_mon.day, next_mon.month),
             'body_html': body,
             'recipient_ids': [Command.set(partners.ids)],
         }).send()
 ```
 
+> **Adaptación de `formato-doc-we` a email.** Se trasladan: **paleta** oficial, **jerarquía** (eyebrow → título → subtítulo → chip) y **regla de marca** (doble trazo tinta + naranja). Lo que **no** aplica del estándar PDF: márgenes en mm y fuentes `.ttf` embebidas — se usa la pila `'Lexend Deca', Arial, Helvetica` y el cliente que no tenga la fuente cae a Arial (aceptable solo en email). El **estado** de cada solicitud se codifica en el color del borde superior de su tarjeta (naranja = programada · teal = en progreso · gris = borrador). El **snapshot** (`x_studio_equipment_snapshot_ids`) es la fuente de los equipos; si la ocurrencia sigue en `draft` sin snapshot, cae a los equipos vivos del punto. El calendario es **Lun–Vie**; una ocurrencia en fin de semana agrega su columna.
+
 > La lista de **actores relevantes** (acá: responsable + técnico) es el punto a parametrizar: sumá el líder del `maintenance_team_id`, los followers del punto, o una lista de distribución fija según tu operación.
 
 ---
 
-### SA-16 — Reporte mensual (día 1 del mes) (Req 6)
+### SA-16 — Reporte mensual (día 1 del mes) (Req 6) (listo)
 
-**Modelo:** `x_maintenance_plan`. **Disparo:** CR-03. Lista **todas las solicitudes (hijas)** con fecha dentro del mes en curso.
+**Modelo:** `x_maintenance_plan`. **Disparo:** CR-03. Toma **todas las solicitudes (hijas)** con fecha dentro del mes en curso y las maqueta como una **carta Gantt** con la identidad WE TECHS: filas = puntos de monitoreo, columnas = días del mes; cada celda lleva el nº de solicitudes que caen ese día en el punto, más una fila de **carga diaria** al pie. Fin de semana sombreado. Estilos **inline** + `<table>` (Outlook/Gmail).
 
 ```python
 today = datetime.date.today()
@@ -1596,6 +1676,7 @@ first = today.replace(day=1)
 last = first + dateutil.relativedelta.relativedelta(months=1, days=-1)
 first_dt = datetime.datetime.combine(first, datetime.time.min)
 last_dt = datetime.datetime.combine(last, datetime.time.max)
+n_dias = last.day
 
 reqs = env['maintenance.request'].search([
     ('x_studio_plan_id', '!=', False),
@@ -1605,14 +1686,109 @@ reqs = env['maintenance.request'].search([
 ], order='schedule_date')
 
 if reqs:
-    filas = "".join(
-        "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-            r.name, r.equipment_id.name or '', r.schedule_date, r.stage_id.name or '')
-        for r in reqs)
-    body = ("<p>Solicitudes de mantención preventiva del mes %s/%s (%s en total):</p>"
-            "<table border='1' cellpadding='4' style='border-collapse:collapse'>"
-            "<tr><th>Solicitud</th><th>Equipo</th><th>Fecha</th><th>Etapa</th></tr>"
-            "%s</table>") % (first.month, first.year, len(reqs), filas)
+    # --- Identidad WE TECHS adaptada a email (paleta oficial, estilos inline) ---
+    ORANGE, ORANGE2, INK, GREY = '#F26522', '#F47F47', '#2B2B2D', '#5A5B5D'
+    GMED, LINE, BG, PEACH, WHITE = '#939598', '#E4E5E6', '#F6F7F8', '#FDE5DA', '#FFFFFF'
+    FONT = "'Lexend Deca',Arial,Helvetica,sans-serif"
+    MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
+             'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
+    INI = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
+    CW = 19  # ancho (px) de cada columna-día
+
+    # --- Matriz de la carta Gantt: punto de monitoreo x día ---
+    puntos, orden, celdas, tot_dia = {}, [], {}, {}
+    for r in reqs:
+        punto = r.x_studio_plan_id.x_studio_location_id
+        d = r.schedule_date.day               # schedule_date anclada 12:00 UTC (SA-01): el día es estable
+        if punto.id not in celdas:
+            celdas[punto.id], puntos[punto.id] = {}, punto
+            orden.append(punto.id)
+        celdas[punto.id][d] = celdas[punto.id].get(d, 0) + 1
+        tot_dia[d] = tot_dia.get(d, 0) + 1
+    finde = {d for d in range(1, n_dias + 1)
+             if datetime.date(first.year, first.month, d).weekday() >= 5}
+
+    # Encabezado: números de día (fin de semana sombreado).
+    th = (f'<td style="padding:6px 12px;font:700 9px {FONT};color:{GMED};letter-spacing:.5px;'
+          f'border-bottom:2px solid {INK};text-align:left;white-space:nowrap;">PUNTO DE MONITOREO</td>')
+    for d in range(1, n_dias + 1):
+        wk = d in finde
+        th += (f'<td width="{CW}" style="width:{CW}px;padding:3px 0 5px;text-align:center;'
+               f'font:700 9px {FONT};color:{INK if wk else GMED};border-bottom:2px solid {INK};'
+               f'background:{PEACH if wk else WHITE};">{d}<br>'
+               f'<span style="font-weight:400;font-size:7px;color:{GMED};">'
+               f'{INI[datetime.date(first.year, first.month, d).weekday()]}</span></td>')
+    th += (f'<td style="padding:6px 8px;font:700 9px {FONT};color:{INK};letter-spacing:.5px;'
+           f'border-bottom:2px solid {INK};text-align:center;">TOT</td>')
+
+    # Una fila por punto; barra naranja en cada día con carga (nº = solicitudes).
+    filas = ""
+    for i, pid in enumerate(orden):
+        rbg = WHITE if i % 2 == 0 else BG
+        tot_p = sum(celdas[pid].values())
+        celdas_html = ""
+        for d in range(1, n_dias + 1):
+            c = celdas[pid].get(d, 0)
+            if c:
+                celdas_html += (f'<td width="{CW}" style="width:{CW}px;padding:2px;text-align:center;'
+                                f'border-right:1px solid {LINE};border-bottom:1px solid {LINE};background:{rbg};">'
+                                f'<span style="display:block;background:{ORANGE};color:{WHITE};'
+                                f'font:700 10px {FONT};border-radius:3px;padding:4px 0;">{c}</span></td>')
+            else:
+                celdas_html += (f'<td width="{CW}" style="width:{CW}px;border-right:1px solid {LINE};'
+                                f'border-bottom:1px solid {LINE};background:{PEACH if d in finde else rbg};"> </td>')
+        filas += (f'<tr><td style="padding:7px 12px;font:600 11px {FONT};color:{INK};'
+                  f'border-bottom:1px solid {LINE};background:{rbg};white-space:nowrap;">'
+                  f'{puntos[pid].x_name or "Punto sin nombre"}</td>{celdas_html}'
+                  f'<td style="padding:7px 8px;text-align:center;font:700 11px {FONT};color:{ORANGE};'
+                  f'border-bottom:1px solid {LINE};background:{rbg};">{tot_p}</td></tr>')
+
+    # Pie: carga diaria (total de solicitudes por día).
+    foot = (f'<td style="padding:7px 12px;font:700 9px {FONT};color:{GMED};letter-spacing:.5px;'
+            f'border-top:2px solid {INK};">CARGA DIARIA</td>')
+    for d in range(1, n_dias + 1):
+        v = tot_dia.get(d, 0)
+        foot += (f'<td width="{CW}" style="width:{CW}px;padding:4px 0;text-align:center;'
+                 f'font:700 9px {FONT};color:{INK if v else LINE};border-top:2px solid {INK};'
+                 f'background:{PEACH if d in finde else WHITE};">{v or "·"}</td>')
+    foot += (f'<td style="padding:4px 8px;text-align:center;font:700 10px {FONT};color:{INK};'
+             f'border-top:2px solid {INK};">{len(reqs)}</td>')
+
+    gantt = (f'<table cellpadding="0" cellspacing="0" role="presentation" '
+             f'style="border-collapse:collapse;border:1px solid {LINE};">'
+             f'<tr>{th}</tr>{filas}<tr>{foot}</tr></table>')
+
+    chip = (
+        f'<table cellpadding="0" cellspacing="0" role="presentation" style="background:{ORANGE};border-radius:6px;"><tr>'
+        f'<td style="padding:9px 18px;font:400 9px {FONT};color:{PEACH};letter-spacing:.6px;">PUNTOS<br>'
+        f'<span style="font:700 16px {FONT};color:{WHITE};">{len(orden)}</span></td>'
+        f'<td style="border-left:1px solid {ORANGE2};padding:9px 18px;font:400 9px {FONT};color:{PEACH};letter-spacing:.6px;">SOLICITUDES<br>'
+        f'<span style="font:700 16px {FONT};color:{WHITE};">{len(reqs)}</span></td>'
+        f'<td style="border-left:1px solid {ORANGE2};padding:9px 18px;font:400 9px {FONT};color:{PEACH};letter-spacing:.6px;">DÍAS ACTIVOS<br>'
+        f'<span style="font:700 16px {FONT};color:{WHITE};">{len(tot_dia)}</span></td>'
+        f'</tr></table>')
+
+    body = f'''<div style="margin:0;padding:24px 12px;background:{BG};">
+<table align="center" width="720" cellpadding="0" cellspacing="0" role="presentation" style="width:720px;max-width:720px;margin:0 auto;background:{WHITE};">
+<tr><td style="padding:26px 30px 30px;">
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation"><tr>
+<td style="font:700 18px {FONT};color:{INK};letter-spacing:2px;">WE TECHS</td>
+<td align="right" style="font:700 9px {FONT};color:{ORANGE};letter-spacing:1px;text-transform:uppercase;line-height:14px;">Reporte mensual<br>
+<span style="font-weight:400;color:{GMED};">Programa de Mantención Preventiva</span></td>
+</tr></table>
+<div style="height:3px;width:118px;background:{ORANGE};font-size:0;line-height:0;"> </div>
+<div style="height:2px;background:{INK};font-size:0;line-height:0;"> </div>
+<div style="font:700 9px {FONT};color:{ORANGE};letter-spacing:1.5px;text-transform:uppercase;padding:20px 0 0;">Carta Gantt mensual</div>
+<div style="font:700 24px {FONT};color:{INK};padding:5px 0 0;">{MESES[first.month]} {first.year}</div>
+<div style="font:400 13px {FONT};color:{GREY};padding:6px 0 0;">Distribución de la mantención preventiva por punto de monitoreo</div>
+<div style="padding:16px 0 2px;">{chip}</div>
+<div style="overflow-x:auto;padding:20px 0 0;">{gantt}</div>
+<div style="padding:12px 0 0;font:400 10px {FONT};color:{GMED};line-height:15px;">
+<span style="display:inline-block;width:9px;height:9px;background:{ORANGE};border-radius:2px;vertical-align:middle;"></span> el número indica las solicitudes programadas ese día en el punto  ·  fin de semana sombreado.</div>
+<div style="border-top:1px solid {LINE};margin:22px 0 0;padding:12px 0 0;font:400 10px {FONT};color:{GMED};line-height:15px;">
+Programa de Mantención Preventiva — WE TECHS · Generado automáticamente el {today.day}/{today.month}/{today.year}. Correo automático, no responder.</div>
+</td></tr></table></div>'''
+
     partners = env['res.partner']
     for r in reqs:
         if r.user_id.partner_id:
@@ -1621,11 +1797,13 @@ if reqs:
             partners |= r.x_studio_plan_id.x_studio_user_id.partner_id
     if partners:
         env['mail.mail'].create({
-            'subject': "PMP - solicitudes del mes %s/%s" % (first.month, first.year),
+            'subject': "PMP · Reporte mensual — %s %s" % (MESES[first.month], first.year),
             'body_html': body,
             'recipient_ids': [Command.set(partners.ids)],
         }).send()
 ```
+
+> **Adaptación de `formato-doc-we` a email** (igual que SA-14): paleta, jerarquía, regla de marca y chip se trasladan; márgenes en mm y `.ttf` embebidos no aplican. La Gantt va dentro de un contenedor `overflow-x:auto` para que en móvil se pueda desplazar horizontalmente sin romper el ancho del correo. Si un mes es muy denso, subí `CW` o agrupá por semana.
 
 ---
 
