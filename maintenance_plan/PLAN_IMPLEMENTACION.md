@@ -77,7 +77,18 @@ Los features marcados habilitan automáticamente:
 
 Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel derecho **+ Field** → tipo → drag al canvas → configurar propiedades.
 
-> **Convención de nombres — LEER ANTES DE PEGAR CUALQUIER SNIPPET.** En modelos creados por Studio **todo lleva prefijo**, incluidos los campos de features: el rec_name es **`x_name`** y el archivado **`x_active`** (verificado en `er_introspection.json`: `x_maintenance_location` tiene `x_name`/`x_active`, no `name`/`active`); los demás features y campos manuales salen como `x_studio_<nombre>` (`x_studio_user_id`, `x_studio_company_id`, `x_studio_state`, …). Los únicos sin prefijo son los heredados del chatter (`message_ids`, `activity_ids`, …). En esta guía los snippets usan los **nombres lógicos sin prefijo** por legibilidad: al pegar cada snippet o dominio, **transponé** (`name`→`x_name`, `active`→`x_active`, `state`→`x_studio_state`, `plan_id`→`x_studio_plan_id`, etc.). Verificá el nombre técnico real de cada campo en *Settings → Technical → Fields* después de crearlo. Los campos de modelos **core** (`maintenance.request.archive`, `maintenance.equipment.period`, `stage_id`, …) sí van sin prefijo, tal cual aparecen acá.
+> **Convención de nombres — LEER ANTES DE PEGAR CUALQUIER SNIPPET.** En modelos creados por Studio **todo lleva prefijo**, incluidos los campos de features: el rec_name es **`x_name`** y el archivado **`x_active`** (verificado en `er_introspection.json`: `x_maintenance_location` tiene `x_name`/`x_active`, no `name`/`active`); los demás features y campos manuales salen como `x_studio_<nombre>` (`x_studio_user_id`, `x_studio_company_id`, `x_studio_state`, …). Los únicos sin prefijo son los heredados del chatter (`message_ids`, `activity_ids`, …). **Los snippets de esta guía ya vienen transpuestos** (pasada completa del 2026-08-05): usan los nombres técnicos reales, listos para pegar sin editar. Antes usaban nombres lógicos con la instrucción de transponer a mano, y la mezcla resultante causó fallas en T-02 (`x_active` en un modelo core) y T-03 (`plan.name` en vez de `plan.x_name`). Si encontrás un nombre sin prefijo en un snippet sobre un modelo Studio, **es un bug del doc** — corregilo. Verificá igual el nombre técnico real en *Settings → Technical → Fields*: Studio a veces genera sufijos aleatorios (en `x_maintenance_location` existe un `x_studio_one2many_field_TLVYb`), y este doc asume la forma canónica `x_studio_<nombre>`. Los campos de modelos **core** (`maintenance.request.archive`, `maintenance.equipment.period`, `stage_id`, …) sí van sin prefijo, tal cual aparecen acá.
+>
+> **Cuidado con la transposición inversa: NO prefijes campos de modelos core.** La regla `active`→`x_active` / `name`→`x_name` aplica **solo** a los modelos Studio (`x_maintenance_plan`, `x_maintenance_location`, `x_equipment_movement`). En `maintenance.equipment` y `maintenance.request` los campos nativos se llaman `active` y `name`, sin prefijo — escribir `('x_active','=',True)` en un dominio sobre `maintenance.equipment` revienta con `ValueError: Invalid field maintenance.equipment.x_active` (error real encontrado en T-02).
+>
+>
+> | Modelo                   | Archivado  | rec_name |
+> | -------------------------- | ------------ | ---------- |
+> | `maintenance.equipment`  | `active`   | `name`   |
+> | `maintenance.request`    | `active`   | `name`   |
+> | `x_maintenance_plan`     | `x_active` | `x_name` |
+> | `x_maintenance_location` | `x_active` | `x_name` |
+> | `x_equipment_movement`   | `x_active` | `x_name` |
 
 ### 3.1 Identificación (listo)
 
@@ -113,12 +124,12 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 * [X]
 
 
-| Campo             | Tipo                               | Related                         | Notas                                                                                    |
-| ------------------- | ------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------ |
-| `frequency_value` | integer (related,**store=True**)   | `location_id.x_frequency_value` | indexed. Validación > 0 en el punto (C-01). Readonly en el form (se edita en el punto). |
-| `frequency_unit`  | selection (related,**store=True**) | `location_id.x_frequency_unit`  | `day` · `week` · `month` · `year`. Readonly en el form.                               |
-| `slack_days`      | integer (related,**store=True**)   | `location_id.x_slack_days`      | tolerancia ± en días. Readonly en el form.                                             |
-| `auto_replan`     | boolean                            | — (propio del plan)            | default`True`. **No** related: cada ocurrencia lo controla por separado.                 |
+| Campo             | Tipo                               | Related                         | Notas                                                                                                                                                                                                                                                                                                                     |
+| ------------------- | ------------------------------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `frequency_value` | integer (related,**store=True**)   | `location_id.x_frequency_value` | indexed. Validación > 0 en el punto (C-01). Readonly en el form (se edita en el punto).                                                                                                                                                                                                                                  |
+| `frequency_unit`  | selection (related,**store=True**) | `location_id.x_frequency_unit`  | `day` · `week` · `month` · `year`. Readonly en el form.                                                                                                                                                                                                                                                                |
+| `slack_days`      | integer (related,**store=True**)   | `location_id.x_slack_days`      | tolerancia ± en días. Readonly en el form.                                                                                                                                                                                                                                                                              |
+| `auto_replan`     | boolean                            | — (propio del plan)            | default`True`. **No** related: cada ocurrencia lo controla por separado. ⚠️ **Nombre técnico real: `x_studio_auto_plan`** (sin el `re`), verificado en runtime durante T-05. El nombre lógico en esta guía es `auto_replan`; el campo en la base se llama `auto_plan`. Todos los snippets usan `x_studio_auto_plan`. |
 
 > **Related store=True es crítico** (mismo criterio que los campos de contrato, §3.10): sin store, la cascada y C-04 no pueden usarlos en dominios ni queries eficientes. Al cambiar la cadencia/slack en el punto, el ORM invalida y recomputa los espejos en **todas** las ocurrencias automáticamente — pero eso solo cambia el *número*, no re-fecha las ocurrencias: de eso se encarga SA-19 (ver §8).
 
@@ -128,7 +139,7 @@ Trabajamos en *Studio → tu modelo nuevo → Form view*. Para cada campo: panel
 # Correr ANTES de cambiar los campos a related (o sobre una copia de los valores).
 for punto in env['x_maintenance_location'].search([]):
     canon = env['x_maintenance_plan'].search(
-        [('location_id', '=', punto.id), ('x_studio_state', '!=', 'cancelled')],
+        [('x_studio_location_id', '=', punto.id), ('x_studio_state', '!=', 'cancelled')],
         order='x_studio_scheduled_date desc', limit=1)
     if canon:
         punto.write({
@@ -173,6 +184,37 @@ for punto in env['x_maintenance_location'].search([]):
 | ------------------------ | -------------------------------- | ----------------------------------------------------------------------------- |
 | `resource_calendar_id` | many2one →`resource.calendar` | default:`company_id.resource_calendar_id` (vía related compute o default). |
 
+#### Contrato de uso — qué se lee y qué NO
+
+El nombre del calendario (`40 Hours/Week`, `38 Hours/Week`) es **solo una etiqueta**: describe el total de horas semanales, no los días. Lo que realmente define qué días son hábiles son las líneas `resource.calendar.attendance`, cada una con `dayofweek` (selection `'0'`=Lunes … `'6'`=Domingo), `hour_from` y `hour_to`.
+
+De ese calendario, `shift_to_workday` (SA-02 / SA-07 / SA-08) lee **exactamente dos cosas**:
+
+1. El conjunto de `dayofweek` presentes en `attendance_ids` → qué días son hábiles.
+2. Los `resource.calendar.leaves` con `resource_id = False` → feriados globales.
+
+**No** lee `hours_per_day`, `full_time_required_hours`, `hour_from`/`hour_to` ni el total semanal. Para la lógica de cascada, un calendario de 40 h/sem y uno de 38 h/sem son **idénticos** si declaran los mismos días.
+
+#### Precondiciones de configuración
+
+
+| Condición                                                      | Efecto si no se cumple                                                                                | Mitigación implementada                                                                                                                                                  |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| El calendario tiene`attendance_ids` cargadas                    | `flexible_hours = True` (Odoo 17.4+/18) no genera líneas → no habría restricción de días         | `workday_set()` cae a `DEFAULT_WORKDAYS` = Lun–Vie                                                                                                                       |
+| El calendario**no** es quincenal (`two_weeks_calendar = False`) | Con`week_type`, un mismo día es hábil una semana y no la otra                                       | **No mitigado**: `workday_set()` colapsa ambas semanas a su unión (criterio más permisivo). Si se adoptan calendarios quincenales hay que discriminar por `week_type`.  |
+| El calendario declara Lun–Vie                                  | Un calendario de faena (7×24, 4×3) incluye fin de semana y las ocurrencias caerían sábado/domingo | **No mitigado por diseño**: se respeta lo que declare el calendario. Pero rompe la grilla Lun–Vie del email semanal (§11), que agrega columna solo si hay ocurrencias. |
+
+#### Por qué no se usa `calendar.plan_days()`
+
+La implementación anterior llamaba `plan_days(1, dt, compute_leaves=True)`. Se descartó por dos motivos:
+
+* `plan_days` devuelve el **fin de jornada** del N-ésimo día hábil completo, no el inicio del primer día hábil ≥ `dt`. Funcionaba por coincidencia de la semántica.
+* Devuelve un `datetime` **UTC naive** (por el `revert()` interno). Con `tz` del calendario en `America/Santiago` (UTC-3/-4), una jornada que termine 21:00 local cruza medianoche UTC y `.date()` entregaría el día siguiente. Con jornada a las 18:00 hoy no ocurre, pero queda latente ante cualquier edición del calendario.
+
+La implementación actual trabaja en `date` puro, con lo cual el problema de timezone desaparece.
+
+> **Supuesto a validar:** el chequeo de feriados compara a nivel día contra `date_from`/`date_to` en UTC, con hasta 4 h de desfase en los bordes. Para feriados de día completo alcanza; si se necesita precisión horaria, usar `calendar._leave_intervals_batch`.
+
 ### 3.7 Snapshot de equipos (listo)
 
 * [X]
@@ -206,62 +248,62 @@ for punto in env['x_maintenance_location'].search([]):
 for record in self:
     # Excluir hijas archivadas (extraídas a servicio externo / carryover):
     # no deben impedir que el plan llegue a 100%.
-    vivas = record.request_ids.filtered(lambda r: not r.archive)
+    vivas = record.x_studio_request_ids.filtered(lambda r: not r.archive)
     total = len(vivas)
     if total:
         done = len(vivas.filtered(lambda r: r.stage_id.done))
-        record['progress'] = int(round(100.0 * done / total))
+        record['x_studio_progress'] = int(round(100.0 * done / total))
     else:
-        record['progress'] = 0
+        record['x_studio_progress'] = 0
 ```
 
-Dependencies: `request_ids,request_ids.stage_id.done,request_ids.archive`
+Dependencies: `x_studio_request_ids,x_studio_request_ids.stage_id.done,x_studio_request_ids.archive`
 
 **Snippet `delta_days_from_planned`:**
 
 ```python
 for record in self:
-    if record.close_date and record.scheduled_date:
-        record['delta_days_from_planned'] = (record.close_date - record.scheduled_date).days
+    if record.x_studio_close_date and record.x_studio_scheduled_date:
+        record['x_studio_delta_days_from_planned'] = (record.x_studio_close_date - record.x_studio_scheduled_date).days
     else:
-        record['delta_days_from_planned'] = 0
+        record['x_studio_delta_days_from_planned'] = 0
 ```
 
-Dependencies: `close_date,scheduled_date`
+Dependencies: `x_studio_close_date,x_studio_scheduled_date`
 
 **Snippet `adjusted_from_scheduled`:**
 
 ```python
 for record in self:
-    record['adjusted_from_scheduled'] = bool(
-        record.original_scheduled_date
-        and record.scheduled_date
-        and record.original_scheduled_date != record.scheduled_date
+    record['x_studio_adjusted_from_scheduled'] = bool(
+        record.x_studio_original_scheduled_date
+        and record.x_studio_scheduled_date
+        and record.x_studio_original_scheduled_date != record.x_studio_scheduled_date
     )
 ```
 
-Dependencies: `scheduled_date,original_scheduled_date`
+Dependencies: `x_studio_scheduled_date,x_studio_original_scheduled_date`
 
 **Snippet `gantt_start`** (análogo para `gantt_stop` cambiando `-` por `+`):
 
 ```python
 for record in self:
-    if record.scheduled_date:
-        record['gantt_start'] = record.scheduled_date - datetime.timedelta(days=record.slack_days or 0)
+    if record.x_studio_scheduled_date:
+        record['x_studio_gantt_start'] = record.x_studio_scheduled_date - datetime.timedelta(days=record.x_studio_slack_days or 0)
     else:
-        record['gantt_start'] = False
+        record['x_studio_gantt_start'] = False
 ```
 
-Dependencies: `scheduled_date,slack_days`
+Dependencies: `x_studio_scheduled_date,x_studio_slack_days`
 
 **Snippet `x_studio_is_approaching`** (booleano, computado **NO stored** — debe recalcularse contra "hoy" en cada lectura; alimenta el realce ámbar de "ocurrencia próxima" del §6 y se apoya en la alerta de SA-18):
 
 ```python
 for record in self:
     record['x_studio_is_approaching'] = bool(
-        record.scheduled_date
-        and record.state in ('draft', 'scheduled')
-        and 0 <= (record.scheduled_date - datetime.date.today()).days <= 7
+        record.x_studio_scheduled_date
+        and record.x_studio_state in ('draft', 'scheduled')
+        and 0 <= (record.x_studio_scheduled_date - datetime.date.today()).days <= 7
     )
 ```
 
@@ -385,7 +427,7 @@ Default order: `date_out desc`.
 **Filtros y agrupaciones:**
 
 - Filter "En servicio externo": se consulta sobre **equipment**, no sobre movements: `[('x_studio_location','in',(593,594))]` en la list de equipos.
-- Filter "Calibraciones": `[('reason','=','calibration')]`
+- Filter "Calibraciones": `[('x_studio_reason','=','calibration')]`
 - Group by: `equipment_id`, `from_location_id`, `to_location_id`, `reason`, `state`.
 
 ### 3.bis.5 Consulta de oro habilitada
@@ -394,10 +436,10 @@ Default order: `date_out desc`.
 # "¿Qué sondas pasaron por el punto Norte entre 2026-01-01 y hoy?"
 movements = env['x_equipment_movement'].search([
     '|',
-    '&', ('from_location_id', '=', norte.id), ('date_out', '>=', '2026-01-01'),
-    '&', ('to_location_id', '=', norte.id),   ('date_in', '>=', '2026-01-01'),
+    '&', ('x_studio_from_location_id', '=', norte.id), ('x_studio_date_out', '>=', '2026-01-01'),
+    '&', ('x_studio_to_location_id', '=', norte.id),   ('x_studio_date_in', '>=', '2026-01-01'),
 ])
-equipos = movements.mapped('equipment_id')
+equipos = movements.mapped('x_studio_equipment_id')
 ```
 
 ### 3.bis.5-bis Seed inicial de la bitácora (paso obligatorio de go-live)
@@ -406,7 +448,7 @@ SA-09 infiere `from_location_id` del **último movement** del equipo. Con la bit
 
 > **Excluí Bodega cliente (594).** Es la ubicación **default al crear un equipo**: significa "stock / no instalado", no una posición real en un punto. Sembrar un `installation → 594` sería falso (el equipo no está instalado en ningún lado) y además mal-etiquetaría su primer traslado real como `return_from_service`. Estos equipos **no se seedean**: SA-09 los cubre con un **baseline implícito de 594** (sin movement = está en stock), de modo que su primer movimiento real sale correctamente como `installation` desde `from=NULL`. **Sí** se seedean los equipos en puntos reales y los que estén en Laboratorio (593) al go-live — su ubicación previa NO es el baseline 594, así que necesitan el movement semilla.
 
-> El seed setea el `name` **explícitamente** (no lo deja en NULL): así funciona aunque AA-MOV-00 todavía no esté activa, y aunque por error `x_name` siguiera siendo NOT NULL. Si AA-MOV-00 ya está activa, SA-MOV-00 ve el name puesto y se saltea (chequea `if not mov.name`) — no hay doble nombrado.
+> El seed setea el `name` **explícitamente** (no lo deja en NULL): así funciona aunque AA-MOV-00 todavía no esté activa, y aunque por error `x_name` siguiera siendo NOT NULL. Si AA-MOV-00 ya está activa, SA-MOV-00 ve el name puesto y se saltea (chequea `if not mov.x_name`) — no hay doble nombrado.
 
 ```python
 STOCK_LOC_ID = 594   # Bodega cliente = ubicación default / stock
@@ -417,14 +459,14 @@ for eq in env['maintenance.equipment'].search([
     seed_date = eq.effective_date or datetime.date.today()
     seq = env['ir.sequence'].next_by_code('x_equipment_movement') or '0001'
     env['x_equipment_movement'].create({
-        'name': f"MOV-{seed_date.year}-{seq} / {eq.name or '?'}",
-        'equipment_id': eq.id,
-        'to_location_id': eq.x_studio_location.id,
-        'reason': 'installation',
-        'date_out': seed_date,
-        'date_in': seed_date,
-        'state': 'completed',
-        'notes': 'Seed inicial de bitácora (go-live).',
+        'x_name': f"MOV-{seed_date.year}-{seq} / {eq.name or '?'}",
+        'x_studio_equipment_id': eq.id,
+        'x_studio_to_location_id': eq.x_studio_location.id,
+        'x_studio_reason': 'installation',
+        'x_studio_date_out': seed_date,
+        'x_studio_date_in': seed_date,
+        'x_studio_state': 'completed',
+        'x_studio_notes': 'Seed inicial de bitácora (go-live).',
     })
 ```
 
@@ -479,8 +521,8 @@ for eq in env['maintenance.equipment'].search([
 # La ocurrencia siguiente (draft) es la que mantiene el True.
 ACTIVE_STATES = ('draft', 'scheduled', 'in_progress')
 for record in self:
-    plans = record.x_studio_location.plan_ids.filtered(
-        lambda p: p.active and p.state in ACTIVE_STATES
+    plans = record.x_studio_location.x_studio_plan_ids.filtered(
+        lambda p: p.x_active and p.x_studio_state in ACTIVE_STATES
     ) if record.x_studio_location else False
     record['x_managed_by_plan'] = bool(plans)
 ```
@@ -510,7 +552,7 @@ Adicionalmente, agregá en el form de equipment un **tab "Historial de movimient
 Adicionalmente, abrí el **Form view** de `maintenance.request` y agregá `plan_id` arriba del bloque de programación, en modo readonly cuando el campo viene autogenerado:
 
 ```xml
-<field name="plan_id" attrs="{'readonly': [('plan_id', '!=', False)]}"/>
+<field name="x_studio_plan_id" attrs="{'readonly': [('x_studio_plan_id', '!=', False)]}"/>
 ```
 
 (Studio te lo deja editar en modo visual; el `attrs` lo pegás desde el editor XML del campo → menú "Edit XML".)
@@ -638,7 +680,7 @@ for punto in records:
 
 ```python
 for record in records:
-    if record.state == 'partially_done' and not (record.force_close_reason or '').strip():
+    if record.x_studio_state == 'partially_done' and not (record.x_studio_force_close_reason or '').strip():
         raise UserError(
             "Para cerrar como ‘partially_done’ debe registrar el motivo en force_close_reason.")
 ```
@@ -653,22 +695,22 @@ for record in records:
 if not env.context.get('x_skip_c04'):
     ACTIVE = ('draft', 'scheduled', 'in_progress')
     for record in records:
-        if record.state not in ACTIVE or not record.scheduled_date:
+        if record.x_studio_state not in ACTIVE or not record.x_studio_scheduled_date:
             continue
-        window_start = record.scheduled_date - datetime.timedelta(days=record.slack_days)
-        window_end   = record.scheduled_date + datetime.timedelta(days=record.slack_days)
+        window_start = record.x_studio_scheduled_date - datetime.timedelta(days=record.x_studio_slack_days)
+        window_end   = record.x_studio_scheduled_date + datetime.timedelta(days=record.x_studio_slack_days)
         overlap = model.search([
             ('id', '!=', record.id),
-            ('series_id', '!=', record.series_id),   # excluir la propia serie
-            ('location_id', '=', record.location_id.id),
-            ('state', 'in', ACTIVE),
-            ('scheduled_date', '<=', window_end),
-            ('scheduled_date', '>=', window_start),
+            ('x_studio_series_id', '!=', record.x_studio_series_id),   # excluir la propia serie
+            ('x_studio_location_id', '=', record.x_studio_location_id.id),
+            ('x_studio_state', 'in', ACTIVE),
+            ('x_studio_scheduled_date', '<=', window_end),
+            ('x_studio_scheduled_date', '>=', window_start),
         ])
         if overlap:
             raise UserError(
                 "Solapamiento con plan %s (programado %s)."
-                % (overlap[0].name, overlap[0].scheduled_date))
+                % (overlap[0].x_name, overlap[0].x_studio_scheduled_date))
 ```
 
 > C-04 valida el solapamiento **solo entre series distintas**: excluye la propia serie (la cadencia intra-serie la garantiza C-02 con `2·slack < período`). Su función es impedir que dos series distintas compitan por el mismo punto.
@@ -681,9 +723,9 @@ if not env.context.get('x_skip_c04'):
 # Sin esto, un usuario puede marcar 'done' con hijas pendientes y se pierden
 # silenciosamente: el carryover solo corre en 'partially_done'.
 for record in records:
-    if record.state != 'done':
+    if record.x_studio_state != 'done':
         continue
-    pendientes = record.request_ids.filtered(
+    pendientes = record.x_studio_request_ids.filtered(
         lambda r: not r.stage_id.done and not r.archive)
     if pendientes:
         raise UserError(
@@ -701,12 +743,12 @@ for record in records:
 # de salida de un plan vivo: cancelarlo (SA-04 archiva hijas y puentea la
 # cadena). Ya cancelado/cerrado, archivar es libre.
 for record in records:
-    if not record.active and record.state in ('draft', 'scheduled', 'in_progress'):
+    if not record.x_active and record.x_studio_state in ('draft', 'scheduled', 'in_progress'):
         raise UserError(
             "No se puede archivar un plan vivo (%s está en '%s'). "
             "Cancelalo primero: la cancelación archiva las hijas y puentea la "
             "serie. Después podés archivarlo."
-            % (record.name, record.state))
+            % (record.x_name, record.x_studio_state))
 ```
 
 ---
@@ -733,6 +775,12 @@ for record in records:
 
 ```python
 # Snippet con nombres técnicos reales (x_studio_*), incluidos por pedido del plan.
+
+# Seguidores por defecto de TODA ocurrencia de mantención (res.users 172 y 5205).
+# .exists() es defensivo a propósito: si uno de los IDs se da de baja, el plan
+# igual se crea en vez de reventar el INSERT entero.
+SEGUIDORES_DEFECTO = env['res.users'].browse([172, 5205]).exists().partner_id
+
 for plan in records:
     vals = {}
     # 1) Identificador de serie (reemplaza al uuid, no importable en el sandbox 16).
@@ -752,7 +800,17 @@ for plan in records:
         vals['x_name'] = f"PMP-{seq}"
     if vals:
         plan.write(vals)   # .write(): el sandbox prohíbe STORE_ATTR
+    # 5) Seguidores por defecto. Va acá porque AA-00 es On Creation y cubre
+    #    las TRES vías de nacimiento: alta manual, cascada (SA-02) y
+    #    proyección (SA-07, que crea vía copy() y también dispara create()).
+    #    message_subscribe es idempotente: no duplica a quien ya sigue.
+    if SEGUIDORES_DEFECTO:
+        plan.message_subscribe(partner_ids=SEGUIDORES_DEFECTO.ids)
 ```
+
+> **Seguidores por defecto (res.users 172 y 5205).** Se siembran en SA-00 porque AA-00 es *On Creation*: eso cubre las tres vías de nacimiento de una ocurrencia —alta manual, cascada (SA-02) y proyección (SA-07)— sin tocar SA-02. SA-07 los re-suscribe igual como red de seguridad (`message_subscribe` es idempotente). Los reportes SA-14 y SA-16 leen `message_partner_ids` del plan, así que **agregar un destinatario más no requiere editar Python**: basta con seguir el registro desde la UI.
+>
+> ⚠️ **Los IDs están cableados en cuatro lugares** (SA-00, SA-07, SA-14 y SA-16 — estos dos últimos indirectamente, vía los seguidores). Son IDs de `res.users` de **esta** instancia: al exportar `studio_customization` a otra base apuntan a usuarios distintos o inexistentes. El `.exists()` evita el traceback, pero el reparto quedaría vacío en silencio. Si el módulo va a viajar entre bases, reemplazá los IDs literales por una búsqueda estable —por login o por pertenencia a un grupo— o por un campo de configuración en el punto.
 
 > Cargá **dos** secuencias en *Settings → Technical → Sequences → New*: (1) code `maintenance.plan`, **sin prefijo** (solo padding 4) — el `PMP-` lo agrega SA-00 en el formato del name (`f"PMP-{seq}"`, **sin año**, Req 2); si la secuencia **también** lleva prefix `PMP-`, el nombre sale duplicado: `PMP-PMP-0003`; (2) code `maintenance.plan_serie`, sin prefijo, padding 6 (identificador de serie — reemplaza al `uuid` que el sandbox de 16 no permite importar).
 
@@ -775,8 +833,8 @@ for plan in records:
         ])
   
         plan.write({
-            'equipment_snapshot_ids': [Command.set(equipos.ids)],
-            'last_sync_with_location': datetime.datetime.now(),
+            'x_studio_equipment_snapshot_ids': [Command.set(equipos.ids)],
+            'x_studio_last_sync_with_location': datetime.datetime.now(),
         })
 
     # schedule_date de la hija es DATETIME: anclar a las 12:00 UTC.
@@ -789,9 +847,9 @@ for plan in records:
     nuevos = plan.x_studio_equipment_snapshot_ids - existentes
     for equipo in nuevos:
         env['maintenance.request'].create({
-            'name': f"{plan.name} | {equipo.name}",
+            'name': f"{plan.x_name} | {equipo.name}",
             'equipment_id': equipo.id,
-            'plan_id': plan.id,
+            'x_studio_plan_id': plan.id,
             'stage_id': 1,
             'schedule_date': sched_dt,
             'maintenance_type': plan.x_studio_maintenance_type or 'preventive',
@@ -827,13 +885,37 @@ def add_period(base, value, unit):
         return base + dateutil.relativedelta.relativedelta(years=value)
     return base
 
-def shift_to_workday(date, calendar):
+DEFAULT_WORKDAYS = {0, 1, 2, 3, 4}   # Lun–Vie, fallback
+
+def workday_set(calendar):
+    """Días hábiles (0=Lun … 6=Dom) que declara el calendario.
+    dayofweek de Odoo coincide con date.weekday(). Si el calendario no tiene
+    líneas de asistencia (flexible_hours) cae a Lun–Vie. Ver §3.6."""
     if not calendar:
-        return date
-    # plan_days(1, dt): primer día hábil >= dt
-    dt = datetime.datetime.combine(date, datetime.time(8, 0))
-    next_dt = calendar.plan_days(1, dt, compute_leaves=True)
-    return next_dt.date() if next_dt else date
+        return DEFAULT_WORKDAYS
+    return {int(a.dayofweek) for a in calendar.attendance_ids} or DEFAULT_WORKDAYS
+
+def is_global_leave(calendar, date):
+    """¿date cae en un feriado global (resource_id=False) del calendario?"""
+    if not calendar:
+        return False
+    start = datetime.datetime.combine(date, datetime.time.min)
+    stop  = datetime.datetime.combine(date, datetime.time.max)
+    return bool(env['resource.calendar.leaves'].search_count([
+        ('resource_id', '=', False),
+        ('calendar_id', 'in', [calendar.id, False]),
+        ('date_from', '<=', stop), ('date_to', '>=', start),
+    ]))
+
+def shift_to_workday(date, calendar):
+    """Primer día hábil >= date. Solo mira qué días declara el calendario y
+    sus feriados globales — nunca horas/día ni total semanal (ver §3.6)."""
+    days = workday_set(calendar)
+    for _ in range(14):          # 2 semanas cubre cualquier feriado largo
+        if date.weekday() in days and not is_global_leave(calendar, date):
+            return date
+        date += datetime.timedelta(days=1)
+    return date                  # calendario patológico: no bloquear la cascada
 
 for plan in records:
     if not plan.x_studio_close_date:
@@ -859,7 +941,7 @@ for plan in records:
         continue   # salta a la próxima iteración del for plan in records
 
     # 4) Aplicar a la siguiente ocurrencia (recursivo)
-    if plan.auto_replan:
+    if plan.x_studio_auto_plan:
         nxt = plan.x_studio_next_plan_id
         if nxt and nxt.x_studio_state in ('draft', 'scheduled'):
             old = nxt.x_studio_scheduled_date
@@ -909,23 +991,31 @@ for plan in records:
                 guard += 1
         elif not nxt:
             # 5) Generar la siguiente ocurrencia (hereda contract_start/end)
+            # OJO: en los default de copy()/create() los many2one van como **id**,
+            # no como recordset. Pasar el recordset revienta en el INSERT con
+            # `psycopg2.ProgrammingError: can't adapt type 'maintenance.team'`
+            # (error real encontrado en T-05).
             new_plan = plan.with_context(x_skip_c04=True).copy(default={
-                'x_name': False,            
+                'x_name': False,  
                 'x_studio_scheduled_date': next_date,
                 'x_studio_state': 'draft',
                 'x_studio_close_date': False,
-                'x_studio_previous_plan_id': plan.id,
                 'x_studio_next_plan_id': False,
                 'x_studio_series_id': plan.x_studio_series_id,
-                'x_studio_seq_in_series': plan.x_studio_seq_in_series + 1,
                 'x_studio_original_scheduled_date': next_date,
                 'x_studio_equipment_snapshot_ids': [Command.clear()],
-                'x_studio_user_id': plan.x_studio_user_id,
-                'x_studio_maintenance_team_id': plan.x_studio_maintenance_team_id,
+                'x_studio_user_id': plan.x_studio_user_id.id or False,
+                'x_studio_maintenance_team_id': plan.x_studio_maintenance_team_id.id or False,
                 'x_studio_maintenance_type': plan.x_studio_maintenance_type,
-                'x_studio_resource_calendar_id': plan.x_studio_resource_calendar_id,
+                'x_studio_resource_calendar_id': plan.x_studio_resource_calendar_id.id or False,
                 'x_studio_auto_plan': plan.x_studio_auto_plan,
                 # 'contract_start_date' y 'contract_end_date' viajan tal cual via copy()
+            })
+            # Encadenado explícito post-create (mismo criterio que SA-07): no
+            # confiar en el default de copy() para previous/seq.
+            new_plan.with_context(x_skip_c04=True).write({
+                'x_studio_previous_plan_id': plan.id,
+                'x_studio_seq_in_series': (plan.x_studio_seq_in_series or 0) + 1,
             })
             plan.write({'x_studio_next_plan_id': new_plan.id})  
 
@@ -937,13 +1027,13 @@ for plan in records:
             env['maintenance.request'].create({
                 'name': f"[Arrastrada] {hija.name}",   # hija.name ya incluye el nombre del plan; no repetirlo
                 'equipment_id': hija.equipment_id.id,
-                'plan_id': plan.next_plan_id.id,
+                'x_studio_plan_id': plan.x_studio_next_plan_id.id,
                 'schedule_date': carry_dt,
                 'maintenance_type': hija.maintenance_type,
                 'user_id': hija.user_id.id or False,
                 'maintenance_team_id': hija.maintenance_team_id.id or False,
                 'company_id': hija.company_id.id,
-                'description': "Arrastrada desde %s (no completada)." % plan.name,
+                'description': "Arrastrada desde %s (no completada)." % plan.x_name,
             })
         # Archivar las originales: no dejar DOS órdenes vivas por el mismo trabajo.
         # La trazabilidad queda en el plan cerrado (request_ids las conserva).
@@ -977,8 +1067,8 @@ for plan in records:
 
     # .write() en vez de asignación directa: el sandbox prohíbe STORE_ATTR
     plan.write({
-        'equipment_snapshot_ids': [Command.set(equipos_punto.ids)],
-        'last_sync_with_location': datetime.datetime.now(),
+        'x_studio_equipment_snapshot_ids': [Command.set(equipos_punto.ids)],
+        'x_studio_last_sync_with_location': datetime.datetime.now(),
     })
 
     # Crear hijas para los faltantes si el plan ya está scheduled.
@@ -988,9 +1078,9 @@ for plan in records:
         sched_dt = datetime.datetime.combine(plan.x_studio_scheduled_date, datetime.time(12, 0))
         for equipo in faltantes:
             env['maintenance.request'].create({
-                'name': f"{plan.name} - {equipo.name}",
+                'name': f"{plan.x_name} - {equipo.name}",
                 'equipment_id': equipo.id,
-                'plan_id': plan.id,
+                'x_studio_plan_id': plan.id,
                 'schedule_date': sched_dt,
                 'maintenance_type': plan.x_studio_maintenance_type or 'preventive',
                 'user_id': plan.x_studio_user_id.id or False,
@@ -1018,16 +1108,34 @@ for plan in records:
     hijas_vivas.write({'archive': True, 'kanban_state': 'blocked'})
     plan.write({'x_studio_state': 'cancelled'})
 
-    # Puentear la cadena si se cancela una ocurrencia INTERMEDIA de una serie
-    # proyectada (SA-07): sin esto, la cascada del anterior encontraría un
-    # next_plan_id cancelado y la serie quedaría trabada.
-  
-    if plan.x_studio_previous_plan_id and plan.x_studio_next_plan_id:
-        plan.x_studio_previous_plan_id.write({'x_studio_next_plan_id': plan.x_studio_next_plan_id.id})
-        plan.x_studio_next_plan_id.write({'x_studio_previous_plan_id': plan.x_studio_previous_plan_id.id})
+    # Sacar la ocurrencia cancelada de la cadena y puentear a sus vecinos.
+    # Cubre los TRES casos (intermedia, cabeza y cola), no solo el intermedio:
+    # un `if prev and next` deja los extremos sin tratar y la serie se rompe
+    # en silencio (ver la nota de abajo).
+    prev = plan.x_studio_previous_plan_id
+    nxt = plan.x_studio_next_plan_id
+    if prev or nxt:
+        if prev:
+            prev.with_context(x_skip_c04=True).write(
+                {'x_studio_next_plan_id': nxt.id if nxt else False})
+        if nxt:
+            nxt.with_context(x_skip_c04=True).write(
+                {'x_studio_previous_plan_id': prev.id if prev else False})
+        # CRÍTICO: desenganchar la cancelada. Si conserva sus punteros, el plan
+        # anterior queda con DOS registros que lo declaran 'previous' (la
+        # cancelada y la siguiente) y toda vista/dominio sobre
+        # x_studio_previous_plan_id devuelve la cadena bifurcada (bug de T-36).
+        # La trazabilidad no se pierde: vive en el chatter (mensaje de abajo) y
+        # en series_id/seq_in_series, que no se tocan.
+        plan.with_context(x_skip_c04=True).write({
+            'x_studio_previous_plan_id': False,
+            'x_studio_next_plan_id': False,
+        })
         plan.message_post(body=(
-            "Cadena puenteada: %s → %s (esta ocurrencia queda fuera de la serie activa)."
-        ) % (plan.x_studio_previous_plan_id.x_name, plan.x_studio_next_plan_id.x_name))
+            "Desenganchada de la serie %s. Cadena puenteada: %s → %s."
+        ) % (plan.x_studio_series_id,
+             prev.x_name if prev else "(inicio de serie)",
+             nxt.x_name if nxt else "(fin de serie)"))
 
     # El period nativo del equipo NO se toca: su ciclo propio sigue corriendo
     # independientemente de que el plan del punto se cancele (ver Paso 4).
@@ -1037,6 +1145,10 @@ for plan in records:
         "La serie continúa desde el último plan ‘done’."
     ) % len(hijas_vivas))
 ```
+
+> **Por qué hay que desenganchar y cubrir los extremos (bug encontrado en T-36).** `previous_plan_id` y `next_plan_id` son dos m2o independientes: el ORM **no** los mantiene coherentes entre sí. Dejar los punteros de la cancelada produce una cadena bifurcada —el plan anterior queda siendo `previous` de dos ocurrencias— y el guard `if prev and next` (versión anterior) saltaba los extremos con dos consecuencias silenciosas: cancelar la **cabeza** dejaba a la siguiente con `previous` apuntando a un plan `cancelled`, con lo que **SA-19 deja de verla** (su búsqueda de cabezas exige `previous.state in ('done','partially_done')` o `previous = False`, y esa ocurrencia no cae en ninguna de las dos → la serie nunca se recadencia); cancelar la **cola** dejaba a `prev.next_plan_id` apuntando a un cancelado, con lo que SA-02 entra por la rama `nxt and nxt.state in ('draft','scheduled')` en falso pero tampoco por `elif not nxt` → **no genera la siguiente ocurrencia y la serie muere**.
+>
+> **Los writes del puente llevan `x_skip_c04`**: sin ese flag, SA-C04 (no solapamiento, AA-10) puede abortar la cancelación al reevaluar los planes vecinos.
 
 > Para la confirmación: definí esta SA con `binding_model_id = x_maintenance_plan` y `binding_view_types = form`, y al disparar abrí un wizard transitorio que pida confirmación. Si no querés crear el wizard, configurá la AA con un `confirm` JS-side desde el form view button.
 
@@ -1048,20 +1160,20 @@ for plan in records:
 
 ```python
 for plan in records:
-    if plan.state not in ('draft', 'scheduled') or not plan.scheduled_date:
+    if plan.x_studio_state not in ('draft', 'scheduled') or not plan.x_studio_scheduled_date:
         continue
     # datetime anclado a 12:00 UTC (ver SA-01)
-    target = datetime.datetime.combine(plan.scheduled_date, datetime.time(12, 0))
+    target = datetime.datetime.combine(plan.x_studio_scheduled_date, datetime.time(12, 0))
     # Guard anti-spam: si las fechas ya coinciden (write de notas, responsable,
     # etc.), no escribir ni loggear nada.
-    hijas_desfasadas = plan.request_ids.filtered(
+    hijas_desfasadas = plan.x_studio_request_ids.filtered(
         lambda r: not r.stage_id.done and not r.archive and r.schedule_date != target
     )
     if hijas_desfasadas:
         hijas_desfasadas.write({'schedule_date': target})
         plan.message_post(body=(
             "scheduled_date del plan aplicado a %s hijas vivas (nueva fecha: %s; write de %s)."
-        ) % (len(hijas_desfasadas), plan.scheduled_date, env.user.name))
+        ) % (len(hijas_desfasadas), plan.x_studio_scheduled_date, env.user.name))
 ```
 
 > Si querés un wizard de confirmación previo a guardar, transformá esta lógica en un Server Action invocado desde un botón "Aplicar nueva fecha" en lugar de un AA on-save.
@@ -1090,60 +1202,101 @@ def add_period(base, value, unit):
         return base + dateutil.relativedelta.relativedelta(years=value)
     return base
 
-def shift_to_workday(date, calendar):
+DEFAULT_WORKDAYS = {0, 1, 2, 3, 4}   # Lun–Vie, fallback
+
+def workday_set(calendar):
+    """Días hábiles (0=Lun … 6=Dom) que declara el calendario. Ver §3.6."""
     if not calendar:
-        return date
-    dt = datetime.datetime.combine(date, datetime.time(8, 0))
-    next_dt = calendar.plan_days(1, dt, compute_leaves=True)
-    return next_dt.date() if next_dt else date
+        return DEFAULT_WORKDAYS
+    return {int(a.dayofweek) for a in calendar.attendance_ids} or DEFAULT_WORKDAYS
+
+def is_global_leave(calendar, date):
+    """¿date cae en un feriado global (resource_id=False) del calendario?"""
+    if not calendar:
+        return False
+    start = datetime.datetime.combine(date, datetime.time.min)
+    stop  = datetime.datetime.combine(date, datetime.time.max)
+    return bool(env['resource.calendar.leaves'].search_count([
+        ('resource_id', '=', False),
+        ('calendar_id', 'in', [calendar.id, False]),
+        ('date_from', '<=', stop), ('date_to', '>=', start),
+    ]))
+
+def shift_to_workday(date, calendar):
+    """Primer día hábil >= date. Solo mira qué días declara el calendario y
+    sus feriados globales — nunca horas/día ni total semanal (ver §3.6)."""
+    days = workday_set(calendar)
+    for _ in range(14):
+        if date.weekday() in days and not is_global_leave(calendar, date):
+            return date
+        date += datetime.timedelta(days=1)
+    return date
+
+# Mismos seguidores por defecto que SA-00 (res.users 172 y 5205). Si cambian,
+# hay que tocar los CUATRO snippets: SA-00, SA-07, SA-14 y SA-16.
+SEGUIDORES_DEFECTO = env['res.users'].browse([172, 5205]).exists().partner_id
 
 for plan in records:
-    if not plan.auto_replan:
+    if not plan.x_studio_auto_plan:
         raise UserError(
             "La serie %s tiene auto_replan desactivado: activalo antes de proyectar."
-            % plan.name)
+            % plan.x_name)
 
     # 1) Caminar hasta el último eslabón de la serie (el botón puede
     #    clickearse desde cualquier ocurrencia).
     current = plan
     guard = 0
-    while current.next_plan_id and guard < MAX_OCC:
-        current = current.next_plan_id
+    while current.x_studio_next_plan_id and guard < MAX_OCC:
+        current = current.x_studio_next_plan_id
         guard += 1
 
     # 2) Generar hacia adelante hasta el horizonte.
-    horizon = plan.contract_end_date
+    horizon = plan.x_studio_contract_end_date
     limit = MAX_OCC if horizon else 12
     creadas = 0
     while creadas < limit:
-        next_date = add_period(current.scheduled_date,
-                               current.frequency_value, current.frequency_unit)
-        next_date = shift_to_workday(next_date, current.resource_calendar_id)
+        next_date = add_period(current.x_studio_scheduled_date,
+                               current.x_studio_frequency_value, current.x_studio_frequency_unit)
+        next_date = shift_to_workday(next_date, current.x_studio_resource_calendar_id)
         if horizon and next_date > horizon:
             break   # serie completa hasta fin de contrato
         new_plan = current.with_context(x_skip_c04=True).copy(default={
-            'name': False,                     # SA-00 le pondrá uno nuevo
-            'scheduled_date': next_date,
-            'state': 'draft',
-            'close_date': False,
-            'previous_plan_id': current.id,
-            'next_plan_id': False,
-            'series_id': current.series_id,
-            'seq_in_series': current.seq_in_series + 1,
-            'original_scheduled_date': next_date,
-            'equipment_snapshot_ids': [Command.clear()],
-            'force_close_reason': False,
+            'x_name': False,                     # SA-00 le pondrá uno nuevo
+            'x_studio_scheduled_date': next_date,
+            'x_studio_state': 'draft',
+            'x_studio_close_date': False,
+            'x_studio_next_plan_id': False,
+            'x_studio_series_id': current.x_studio_series_id,
+            'x_studio_original_scheduled_date': next_date,
+            'x_studio_equipment_snapshot_ids': [Command.clear()],
+            'x_studio_force_close_reason': False,
         })
-        current.write({'next_plan_id': new_plan.id})   # .write(): el sandbox prohíbe STORE_ATTR
+        # Encadenado EXPLÍCITO post-create, NO vía default de copy(). Ver la
+        # nota de abajo: si el default de estos dos campos no llega al create(),
+        # copy() arrastra los del ORIGEN y el error se autopropaga por toda la
+        # cola (bug real encontrado en T-36).
+        new_plan.with_context(x_skip_c04=True).write({
+            'x_studio_previous_plan_id': current.id,
+            'x_studio_seq_in_series': (current.x_studio_seq_in_series or 0) + 1,
+        })
+        # Seguidores por defecto. SA-00 (AA-00, On Creation) ya los sembró al
+        # crear el registro; se repite acá como red de seguridad para que la
+        # serie proyectada quede con reparto aunque AA-00 esté desactivada.
+        # Idempotente: message_subscribe no duplica seguidores.
+        if SEGUIDORES_DEFECTO:
+            new_plan.message_subscribe(partner_ids=SEGUIDORES_DEFECTO.ids)
+        current.write({'x_studio_next_plan_id': new_plan.id})   # .write(): el sandbox prohíbe STORE_ATTR
         current = new_plan
         creadas += 1
 
     plan.message_post(body=(
         "Proyección de serie %s: %s ocurrencias nuevas (horizonte: %s)."
-    ) % (plan.series_id, creadas,
+    ) % (plan.x_studio_series_id, creadas,
          horizon or "12 ocurrencias por defecto"))
 ```
 
+> **Nunca encadenar por `default` de `copy()` (bug real de T-36).** `copy()` arrastra del **registro origen** todo campo que no se sobrescriba, y en este bucle el origen de cada iteración es la ocurrencia recién creada. Si el default de `x_studio_previous_plan_id` / `x_studio_seq_in_series` no llega al `create()` — porque la clave está mal escrita, porque el snippet pegado en la instancia es una variante sin esas claves, o porque una AA *On Creation* las pisa — cada eslabón hereda el `previous`/`seq` **de su fuente** en vez de apuntar a su fuente, y el error se autopropaga: toda la cola queda colgando de la misma cabeza con el `seq` repetido. El síntoma es traicionero porque **la cadena `next` y las fechas quedan perfectas** (esas sí se escriben explícitamente), así que la Gantt se ve bien y solo se nota al inspeccionar `previous_plan_id`. Escribirlos con un `write()` posterior al `create()` es inmune a las tres causas.
+>
 > **Idempotente:** re-ejecutar el botón no duplica nada — camina hasta el final de la cadena existente y solo completa lo que falte hasta el horizonte. Si la serie ya llega a `contract_end_date`, genera 0 y lo dice en el chatter.
 >
 > **Las fechas proyectadas son teóricas** (cadencia ideal desde la última ocurrencia). Cuando la realidad se imponga — un cierre fuera de slack — SA-02 re-fecha la cola completa en bloque, y las ocurrencias que el deslizamiento empuje más allá del contrato se cancelan solas (ver paso 4-bis de SA-02).
@@ -1171,15 +1324,41 @@ def add_period(base, value, unit):
         return base + dateutil.relativedelta.relativedelta(years=value)
     return base
 
-def shift_to_workday(date, calendar):
+DEFAULT_WORKDAYS = {0, 1, 2, 3, 4}   # Lun–Vie, fallback
+
+def workday_set(calendar):
+    """Días hábiles (0=Lun … 6=Dom) que declara el calendario. Ver §3.6."""
     if not calendar:
-        return date
-    dt = datetime.datetime.combine(date, datetime.time(8, 0))
-    next_dt = calendar.plan_days(1, dt, compute_leaves=True)
-    return next_dt.date() if next_dt else date
+        return DEFAULT_WORKDAYS
+    return {int(a.dayofweek) for a in calendar.attendance_ids} or DEFAULT_WORKDAYS
+
+def is_global_leave(calendar, date):
+    """¿date cae en un feriado global (resource_id=False) del calendario?"""
+    if not calendar:
+        return False
+    start = datetime.datetime.combine(date, datetime.time.min)
+    stop  = datetime.datetime.combine(date, datetime.time.max)
+    return bool(env['resource.calendar.leaves'].search_count([
+        ('resource_id', '=', False),
+        ('calendar_id', 'in', [calendar.id, False]),
+        ('date_from', '<=', stop), ('date_to', '>=', start),
+    ]))
+
+def shift_to_workday(date, calendar):
+    """Primer día hábil >= date. Solo mira qué días declara el calendario y
+    sus feriados globales — nunca horas/día ni total semanal (ver §3.6)."""
+    days = workday_set(calendar)
+    for _ in range(14):
+        if date.weekday() in days and not is_global_leave(calendar, date):
+            return date
+        date += datetime.timedelta(days=1)
+    return date
 
 for punto in records:
-    fval, funit = punto.x_studio_frequency_value, punto.x_studio_frequency_unit
+    # OJO: en el PUNTO la cadencia va SIN prefijo studio (x_frequency_value),
+    # a diferencia del espejo related del plan (x_studio_frequency_value).
+    # Ver §3.bis.6 y la nota de abajo.
+    fval, funit = punto.x_frequency_value, punto.x_frequency_unit
     if not fval or not funit:
         continue
     # Cabezas de serie viva del punto: primera ocurrencia NO cerrada de cada cadena.
@@ -1192,6 +1371,7 @@ for punto in records:
         ('x_studio_state', 'in', ('draft', 'scheduled')),
         ('x_studio_previous_plan_id', '=', False),
     ])
+    refechadas = 0
     for cabeza in cabezas:
         # La cabeza conserva su fecha (compromiso); se recalcula la cola.
         prev, cur, guard = cabeza, cabeza.x_studio_next_plan_id, 0
@@ -1203,16 +1383,26 @@ for punto in records:
                 # más allá del contrato: fuera de rango (Req 5), no se cancela acá.
                 cur.with_context(x_skip_c04=True).write({
                     'x_studio_state': 'out_of_range', 'x_studio_scheduled_date': new_date})
+                refechadas += 1
             elif cur.x_studio_scheduled_date != new_date:
                 # AA-03 → SA-06 propaga la fecha nueva a las hijas vivas si las hay.
                 cur.with_context(x_skip_c04=True).write({'x_studio_scheduled_date': new_date})
+                refechadas += 1
             prev, cur = cur, cur.x_studio_next_plan_id
             guard += 1
-    punto.message_post(body=(
-        "Cadencia/tolerancia del punto actualizada (%s %s, slack %s d): "
-        "series pendientes re-fechadas."
-    ) % (fval, funit, punto.x_studio_slack_days))
+    # Solo se loggea si REALMENTE se movió algo. El mensaje incondicional de la
+    # versión anterior reportaba "series re-fechadas" aunque `cabezas` viniera
+    # vacía, y ocultaba el fallo de T-54: ausencia de mensaje = no se movió nada.
+    if refechadas:
+        punto.message_post(body=(
+            "Cadencia/tolerancia del punto actualizada (%s %s, slack %s d): "
+            "%s ocurrencia(s) re-fechada(s) en %s serie(s)."
+        ) % (fval, funit, punto.x_slack_days or 0, refechadas, len(cabezas)))
 ```
+
+> **Trampa de prefijos en esta SA (fallo real de T-54).** Es la única SA que lee la cadencia **desde el punto**, y ahí los campos van **sin** `studio`: `x_frequency_value`, `x_frequency_unit`, `x_slack_days`, `x_contract_end_date` (§3.bis.6). El espejo del plan sí lleva prefijo (`x_studio_frequency_value`), y de ahí sale la confusión. La versión anterior mezclaba ambas convenciones **dentro del mismo snippet** — `punto.x_studio_frequency_value` en la línea 2 y `punto.x_contract_end_date` más abajo. El fallo es traicionero porque puede no dar traceback: si en el punto quedó un campo duplicado vacío con nombre prefijado, `fval` sale falsy, el `continue` se come la ejecución y **la cadencia se guarda sin que se reprograme nada**.
+
+> **La cabeza no se mueve, por diseño.** SA-19 re-fecha la **cola**, no la serie entera: la primera ocurrencia no cerrada conserva su fecha porque es un compromiso ya tomado (puede tener hijas y snapshot). Con una serie de solo dos ocurrencias pendientes, el efecto visible es **un solo cambio de fecha**. Si necesitás que también se mueva la cabeza, hay que decidirlo explícitamente — no es un bug.
 
 > **Convive con SA-12 (acortar contrato) y SA-13 (fuera de rango).** Las tres cuelgan de writes del punto/ocurrencia y son idempotentes: si el mismo write cambia cadencia *y* acorta contrato, SA-19 re-fecha y marca `out_of_range` lo que se pasa, y SA-12 elimina/cancela lo que quede en `draft`/`scheduled` más allá del nuevo término. Asigná a **AA-18 un `sequence` mayor que AA-14** (SA-12) para que el corte de contrato se aplique *después* del re-fechado. Las ocurrencias ya `out_of_range` no las toca la cabeza (la búsqueda de cabezas solo mira `draft`/`scheduled`).
 >
@@ -1538,14 +1728,27 @@ for plan in plans:
 El correo se maqueta con la **identidad WE TECHS adaptada a email** (paleta oficial, jerarquía eyebrow → título → subtítulo → chip, regla de marca de doble trazo) y presenta la semana como un **calendario laboral (Lun–Vie)**: una columna por día y, dentro de cada día, una **tarjeta por solicitud** con **punto de monitoreo**, **estado** (pill + borde superior de color) y **equipos a intervenir** (`nombre | Nº de serie`, del snapshot). Sábado/domingo solo aparecen si tienen ocurrencias. Todo va con **estilos inline** y layout con `<table>`; el calendario va dentro de `overflow-x:auto` para móvil.
 
 ```python
+# ═══ OPCIÓN — ventana del reporte (comentar / descomentar UNA de las dos) ═══
+INCLUIR_SEMANA_EN_CURSO = False    # solo la semana siguiente (comportamiento por defecto)
+# INCLUIR_SEMANA_EN_CURSO = True   # + arrastra lo pendiente de la semana en curso
+# ═══════════════════════════════════════════════════════════════════════════
+
 today = datetime.date.today()
 days_to_mon = (7 - today.weekday()) % 7 or 7
 next_mon = today + datetime.timedelta(days=days_to_mon)
 next_sun = next_mon + datetime.timedelta(days=6)
+cur_mon = today - datetime.timedelta(days=today.weekday())   # lunes de esta semana
+
+# Inicio de la ventana. Con la opción activa arranca el LUNES de esta semana:
+# así lo vencido y todavía sin cerrar (sigue en draft/scheduled) también sale.
+win_start = cur_mon if INCLUIR_SEMANA_EN_CURSO else next_mon
+# Variante: arrancar HOY en vez del lunes — excluye lo ya vencido de esta semana.
+# win_start = today if INCLUIR_SEMANA_EN_CURSO else next_mon
+win_end = next_sun
 
 plans = env['x_maintenance_plan'].search([
-    ('x_studio_scheduled_date', '>=', next_mon),
-    ('x_studio_scheduled_date', '<=', next_sun),
+    ('x_studio_scheduled_date', '>=', win_start),
+    ('x_studio_scheduled_date', '<=', win_end),
     ('x_studio_state', 'in', ('draft', 'scheduled', 'in_progress')),
 ], order='x_studio_scheduled_date, x_studio_location_id')
 
@@ -1565,17 +1768,22 @@ if plans:
     for p in plans:
         por_dia.setdefault(p.x_studio_scheduled_date, []).append(p)
 
-    # Semana laboral: Lun-Vie; sábado/domingo solo si tienen ocurrencias.
-    dias = [next_mon + datetime.timedelta(days=i) for i in range(5)]
-    for extra in (5, 6):
-        d = next_mon + datetime.timedelta(days=extra)
-        if por_dia.get(d):
+    # Días de la ventana: hábiles siempre; sábado/domingo solo si tienen
+    # ocurrencias. Sirve igual para 1 semana (5-7 columnas) que para 2 (10-14).
+    dias = []
+    d = win_start
+    while d <= win_end:
+        if d.weekday() < 5 or por_dia.get(d):
             dias.append(d)
+        d += datetime.timedelta(days=1)
 
     # --- Calendario: una columna por día laboral, tarjetas por solicitud ---
     total_eq, puntos_set, cols = 0, set(), ""
     for d in dias:
         head_bg = PEACH if d.weekday() >= 5 else BG   # fin de semana sombreado
+        # Barra naranja al tope: distingue las columnas de la semana en curso.
+        # Con la opción apagada nunca se emite y el correo sale idéntico al de hoy.
+        mark = f'border-top:3px solid {ORANGE};' if d < next_mon else ''
         ocs = por_dia.get(d, [])
         cuerpo = ""
         for p in ocs:
@@ -1605,7 +1813,7 @@ if plans:
         cols += (
             f'<td width="126" style="width:126px;padding:0 3px;vertical-align:top;">'
             f'<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid {LINE};background:{WHITE};">'
-            f'<tr><td style="background:{head_bg};padding:6px 8px;border-bottom:1px solid {LINE};white-space:nowrap;">'
+            f'<tr><td style="background:{head_bg};{mark}padding:6px 8px;border-bottom:1px solid {LINE};white-space:nowrap;">'
             f'<span style="font:700 9px {FONT};color:{GMED};letter-spacing:.5px;">{DIA_AB[d.weekday()]}</span>'
             f' <span style="font:700 13px {FONT};color:{INK};">{d.day}</span></td></tr>'
             f'<tr><td style="padding:7px 5px;vertical-align:top;">{cuerpo}</td></tr>'
@@ -1614,8 +1822,24 @@ if plans:
     calendario = (f'<table cellpadding="0" cellspacing="0" role="presentation" '
                   f'style="table-layout:fixed;width:{len(dias) * 132}px;border-collapse:collapse;"><tr>{cols}</tr></table>')
 
-    rango = (f'Semana del {next_mon.day} de {MESES[next_mon.month]} al '
-             f'{next_sun.day} de {MESES[next_sun.month]} de {next_sun.year}')
+    # Rótulos y asunto según la ventana elegida. Con la opción apagada el correo
+    # sale con el mismo título, rango y subject que antes de agregar la opción.
+    if INCLUIR_SEMANA_EN_CURSO:
+        titulo = 'Mantención de esta semana y la próxima'
+        rango = (f'Del {win_start.day} de {MESES[win_start.month]} al '
+                 f'{win_end.day} de {MESES[win_end.month]} de {win_end.year}')
+        subject = ("PMP · Reporte semanal — del %s/%s al %s/%s"
+                   % (win_start.day, win_start.month, win_end.day, win_end.month))
+        leyenda = (f'<div style="font:400 10px {FONT};color:{GMED};padding:8px 0 0;">'
+                   f'<span style="color:{ORANGE};font-weight:700;">▬</span> '
+                   f'Las columnas con barra naranja corresponden a la semana en curso '
+                   f'(pendientes de cierre).</div>')
+    else:
+        titulo = 'Mantención de la próxima semana'
+        rango = (f'Semana del {win_start.day} de {MESES[win_start.month]} al '
+                 f'{win_end.day} de {MESES[win_end.month]} de {win_end.year}')
+        subject = "PMP · Reporte semanal — semana del %s/%s" % (win_start.day, win_start.month)
+        leyenda = ''
     chip = (
         f'<table cellpadding="0" cellspacing="0" role="presentation" style="background:{ORANGE};border-radius:6px;"><tr>'
         f'<td style="padding:9px 18px;font:400 9px {FONT};color:{PEACH};letter-spacing:.6px;">OCURRENCIAS<br>'
@@ -1637,28 +1861,63 @@ if plans:
 <div style="height:3px;width:118px;background:{ORANGE};font-size:0;line-height:0;"> </div>
 <div style="height:2px;background:{INK};font-size:0;line-height:0;"> </div>
 <div style="font:700 9px {FONT};color:{ORANGE};letter-spacing:1.5px;text-transform:uppercase;padding:20px 0 0;">Calendario semanal</div>
-<div style="font:700 24px {FONT};color:{INK};padding:5px 0 0;">Mantención de la próxima semana</div>
-<div style="font:400 13px {FONT};color:{GREY};padding:6px 0 0;">{rango}</div>
+<div style="font:700 24px {FONT};color:{INK};padding:5px 0 0;">{titulo}</div>
+<div style="font:400 13px {FONT};color:{GREY};padding:6px 0 0;">{rango}</div>{leyenda}
 <div style="padding:16px 0 2px;">{chip}</div>
 <div style="overflow-x:auto;padding:20px 0 2px;">{calendario}</div>
 <div style="border-top:1px solid {LINE};margin:22px 0 0;padding:12px 0 0;font:400 10px {FONT};color:{GMED};line-height:15px;">
 Programa de Mantención Preventiva — WE TECHS · Generado automáticamente el {today.day}/{today.month}/{today.year}. Correo automático, no responder.</div>
 </td></tr></table></div>'''
 
-    # Actores relevantes: responsable + técnico de cada ocurrencia.
+    # Actores relevantes: responsable + técnico + SEGUIDORES de cada ocurrencia.
+    # Los seguidores incluyen a los usuarios 172 y 5205, sembrados por SA-00 en
+    # la creación; sumar un actor más no requiere tocar este snippet, basta con
+    # seguir el registro. Se filtra por email/active para que un partner
+    # incompleto no haga fallar el envío entero.
     partners = env['res.partner']
     for p in plans:
+        partners |= p.message_partner_ids
         if p.x_studio_user_id.partner_id:
             partners |= p.x_studio_user_id.partner_id
         if p.x_studio_technician_user_id.partner_id:
             partners |= p.x_studio_technician_user_id.partner_id
+    partners = partners.filtered(lambda x: x.email and x.active)
     if partners:
         env['mail.mail'].create({
-            'subject': "PMP · Reporte semanal — semana del %s/%s" % (next_mon.day, next_mon.month),
+            'subject': subject,
             'body_html': body,
             'recipient_ids': [Command.set(partners.ids)],
         }).send()
 ```
+
+#### Opción: incluir la semana en curso
+
+Al tope del snippet hay un interruptor de dos líneas. Para activarlo, **comentá la primera y descomentá la segunda**:
+
+```python
+# INCLUIR_SEMANA_EN_CURSO = False  # solo la semana siguiente (comportamiento por defecto)
+INCLUIR_SEMANA_EN_CURSO = True     # + arrastra lo pendiente de la semana en curso
+```
+
+
+|              | `False` (default)                   | `True`                                                                |
+| -------------- | ------------------------------------- | ----------------------------------------------------------------------- |
+| Ventana      | Lun–Dom de la semana siguiente     | Lun de**esta** semana → Dom de la siguiente                          |
+| Columnas     | 5 a 7                               | 10 a 14                                                               |
+| Título      | "Mantención de la próxima semana" | "Mantención de esta semana y la próxima"                            |
+| Asunto       | `— semana del D/M`                 | `— del D/M al D/M`                                                   |
+| Marca visual | ninguna                             | barra naranja al tope de las columnas de la semana en curso + leyenda |
+
+Con la opción en `False` el correo sale **idéntico** al de antes de agregar el interruptor: `mark` queda en `''`, y título, rango y asunto conservan su texto original.
+
+**Variante de arranque.** Por defecto la ventana ampliada parte el **lunes de esta semana**, así lo ya vencido y sin cerrar (sigue en `draft`/`scheduled`) aparece como atraso. Si preferís ver solo lo que queda por delante, cambiá el par de líneas de `win_start`:
+
+```python
+# win_start = cur_mon if INCLUIR_SEMANA_EN_CURSO else next_mon
+win_start = today if INCLUIR_SEMANA_EN_CURSO else next_mon
+```
+
+> **Dos efectos a considerar antes de activarla.** (1) **Repetición:** una ocurrencia se anuncia el jueves como "próxima semana" y vuelve a salir el jueves siguiente como "semana en curso" — los destinatarios ven la misma tarjeta dos veces. (2) **Ancho:** 14 columnas son ~1.850 px. El calendario ya vive dentro de `overflow-x:auto`, así que hace scroll horizontal en vez de romper el correo, pero en móvil obliga a desplazar bastante. Si molesta, bajá el `width="126"` de la celda de día y el `132` del cálculo de ancho total.
 
 > **Adaptación de `formato-doc-we` a email.** Se trasladan: **paleta** oficial, **jerarquía** (eyebrow → título → subtítulo → chip) y **regla de marca** (doble trazo tinta + naranja). Lo que **no** aplica del estándar PDF: márgenes en mm y fuentes `.ttf` embebidas — se usa la pila `'Lexend Deca', Arial, Helvetica` y el cliente que no tenga la fuente cae a Arial (aceptable solo en email). El **estado** de cada solicitud se codifica en el color del borde superior de su tarjeta (naranja = programada · teal = en progreso · gris = borrador). El **snapshot** (`x_studio_equipment_snapshot_ids`) es la fuente de los equipos; si la ocurrencia sigue en `draft` sin snapshot, cae a los equipos vivos del punto. El calendario es **Lun–Vie**; una ocurrencia en fin de semana agrega su columna.
 
@@ -1789,12 +2048,16 @@ if reqs:
 Programa de Mantención Preventiva — WE TECHS · Generado automáticamente el {today.day}/{today.month}/{today.year}. Correo automático, no responder.</div>
 </td></tr></table></div>'''
 
+    # Los seguidores viven en el PLAN padre (SA-00 los siembra ahí), no en la
+    # hija: por eso se lee message_partner_ids del plan, no de la request.
     partners = env['res.partner']
     for r in reqs:
+        partners |= r.x_studio_plan_id.message_partner_ids
         if r.user_id.partner_id:
             partners |= r.user_id.partner_id
         if r.x_studio_plan_id.x_studio_user_id.partner_id:
             partners |= r.x_studio_plan_id.x_studio_user_id.partner_id
+    partners = partners.filtered(lambda x: x.email and x.active)
     if partners:
         env['mail.mail'].create({
             'subject': "PMP · Reporte mensual — %s %s" % (MESES[first.month], first.year),
@@ -1842,19 +2105,19 @@ for plan in records:
 | ID        | Modelo                   | Trigger (16)             | Before Update Domain / Apply on                                                                                                                             | Acción                                                                                                   |
 | ----------- | -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | AA-00     | `x_maintenance_plan`     | On Creation              | —                                                                                                                                                          | Execute → SA-00                                                                                          |
-| AA-01     | `x_maintenance_plan`     | On Update                | Before Update:`[('state','!=','scheduled')]` · Apply on: `[('state','=','scheduled')]`                                                                     | Execute → SA-01                                                                                          |
-| AA-02     | `x_maintenance_plan`     | On Update                | Before Update:`[('state','not in',('done','partially_done'))]` · Apply on: `[('state','in',('done','partially_done'))]`                                    | Execute → SA-02 (incluye chequeo de`contract_end_date`)                                                  |
-| AA-03     | `x_maintenance_plan`     | On Update                | Apply on:`[('state','in',('draft','scheduled'))]` (dispara en cada write; SA-06 se autofiltra: solo escribe si la fecha de las hijas difiere)               | Execute → SA-06                                                                                          |
+| AA-01     | `x_maintenance_plan`     | On Update                | Before Update:`[('x_studio_state','!=','scheduled')]` · Apply on: `[('x_studio_state','=','scheduled')]`                                                   | Execute → SA-01                                                                                          |
+| AA-02     | `x_maintenance_plan`     | On Update                | Before Update:`[('x_studio_state','not in',('done','partially_done'))]` · Apply on: `[('x_studio_state','in',('done','partially_done'))]`                  | Execute → SA-02 (incluye chequeo de`contract_end_date`)                                                  |
+| AA-03     | `x_maintenance_plan`     | On Update                | Apply on:`[('x_studio_state','in',('draft','scheduled'))]` (dispara en cada write; SA-06 se autofiltra: solo escribe si la fecha de las hijas difiere)      | Execute → SA-06                                                                                          |
 | AA-05     | `x_maintenance_plan`     | Based on Timed Condition | Trigger Date:`x_studio_scheduled_date`. Delay: **-7 días** (corre 7 días antes).                                                                          | Execute → SA-18 (alerta de ocurrencia próxima, Req 6)                                                   |
 | AA-06     | `maintenance.equipment`  | On Update                | — (en 16 dispara en cada write; SA-09 compara el último movement y sale si la ubicación no cambió)                                                      | Execute → SA-09 (registra la bitácora de movimientos)                                                   |
 | AA-MOV-00 | `x_equipment_movement`   | On Creation              | —                                                                                                                                                          | Execute → SA-MOV-00 (autogen name, company)                                                              |
 | AA-07     | `x_maintenance_location` | On Creation & Update     | —                                                                                                                                                          | Execute → SA-C01 (`x_frequency_value > 0`) — valida la cadencia en el punto                             |
 | AA-08     | `x_maintenance_location` | On Creation & Update     | —                                                                                                                                                          | Execute → SA-C02 (`x_slack_days` < mitad del período base) — valida en el punto                        |
-| AA-09     | `x_maintenance_plan`     | On Creation & Update     | Apply on:`[('state','=','partially_done')]`                                                                                                                 | Execute → SA-C03 (`force_close_reason` requerido)                                                        |
-| AA-10     | `x_maintenance_plan`     | On Creation & Update     | Apply on:`[('state','in',('draft','scheduled','in_progress'))]`                                                                                             | Execute → SA-C04 (no solapamiento; se salta si el contexto trae`x_skip_c04` — escrituras de la cascada) |
-| AA-11     | `x_maintenance_plan`     | On Update                | Apply on:`[('state','=','done')]`                                                                                                                           | Execute → SA-C05 (`done` exige hijas resueltas)                                                          |
-| AA-12     | `x_maintenance_plan`     | On Update                | Apply on:`[('active','=',False)]`                                                                                                                           | Execute → SA-C06 (no archivar plan vivo)                                                                 |
-| AA-13     | `maintenance.request`    | On Creation              | Apply on:`[('plan_id','=',False),('maintenance_type','=','preventive')]`                                                                                    | Execute → SA-10 (etiqueta las hijas propias del equipo / ciclo nativo)                                   |
+| AA-09     | `x_maintenance_plan`     | On Creation & Update     | Apply on:`[('x_studio_state','=','partially_done')]`                                                                                                        | Execute → SA-C03 (`force_close_reason` requerido)                                                        |
+| AA-10     | `x_maintenance_plan`     | On Creation & Update     | Apply on:`[('x_studio_state','in',('draft','scheduled','in_progress'))]`                                                                                    | Execute → SA-C04 (no solapamiento; se salta si el contexto trae`x_skip_c04` — escrituras de la cascada) |
+| AA-11     | `x_maintenance_plan`     | On Update                | Apply on:`[('x_studio_state','=','done')]`                                                                                                                  | Execute → SA-C05 (`done` exige hijas resueltas)                                                          |
+| AA-12     | `x_maintenance_plan`     | On Update                | Apply on:`[('x_active','=',False)]`                                                                                                                         | Execute → SA-C06 (no archivar plan vivo)                                                                 |
+| AA-13     | `maintenance.request`    | On Creation              | Apply on:`[('x_studio_plan_id','=',False),('maintenance_type','=','preventive')]`                                                                           | Execute → SA-10 (etiqueta las hijas propias del equipo / ciclo nativo)                                   |
 | AA-14     | `x_maintenance_location` | On Update                | — (idempotente: actúa solo si hay ocurrencias`draft`/`scheduled` más allá del nuevo `x_contract_end_date`)                                              | Execute → SA-12 (acortar contrato: eliminar/cancelar ocurrencias futuras, Req 1)                         |
 | AA-15     | `x_equipment_movement`   | On Creation              | Apply on:`[('x_studio_reason','=','repair')]`                                                                                                               | Execute → SA-11 (equipo dañado: eliminar solicitudes programadas, Req 3)                                |
 | AA-16     | `maintenance.request`    | On Update                | Apply on:`[('x_studio_plan_id','!=',False)]`                                                                                                                | Execute → SA-17 (estado del padre según hijas: 100%→done, hija arranca→in_progress, Req 8)            |
@@ -1931,84 +2194,88 @@ Sobre `x_equipment_movement`:(AAl
 
 Probar en este orden, con un punto que tenga 3 equipos:
 
-- [ ]  **T-01** Crear plan en draft. → name autogenerado, series_id se completa, original_scheduled_date = scheduled_date.
-- [ ]  **T-02** Click "Sync con punto" en draft. → equipment_snapshot_ids se llena con los 3.
-- [ ]  **T-03** Cambiar state a `scheduled`. → se crean 3 `maintenance.request` con `plan_id` apuntando al plan, `schedule_date` = plan.scheduled_date.
-- [ ]  **T-04** Verificar en cada uno de los 3 equipos: `x_managed_by_plan = True` y que el `period` nativo **sigue intacto** (no se toca). Si el equipo tenía `period > 0`, el cron nativo debe seguir generando sus hijas propias (`plan_id = False`) en paralelo a las del plan.
-- [ ]  **T-05** Cerrar 3 hijas en stage "Repaired/Done". → `progress` = 100%.
-- [ ]  **T-06** Cerrar el plan dentro del slack (state → `done` con close_date = scheduled_date). → se crea next_plan_id con scheduled_date = scheduled_date + frequency.
-- [ ]  **T-07** Cerrar fuera del slack (close_date = scheduled_date + slack + 5 días). → next_plan_id.scheduled_date = close_date + frequency (cadencia deslizada).
-- [ ]  **T-08** Cerrar como `partially_done` con 1 hija pendiente y `force_close_reason` lleno. → carryover crea 1 hija extra en next_plan_id con `[CARRYOVER ...]` en el name.
-- [ ]  **T-09** Intentar guardar `partially_done` sin `force_close_reason`. → SA-C03 (AA-09) dispara UserError y bloquea el guardado.
-- [ ]  **T-09b** Intentar cerrar como `done` con 1 hija pendiente. → SA-C05 (AA-11) dispara UserError: o se completan las hijas o se cierra `partially_done`.
-- [ ]  **T-10** Crear segundo plan para el mismo punto con scheduled_date dentro del slack del primero. → SA-C04 (AA-10) dispara UserError.
-- [ ]  **T-11** Editar manualmente scheduled_date en un plan `scheduled`. → AA-03 propaga a hijas vivas + log en chatter.
-- [ ]  **T-12** Cancelar el plan padre. → state = cancelled, hijas archivadas, cadena puenteada, mensaje en chatter. El `period` nativo de los equipos **no cambia** (sigue corriendo su ciclo propio).
-- [ ]  **T-12b** Intentar archivar (`active = False`) un plan `scheduled`. → SA-C06 (AA-12) bloquea con UserError. Tras cancelarlo (T-12), archivar sí funciona.
+- [X]  **T-01** Crear plan en draft. → name autogenerado, series_id se completa, original_scheduled_date = scheduled_date.
+- [X]  **T-02** Click "Sync con punto" en draft. → equipment_snapshot_ids se llena con los 3. *(OK tras corregir el leaf `x_active`→`active` en SA-03; ver la nota de transposición inversa en §3.)*
+- [X]  **T-03** Cambiar state a `scheduled`. → se crean 3 `maintenance.request` con `plan_id` apuntando al plan, `schedule_date` = plan.scheduled_date.
+- [X]  **T-04** Verificar en cada uno de los 3 equipos: `x_managed_by_plan = True` y que el `period` nativo **sigue intacto** (no se toca). Si el equipo tenía `period > 0`, el cron nativo debe seguir generando sus hijas propias (`plan_id = False`) en paralelo a las del plan.
+- [X]  **T-05** Cerrar 3 hijas en stage "Repaired/Done". → `progress` = 100%.
+- [X]  **T-06** Cerrar el plan dentro del slack (state → `done` con close_date = scheduled_date). → se crea next_plan_id con scheduled_date = scheduled_date + frequency.
+- [X]  **T-07** Cerrar fuera del slack (close_date = scheduled_date + slack + 5 días). → next_plan_id.scheduled_date = close_date + frequency (cadencia deslizada).
+- [X]  **T-08** Cerrar como `partially_done` con 1 hija pendiente y `force_close_reason` lleno. → carryover crea 1 hija extra en next_plan_id con `[CARRYOVER ...]` en el name.
+- [X]  **T-09** Intentar guardar `partially_done` sin `force_close_reason`. → SA-C03 (AA-09) dispara UserError y bloquea el guardado.
+- [X]  **T-09b** Intentar cerrar como `done` con 1 hija pendiente. → SA-C05 (AA-11) dispara UserError: o se completan las hijas o se cierra `partially_done`.
+- [X]  **T-10** Crear segundo plan para el mismo punto con scheduled_date dentro del slack del primero. → SA-C04 (AA-10) dispara UserError.
+- [X]  **T-11** Editar manualmente scheduled_date en un plan `scheduled`. → AA-03 propaga a hijas vivas + log en chatter.
+- [X]  **T-12** Cancelar el plan padre. → state = cancelled, hijas archivadas, cadena puenteada, mensaje en chatter. El `period` nativo de los equipos **no cambia** (sigue corriendo su ciclo propio).
+- [X]  **T-12b** Intentar archivar (`active = False`) un plan `scheduled`. → SA-C06 (AA-12) bloquea con UserError. Tras cancelarlo (T-12), archivar sí funciona.
 - [ ]  **T-13** Borrar el punto. → restricción impide borrar si tiene planes (cambiar `ondelete` si no se desea).
-- [ ]  **T-14** Agregar un nuevo equipo al punto entre Paso T-03 y T-05. Sync con punto. → se crea 1 hija extra, `last_sync_with_location` se actualiza.
+- [X]  **T-14** Agregar un nuevo equipo al punto entre Paso T-03 y T-05. Sync con punto. → se crea 1 hija extra, `last_sync_with_location` se actualiza.
 - [ ]  **T-15** scheduled_date que caiga en domingo con `resource_calendar_id` cargado. → SA-02 desplaza al lunes hábil.
 
 **Tests específicos de `contract_end_date`:**
 
-- [ ]  **T-16** Plan con `contract_end_date = scheduled_date + 2 meses`, frequency = 1 mes. Cerrar plan 1. → genera plan 2 (próximo mes). Cerrar plan 2. → genera plan 3 (mes siguiente). Cerrar plan 3. → **NO** genera plan 4; chatter loggea "Serie finalizada por término de contrato".
+- [X]  **T-16** Plan con `contract_end_date = scheduled_date + 2 meses`, frequency = 1 mes. Cerrar plan 1. → genera plan 2 (próximo mes). Cerrar plan 2. → genera plan 3 (mes siguiente). Cerrar plan 3. → **NO** genera plan 4; chatter loggea "Serie finalizada por término de contrato".
 - [ ]  **T-17** Cambiar `contract_end_date` a una fecha posterior en un plan existente → al copiar el siguiente debería heredar el nuevo valor. Verificar que `plan.copy(default=...)` propagó.
 
 **Tests específicos de `x_equipment_movement`:**
 
-- [ ]  **T-18** Equipo S1 en punto Norte → cambiar `x_studio_location` a Laboratorio (593). → AA-06/SA-09 crea movement `completed` con `from=Norte`, `to=Lab`, `reason='calibration'`, `date_in=date_out=today`. El `period` del equipo **no cambia**.
-- [ ]  **T-19** S1 vuelve del Lab al punto Norte (con plan activo). → movement `reason='return_from_service'`. El `period` del equipo **no cambia**.
-- [ ]  **T-20** S1 se mueve de Norte a un punto Sur **sin** plan activo. → movement `reason='reassignment'`. El `period` del equipo **no cambia**.
+- [X]  **T-18** Equipo S1 en punto Norte → cambiar `x_studio_location` a Laboratorio (593). → AA-06/SA-09 crea movement `completed` con `from=Norte`, `to=Lab`, `reason='calibration'`, `date_in=date_out=today`. El `period` del equipo **no cambia**.
+- [X]  **T-19** S1 vuelve del Lab al punto Norte (con plan activo). → movement `reason='return_from_service'`. El `period` del equipo **no cambia**.
+- [X]  **T-20** S1 se mueve de Norte a un punto Sur **sin** plan activo. → movement `reason='reassignment'`. El `period` del equipo **no cambia**.
 - [ ]  **T-20b** Equipo con `period > 0` dentro de un plan: el cron nativo genera una hija `plan_id=False`. → AA-13/SA-10 le estampa `x_studio_tipo_de_trabajo='Mantención del Equipo'`; el `progress` del plan **no se altera** y cerrarla no dispara cascada.
-- [ ]  **T-21** Quitar `x_studio_location` de un equipo (baja). → movement `reason='decommission'` con `to=NULL`.
-- [ ]  **T-22** Cambiar manualmente `x_studio_location` desde el form (como Plan User o Maintenance User). → AA-06 dispara SA-09 sin AccessError (ACL de create verificada) y el reason se infiere según destino.
-- [ ]  **T-23** Intentar borrar un movement como Plan Manager o Plan User. → bloqueado por ACL. (El superusuario admin bypasea ACLs — esta protección no aplica para él.)
-- [ ]  **T-24** Consulta "todas las sondas que pasaron por Norte en los últimos 90 días" desde la list view filtrada. → resultados consistentes con los movements creados.
-- [ ]  **T-25** Equipo con `x_studio_location = Lab (593)` + plan de su punto de origen pasa a `scheduled`. → SA-01 NO le genera hija: ya no está en el punto, queda fuera del snapshot naturalmente.
-- [ ]  **T-25b** Equipo recién creado en **Bodega cliente (594)** (default), **sin** seed. Editar cualquier campo NO-ubicación (p. ej. una nota). → SA-09 **NO** crea ningún movement (baseline implícito 594 == 594). No aparece un `594→594 'repair'` espurio.
+- [X]  **T-21** Quitar `x_studio_location` de un equipo (baja). → movement `reason='decommission'` con `to=NULL`.
+- [X]  **T-22** Cambiar manualmente `x_studio_location` desde el form (como Plan User o Maintenance User). → AA-06 dispara SA-09 sin AccessError (ACL de create verificada) y el reason se infiere según destino.
+- [X]  **T-23** Intentar borrar un movement como Plan Manager o Plan User. → bloqueado por ACL. (El superusuario admin bypasea ACLs — esta protección no aplica para él.)
+- [X]  **T-24** Consulta "todas las sondas que pasaron por Norte en los últimos 90 días" desde la list view filtrada. → resultados consistentes con los movements creados.
+- [X]  **T-25** Equipo con `x_studio_location = Lab (593)` + plan de su punto de origen pasa a `scheduled`. → SA-01 NO le genera hija: ya no está en el punto, queda fuera del snapshot naturalmente.
+- [X]  **T-25b** Equipo recién creado en **Bodega cliente (594)** (default), **sin** seed. Editar cualquier campo NO-ubicación (p. ej. una nota). → SA-09 **NO** crea ningún movement (baseline implícito 594 == 594). No aparece un `594→594 'repair'` espurio.
 - [ ]  **T-25c** Ese mismo equipo de 594 se mueve por primera vez a un punto real. → SA-09 crea movement con `from=NULL`, `to=punto`, `reason='installation'` (no `return_from_service`). Confirma que el primer traslado desde stock se etiqueta como instalación.
 
 **Tests de proyección de serie (SA-07) y Gantt:**
 
-- [ ]  **T-30** Plan 1 `scheduled`, `contract_end_date = +6 meses`, frequency = 1 mes. Click "Proyectar serie". → se crean ~5 ocurrencias `draft` encadenadas (`previous/next_plan_id`, `seq_in_series` correlativo, mismo `series_id`), **sin hijas y sin snapshot**, ninguna después del fin de contrato. La Gantt agrupada por punto muestra la serie completa como barras `±slack`.
+- [X]  **T-30** Plan 1 `scheduled`, `contract_end_date = +6 meses`, frequency = 1 mes. Click "Proyectar serie". → se crean ~5 ocurrencias `draft` encadenadas (`previous/next_plan_id`, `seq_in_series` correlativo, mismo `series_id`), **sin hijas y sin snapshot**, ninguna después del fin de contrato. La Gantt agrupada por punto muestra la serie completa como barras `±slack`. **Verificar `previous_plan_id` explícitamente, no solo la Gantt:** cada ocurrencia debe apuntar a la **inmediatamente anterior** y `seq_in_series` debe ser 1,2,3,… sin repeticiones. Si todas cuelgan de la misma cabeza con el mismo `seq`, la cadena `next` y las fechas igual se ven perfectas y el bug pasa desapercibido (caso real de T-36 — ver la nota de `copy()` en SA-07).
 - [ ]  **T-31** Re-click en "Proyectar serie" (desde cualquier ocurrencia de la serie). → idempotente: 0 ocurrencias nuevas, mensaje en chatter.
-- [ ]  **T-32** Cerrar plan 1 **fuera del slack** (close_date = scheduled + slack + 10). → SA-02 re-fecha n+1 desde `close_date` y el paso 4-bis desliza **toda la cola** en bloque; las ocurrencias empujadas más allá de `contract_end_date` quedan `cancelled` con log en chatter.
-- [ ]  **T-33** Cerrar plan 1 **dentro del slack**. → la cola no se mueve (las fechas recalculadas coinciden y el guard `!=` evita writes).
-- [ ]  **T-34** Plan sin `contract_end_date`. → "Proyectar serie" genera exactamente 12 ocurrencias.
-- [ ]  **T-35** Pasar a `scheduled` una ocurrencia proyectada. → SA-01 toma el snapshot del punto recién ahí y genera las hijas con los equipos presentes en ese momento.
-- [ ]  **T-36** Cancelar una ocurrencia **intermedia** de la cadena proyectada (SA-04). → la cadena se puentea (`prev.next_plan_id` salta a la siguiente); al cerrar la ocurrencia anterior, la cascada re-fecha la cola sin trabarse.
-
-**Tests de integración con el pipeline existente (Paso 12):**
-
-- [ ]  **T-26** Correr `pipeline_registro_II/main.py` con un form R de calibración (alcance `Ciclo de calibración`, destino `Laboratorio | Metrocal`). Verificar que se creó `x_equipment_movement` con `reason='calibration'`, `to_location_id=593`. La SA del processor ya escribió la `maintenance.request` de Extracción/Calibración; el movement queda con `linked_request_id=NULL` (limitación documentada).
-- [ ]  **T-27** Form R de daño con destino `Bodega cliente` → movement con `reason='repair'`, `to_location_id=594`.
-- [ ]  **T-28** Form I (Instalación) con equipo nuevo a un punto → movement con `reason='installation'`, `to_location_id=punto`. Si el equipo ya estaba en otro punto, `reason='reassignment'`.
-- [ ]  **T-29** Re-ejecutar `main.py` con el mismo form: idempotencia del processor (`form_entries.db`) impide duplicar la request; AA-06 no se redispara porque `x_studio_location` no cambió.
+- [X]  **T-32** Cerrar plan 1 **fuera del slack** (close_date = scheduled + slack + 10). → SA-02 re-fecha n+1 desde `close_date` y el paso 4-bis desliza **toda la cola** en bloque; las ocurrencias empujadas más allá de `contract_end_date` quedan `cancelled` con log en chatter.
+- [X]  **T-33** Cerrar plan 1 **dentro del slack**. → la cola no se mueve (las fechas recalculadas coinciden y el guard `!=` evita writes).
+- [X]  **T-34** Plan sin `contract_end_date`. → "Proyectar serie" genera exactamente 12 ocurrencias.
+- [X]  **T-35** Pasar a `scheduled` una ocurrencia proyectada. → SA-01 toma el snapshot del punto recién ahí y genera las hijas con los equipos presentes en ese momento.
+- [X]  **T-36** Cancelar una ocurrencia **intermedia** de la cadena proyectada (SA-04). → la cadena se puentea (`prev.next_plan_id` salta a la siguiente); al cerrar la ocurrencia anterior, la cascada re-fecha la cola sin trabarse. **Verificar además que la cancelada queda con `previous_plan_id = next_plan_id = False`**: si conserva sus punteros, el plan anterior queda siendo `previous` de dos ocurrencias y la cadena se ve bifurcada (bug real encontrado en la primera pasada de T-36).
+- [X]  **T-36b** Cancelar la **cabeza** de la cadena. → la siguiente queda con `previous_plan_id = False` y SA-19 la sigue reconociendo como cabeza de serie (si queda apuntando a un plan `cancelled`, la serie deja de recadenciarse en silencio).
+- [X]  **T-36c** Cancelar la **cola** de la cadena. → la anterior queda con `next_plan_id = False` y, al cerrarla, SA-02 entra por la rama `elif not nxt` y genera una ocurrencia nueva (si queda apuntando a la cancelada, la serie muere sin aviso).
 
 **Tests de las reglas nuevas (Req 1–8):**
 
 - [ ]  **T-40 (Req 2)** Crear dos planes seguidos. → `x_name` = `PMP-0001` y `PMP-0002`, **sin año ni punto**. El punto se ve por `x_studio_location_id`. Las hijas nacen como `PMP-0001 - {equipo}`.
-- [ ]  **T-41 (Req 1)** Plan con `x_contract_end_date = +6 meses`, frecuencia 1 mes. "Proyectar serie" (≈6 ocurrencias `draft`). Editar `x_contract_end_date` a `+3 meses`. → AA-14/SA-12: las ocurrencias `draft` más allá de +3m se **borran** (`unlink`); si alguna ya estaba `scheduled` con hijas, queda `cancelled` con hijas archivadas; el chatter del punto resume cuántas. La cadena `next_plan_id` queda cortada en la última dentro de rango.
-- [ ]  **T-42 (Req 3)** Equipo con plan `scheduled` (tiene hija abierta). Mover `x_studio_location` a Bodega 594 (daño). → SA-09 crea movement `reason='repair'`; AA-15/SA-11 **archiva** la hija abierta del equipo (`kanban_state='blocked'`); el `x_studio_progress` recalcula ignorándola y el plan puede cerrar.
-- [ ]  **T-43 (Req 3, negativo)** Mismo equipo movido a Laboratorio 593 (calibración). → movement `reason='calibration'`; la hija **NO** se elimina (queda pendiente para carryover al cerrar parcial).
+- [X]  **T-41 (Req 1)** Plan con `x_contract_end_date = +6 meses`, frecuencia 1 mes. "Proyectar serie" (≈6 ocurrencias `draft`). Editar `x_contract_end_date` a `+3 meses`. → AA-14/SA-12: las ocurrencias `draft` más allá de +3m se **borran** (`unlink`); si alguna ya estaba `scheduled` con hijas, queda `cancelled` con hijas archivadas; el chatter del punto resume cuántas. La cadena `next_plan_id` queda cortada en la última dentro de rango.
+- [X]  **T-42 (Req 3)** Equipo con plan `scheduled` (tiene hija abierta). Mover `x_studio_location` a Bodega 594 (daño). → SA-09 crea movement `reason='repair'`; AA-15/SA-11 **archiva** la hija abierta del equipo (`kanban_state='blocked'`); el `x_studio_progress` recalcula ignorándola y el plan puede cerrar.
+- [X]  **T-43 (Req 3, negativo)** Mismo equipo movido a Laboratorio 593 (calibración). → movement `reason='calibration'`; la hija **NO** se elimina (queda pendiente para carryover al cerrar parcial).
 - [ ]  **T-44 (Req 5)** Plan `scheduled` con `x_contract_end_date` cargado. Editar `x_studio_scheduled_date` a una fecha posterior al término. → AA-17/SA-13 pone `x_studio_state='out_of_range'` (badge **rojo**). Volver la fecha a dentro del término → regresa a `draft`.
-- [ ]  **T-45 (Req 5, cascada)** Serie proyectada; cerrar la ocurrencia 1 **fuera de slack** lo suficiente para empujar la cola más allá del contrato. → las ocurrencias deslizadas que superan `x_contract_end_date` quedan `out_of_range` (no `cancelled`), con log en su chatter.
-- [ ]  **T-46 (Req 7)** Plan `draft` con fecha en la **semana siguiente**. Ejecutar CR-01/SA-15 ("Run Manually"). → pasa a `scheduled`, se congela snapshot y se crean hijas. Un `draft` cuya fecha NO cae en la semana siguiente no cambia.
-- [ ]  **T-47 (Req 6, semanal)** Ejecutar CR-02/SA-14. → se crea un `mail.mail` a responsables + técnicos con la tabla de ocurrencias de la semana siguiente. Sin ocurrencias en la ventana, no envía nada.
-- [ ]  **T-48 (Req 6, mensual)** Ejecutar CR-03/SA-16. → `mail.mail` con todas las hijas (`x_studio_plan_id` seteado) del mes en curso.
+- [X]  **T-45 (Req 5, cascada)** Serie proyectada; cerrar la ocurrencia 1 **fuera de slack** lo suficiente para empujar la cola más allá del contrato. → las ocurrencias deslizadas que superan `x_contract_end_date` quedan `out_of_range` (no `cancelled`), con log en su chatter.
+- [X]  **T-46 (Req 7)** Plan `draft` con fecha en la **semana siguiente**. Ejecutar CR-01/SA-15 ("Run Manually"). → pasa a `scheduled`, se congela snapshot y se crean hijas. Un `draft` cuya fecha NO cae en la semana siguiente no cambia.
+- [ ]  **T-47 (Req 6, semanal)** *(re-abierto: cambiaron los destinatarios)* Ejecutar CR-02/SA-14. → se crea un `mail.mail` a responsables + técnicos **+ seguidores del plan** (usuarios 172 y 5205) con la tabla de ocurrencias de la semana siguiente. Sin ocurrencias en la ventana, no envía nada.
+- [ ]  **T-48 (Req 6, mensual)** *(re-abierto: cambiaron los destinatarios)* Ejecutar CR-03/SA-16. → `mail.mail` con todas las hijas (`x_studio_plan_id` seteado) del mes en curso, dirigido a los seguidores del **plan padre** (no de la hija) + responsables.
+- [ ]  **T-47b / T-48b** Verificar que un partner **sin email** o **archivado** no aparece en `recipient_ids` (el `filtered` lo descarta) y que el correo igual sale para el resto.
 - [ ]  **T-49 (Req 6, alerta)** Plan `scheduled` a 7 días. AA-05 (timed, −7d). → `message_post` de recordatorio con `partner_ids` = responsable + técnico.
-- [ ]  **T-50 (Req 8a)** Completar TODAS las hijas vivas (stage `done`). → AA-16/SA-17 pone el plan en `done` automáticamente, lo que dispara la cascada (genera n+1) y pasa C-05.
-- [ ]  **T-51 (Req 8b)** Con el plan `scheduled`, mover **una** hija del stage inicial a "En proceso" (o a `done`). → AA-16/SA-17 pone el plan padre en `in_progress`. Las demás hijas siguen en su stage.
+- [X]  **T-50 (Req 8a)** Completar TODAS las hijas vivas (stage `done`). → AA-16/SA-17 pone el plan en `done` automáticamente, lo que dispara la cascada (genera n+1) y pasa C-05.
+- [X]  **T-51 (Req 8b)** Con el plan `scheduled`, mover **una** hija del stage inicial a "En proceso" (o a `done`). → AA-16/SA-17 pone el plan padre en `in_progress`. Las demás hijas siguen en su stage.
 - [ ]  **T-52 (Req 4)** Verificar el **semáforo**: en list/kanban/badge cada `x_studio_state` toma su color (gris/azul/amarillo/verde/naranja/rojo); `out_of_range` en rojo; las ocurrencias con `x_studio_is_approaching=True` se realzan en ámbar sin tapar el rojo de `out_of_range`.
 
 **Tests de cadencia/slack a nivel de punto (fuente única, §3.3):**
 
-- [ ]  **T-53 (fuente única)** Editar `x_frequency_value` de 1 a 2 meses en un **punto**. → todas las ocurrencias del punto muestran `frequency_value=2` (related recomputa) sin editarlas una por una.
-- [ ]  **T-54 (recadenciado)** Punto con serie proyectada (5 ocurrencias `draft`, 1 mes). Cambiar la cadencia del punto a 2 meses. → AA-18/SA-19 **re-fecha la cola pendiente**: la primera no cerrada conserva su fecha, las siguientes quedan a +2m encadenadas; chatter del punto lo resume. Las hijas vivas se re-fechan por AA-03/SA-06.
+- [X]  **T-53 (fuente única)** Editar `x_frequency_value` de 1 a 2 meses en un **punto**. → todas las ocurrencias del punto muestran `frequency_value=2` (related recomputa) sin editarlas una por una.
+- [ ]  **T-54 (recadenciado)** Punto con serie proyectada (5 ocurrencias `draft`, 1 mes). Cambiar la cadencia del punto a 2 meses. → AA-18/SA-19 **re-fecha la cola pendiente**: la primera no cerrada conserva su fecha (compromiso, **no es bug**), las siguientes quedan a +2m encadenadas; chatter del punto informa **cuántas** se movieron. Las hijas vivas se re-fechan por AA-03/SA-06.
+  - Si **no se movió nada**, el chatter del punto no debe traer mensaje (la versión vieja lo posteaba igual y ocultaba el fallo). Descartar en este orden: (1) ¿existe AA-18 y está activa, sobre `x_maintenance_location`?; (2) ¿los campos del punto son `x_frequency_value`/`x_frequency_unit` **sin** prefijo studio, y tienen valor?; (3) ¿la cadencia se editó en el **punto** y no en el espejo readonly del plan?; (4) ¿la búsqueda de cabezas encuentra alguna — exige `previous_plan_id` en `done`/`partially_done` **o** en `False`, así que una cadena con `previous` corrupto (ver T-36) deja la serie invisible para SA-19?
 - [ ]  **T-55 (recadenciado + contrato)** Igual a T-54 pero el nuevo ritmo empuja ocurrencias más allá de `x_contract_end_date`. → las que se pasan quedan `out_of_range`; si además se acorta el contrato en el mismo write, SA-12 (AA-14) elimina/cancela las `draft`/`scheduled` restantes (AA-18 con `sequence` mayor corre después).
 - [ ]  **T-56 (idempotencia)** Editar un campo cualquiera del punto **sin** tocar cadencia (p. ej. una nota). → SA-19 encuentra las fechas ya correctas y **no** re-fecha ni postea nada.
-- [ ]  **T-57 (C-01/C-02 en el punto)** Poner `x_frequency_value=0` o `x_slack_days` ≥ mitad del período en el **punto** → `UserError` bloquea el guardado del punto (AA-07/AA-08).
-- [ ]  **T-58 (auto_replan propio)** Desactivar `auto_replan` en **una** ocurrencia. → no afecta a las demás del punto (sigue siendo campo propio del plan, no related).
+- [X]  **T-57 (C-01/C-02 en el punto)** Poner `x_frequency_value=0` o `x_slack_days` ≥ mitad del período en el **punto** → `UserError` bloquea el guardado del punto (AA-07/AA-08).
+- [X]  **T-58 (auto_replan propio)** Desactivar `auto_replan` en **una** ocurrencia. → no afecta a las demás del punto (sigue siendo campo propio del plan, no related).
+
+**Seguidores por defecto (SA-00 / SA-07)**
+
+- [ ]  **T-59** Crear una ocurrencia a mano. → AA-00/SA-00 la deja con los usuarios **172 y 5205** como seguidores del registro.
+- [ ]  **T-60** Cerrar una ocurrencia y dejar que SA-02 genere la siguiente; después proyectar la serie con SA-07. → **todas** las ocurrencias nacidas por cascada y por proyección traen los dos seguidores, sin haber tocado SA-02.
+- [ ]  **T-61** Re-ejecutar "Proyectar serie" sobre una serie ya sembrada. → no se duplican seguidores (`message_subscribe` es idempotente).
+- [ ]  **T-62 (degradación)** Archivar temporalmente uno de los dos usuarios y crear una ocurrencia. → el plan **se crea igual** (el `.exists()` evita el traceback) y queda con el seguidor que sí existe. Revertir el archivado al terminar.
 
 ---
 
@@ -2067,7 +2334,7 @@ Maintenance no tiene una marca booleana fija en `maintenance.stage` (depende de 
 
 ```python
 done_stages = env['maintenance.stage'].search([('done', '=', True)])
-hijas_done = plan.request_ids.filtered(lambda r: r.stage_id in done_stages)
+hijas_done = plan.x_studio_request_ids.filtered(lambda r: r.stage_id in done_stages)
 ```
 
 Si tu instancia no tiene el campo `done` en stage, agregalo via Studio o usá `kanban_state == 'done'` como proxy.
@@ -2075,7 +2342,7 @@ Si tu instancia no tiene el campo `done` en stage, agregalo via Studio o usá `k
 ### A.2 Resource calendar fallback
 
 ```python
-calendar = plan.resource_calendar_id or plan.company_id.resource_calendar_id
+calendar = plan.x_studio_resource_calendar_id or plan.x_studio_company_id.resource_calendar_id
 ```
 
 ### A.3 Generar las próximas N ocurrencias
