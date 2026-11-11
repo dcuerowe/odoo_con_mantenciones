@@ -20,11 +20,11 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      # Configura python 3.14.0-alpha.0
-      - name: Configuracion de python 3.14.0-alpha.0
+      # Configura python 3.11
+      - name: Configuracion de python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14.0-alpha.0'
+          python-version: '3.11'
           cache: 'pip'
 
       # Instala las dependencias
