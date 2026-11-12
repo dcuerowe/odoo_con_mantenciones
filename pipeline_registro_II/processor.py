@@ -261,7 +261,7 @@ def process_entrys(ordered_responses, API_key_c, resumen, exito, odoo_client, sh
 
         #Identificador de ususarios en el modelo de contactos
         operators ={
-            "Diego Marchant": 145,
+            "Diego Marchant": 5799,
             "Ángel Zamora": 181,
             "Camilo Sandoval": 138,
             "Cristopher Iglesias": 141,
